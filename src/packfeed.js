@@ -16,7 +16,11 @@ import { configPath } from './config.js';
 import { decode } from './packformat.js';
 
 export const SCHEMA_VERSION = 1;
-export const CACHE_TTL_MS = 6 * 60 * 60 * 1000;
+// Half an hour, not six.  Six is the right number for a big settled feed and
+// the wrong one for this: publish a pack, open the app, and not seeing it reads
+// as the publish having failed.  It is a static file on a CDN -- checking more
+// often costs nothing anybody can measure.
+export const CACHE_TTL_MS = 30 * 60 * 1000;
 
 // The gallery, and where Share submits.  These two lines are the whole
 // configuration -- there is deliberately no setting for either.
