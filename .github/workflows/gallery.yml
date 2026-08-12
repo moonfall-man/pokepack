@@ -57,6 +57,25 @@ jobs:
             --out site/data/packs.json
           cp packs/*.pokepack site/data/ 2>/dev/null || true
 
+      # The app's own version, published beside the pack list.  A static file,
+      # so checking for an update costs no API call, no token and no account --
+      # the same bargain as the gallery itself.
+      - name: Publish the app version
+        run: |
+          node -e '
+            const pkg = require("./package.json");
+            const sha = process.env.GITHUB_SHA || "";
+            process.stdout.write(JSON.stringify({
+              version: pkg.version,
+              notes: process.env.SUBJECT || null,
+              url: `https://github.com/${process.env.GITHUB_REPOSITORY}/commits/master`,
+              commit: sha.slice(0, 7),
+            }, null, 2) + "\n");
+          ' > site/data/pokepack.json
+          cat site/data/pokepack.json
+        env:
+          SUBJECT: ${{ github.event.head_commit.message }}
+
       # The recipes are served next to the list so a gallery entry's url can
       # point at one.  They are small text files; this is not hosting a mod.
       - name: Landing page

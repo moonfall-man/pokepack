@@ -15,45 +15,23 @@ export const RECONCILE = 'reconcile';     // installed, wrong version
 export const UNAVAILABLE = 'unavailable'; // nothing installable to point at
 export const BLOCKED = 'blocked';         // a dependency died, so this dies too
 
-// Compare dotted versions numerically, falling back to string order for the
-// non-numeric tails authors sometimes ship ("1.7.6-beta").
-export function compareVersions(a, b) {
-  if (a === b) return 0;
-  if (!a) return -1;
-  if (!b) return 1;
-  const pa = String(a).split(/[.\-+]/);
-  const pb = String(b).split(/[.\-+]/);
-  for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
-    const x = pa[i] ?? '';
-    const y = pb[i] ?? '';
-    const nx = Number(x);
-    const ny = Number(y);
-    if (Number.isFinite(nx) && Number.isFinite(ny) && x !== '' && y !== '') {
-      if (nx !== ny) return nx < ny ? -1 : 1;
-    } else if (x !== y) {
-      return x < y ? -1 : 1;
-    }
-  }
-  return 0;
-}
+// Version comparison and dependency parsing live in deps.js, which knows
+// nothing about planning -- that keeps the import one-way.  compareVersions is
+// re-exported because it was part of this module's surface first.
+import { compareVersions, parseDeps, conflictIds as conflictNames } from './deps.js';
 
-// Dependency lists come off the index unparsed, and authors write them both
-// ways: ["OTHER_MOD"] and [{ id = "OTHER_MOD", range = ">=1.2" }].
+export { compareVersions };
+
+// Dependency lists come off the index unparsed, and authors write them three
+// ways: "OTHER_MOD", "OTHER_MOD@>=1.2 <2.0", and { id, range }.  The middle one
+// is the common case and used to come back whole as the id, so it matched no
+// installed mod and every dependency quietly passed.
 function dependencyIds(entry) {
-  const raw = entry?.dependencies;
-  if (!Array.isArray(raw)) return [];
-  const out = [];
-  for (const dep of raw) {
-    if (typeof dep === 'string') out.push(dep);
-    else if (dep && typeof dep === 'object' && typeof dep.id === 'string') out.push(dep.id);
-  }
-  return out;
+  return parseDeps(entry?.dependencies).map((d) => d.id);
 }
 
 function conflictIds(entry) {
-  const raw = entry?.conflicts;
-  if (!Array.isArray(raw)) return [];
-  return raw.filter((c) => typeof c === 'string');
+  return conflictNames(entry?.conflicts);
 }
 
 /**

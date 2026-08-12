@@ -36,6 +36,9 @@ import {
 import { identifyRom, linkRom, baseromsIn } from './rom.js';
 import { pickFile, pickFolder, FILTERS } from './filepicker.js';
 import * as catalogue from './catalogue.js';
+import * as deps from './deps.js';
+import { resolveDownload } from './github.js';
+import * as update from './update.js';
 import * as gallery from './packfeed.js';
 import * as config from './config.js';
 import { page } from './ui-page.js';
@@ -100,7 +103,10 @@ export function serve({ packsDir, saveDir, indexFile, port = 7666, host = '127.0
   // instance you already play (instant, skips the game's import step), else the
   // ROM linked in Settings.
   async function giveGameData(path) {
-    const src = romSources()[0];
+    // Never seed from the folder being repaired -- romSources() lists every
+    // instance including this one, and copying a folder onto itself is at best
+    // a no-op reported as success.
+    const src = romSources().find((s) => s.path !== path);
     if (src) {
       try {
         const { copied } = seedRomData(src.path, path);
@@ -125,11 +131,11 @@ export function serve({ packsDir, saveDir, indexFile, port = 7666, host = '127.0
   // packIndexUrl left in an old config file is ignored rather than obeyed.
   const galleryUrl = () => gallery.OFFICIAL_GALLERY;
 
-  async function galleryPacks() {
+  async function galleryPacks({ force = false } = {}) {
     const url = galleryUrl();
     if (!url) return [];
     try {
-      const g = await gallery.load({ url });
+      const g = await gallery.load({ url, force });
       return g.packs.map((p) => ({ ...p, origin: 'gallery' }));
     } catch {
       return [];
@@ -180,7 +186,10 @@ export function serve({ packsDir, saveDir, indexFile, port = 7666, host = '127.0
             .sort((a, b) => (a.id < b.id ? -1 : 1)),
         })),
         recipes: buildFeed(loadPacks(packsDir)).packs.map((p) => ({ ...p, origin: 'local' })),
-        gallery: await galleryPacks(),
+        // The gallery is cached for six hours, which is right for a page that
+        // reloads constantly and wrong for "I just merged it, where is it" --
+        // so Community offers a way to ask now.
+        gallery: await galleryPacks({ force: url.searchParams.get('refresh') === '1' }),
         galleryUrl: galleryUrl(),
         settings: {
           gamePath: cfg.gamePath ?? null,
@@ -270,6 +279,20 @@ export function serve({ packsDir, saveDir, indexFile, port = 7666, host = '127.0
       });
     }
 
+    // The app's own version.  Nothing to do with the pack list, which updates
+    // itself -- this is code on disk and only a pull changes it.
+    if (url.pathname === '/api/update') {
+      if (req.method === 'POST') {
+        try {
+          return json(res, 200, update.pull());
+        } catch (e) {
+          return json(res, 400, { error: e.message });
+        }
+      }
+      const out = await update.check({ force: url.searchParams.get('refresh') === '1' });
+      return json(res, 200, { ...out, checkout: update.status() });
+    }
+
     if (url.pathname === '/api/activate' && req.method === 'POST') {
       const opts = await readBody(req);
       if (!opts) return json(res, 400, { error: 'bad request body' });
@@ -297,15 +320,24 @@ export function serve({ packsDir, saveDir, indexFile, port = 7666, host = '127.0
       const q = (url.searchParams.get('q') ?? '').trim();
       const filter = url.searchParams.get('filter') ?? 'all';
 
+      // What the game will complain about on the next launch, worked out from
+      // the installed manifests rather than the index -- these are the files it
+      // will actually read.
+      const health = deps.check(installed);
+
       let mods = catalogue.search(cat.mods, q).map((m) => {
         const src = catalogue.installableFrom(m);
         const have = installed[m.id];
+        const h = health[m.id];
         return {
           ...m,
           installable: !!src,
           latestVersion: src?.version ?? m.version ?? null,
           installedVersion: have?.version ?? null,
           enabled: have ? have.enabled : null,
+          missing: h?.missing ?? [],
+          wrongVersion: h?.wrongVersion ?? [],
+          clashes: h?.clashes ?? [],
         };
       });
 
@@ -316,15 +348,26 @@ export function serve({ packsDir, saveDir, indexFile, port = 7666, host = '127.0
       for (const m of Object.values(installed)) {
         if (listed.has(m.id)) continue;
         if (needle && !m.id.toLowerCase().includes(needle)) continue;
+        const h = health[m.id];
         mods.push({
           id: m.id, title: m.id, author: null, summary: '', categories: [],
           github: m.github, installable: false, unlisted: true,
           latestVersion: null, installedVersion: m.version, enabled: m.enabled,
+          missing: h?.missing ?? [], wrongVersion: h?.wrongVersion ?? [], clashes: h?.clashes ?? [],
         });
       }
 
       if (filter === 'installed') mods = mods.filter((m) => m.installedVersion);
       else if (filter === 'available') mods = mods.filter((m) => !m.installedVersion);
+
+      // Counted before the category filter is applied, so each chip says how
+      // many you would get by ticking it.  Counting afterwards would zero every
+      // other chip the moment you picked one.
+      const categories = catalogue.facets(mods);
+
+      const wanted = (url.searchParams.get('category') ?? '')
+        .split(',').map((c) => c.trim()).filter(Boolean);
+      mods = catalogue.byCategory(mods, wanted);
 
       mods.sort((a, b) => (a.title.toLowerCase() < b.title.toLowerCase() ? -1 : 1));
 
@@ -334,6 +377,8 @@ export function serve({ packsDir, saveDir, indexFile, port = 7666, host = '127.0
         stale: cat.stale ?? false,
         total: cat.mods.length,
         installedCount: Object.keys(installed).length,
+        categories,
+        selected: wanted,
         mods,
       });
     }
@@ -365,11 +410,61 @@ export function serve({ packsDir, saveDir, indexFile, port = 7666, host = '127.0
         const src = catalogue.installableFrom(entry);
         if (!src) return json(res, 409, { error: `${entry.title} publishes no installable download` });
 
+        // What else this mod needs, and what it would fight with.  Answered
+        // before anything downloads, so the choice is made with the facts
+        // rather than discovered by the game an hour later.
+        const have = stateOf(act.path).mods;
+        const wants = deps.parseDeps(entry.dependencies)
+          .filter((d) => !have[d.id])
+          .map((d) => {
+            const dep = cat.mods.find((m) => m.id === d.id);
+            const depSrc = dep ? catalogue.installableFrom(dep) : null;
+            return {
+              id: d.id,
+              range: d.range,
+              title: dep?.title ?? d.id,
+              version: depSrc?.version ?? dep?.version ?? null,
+              installable: !!depSrc,
+            };
+          });
+        const clashes = deps.check({ ...have, [entry.id]: entry })[entry.id]?.clashes ?? [];
+
+        if ((wants.length || clashes.length) && opts.acknowledged !== true) {
+          return json(res, 409, {
+            needsDeps: wants.length > 0,
+            hasClashes: clashes.length > 0,
+            id: entry.id,
+            title: entry.title,
+            dependencies: wants,
+            clashes,
+            error: wants.length
+              ? `${entry.title} needs ${wants.map((w) => w.id).join(', ')}`
+              : `${entry.title} conflicts with ${clashes.join(', ')}`,
+          });
+        }
+
+        // Dependencies first, so the mod is never on disk in a state the game
+        // will refuse to load.  A dependency that fails stops the whole thing.
+        const alsoInstalled = [];
+        if (opts.withDeps === true) {
+          for (const want of wants) {
+            if (!want.installable) continue;
+            const dep = cat.mods.find((m) => m.id === want.id);
+            const depSrc = catalogue.installableFrom(dep);
+            const got = await downloadToBuffer(depSrc.url);
+            const done = installMod(got.buffer, {
+              saveDir: act.path, expectId: dep.id, sha256: got.sha256,
+            });
+            setModEnabled(act.path, dep.id, true, { exePath });
+            alsoInstalled.push({ id: done.id, version: done.version });
+          }
+        }
+
         const { buffer, sha256, size } = await downloadToBuffer(src.url);
         const out = installMod(buffer, {
           saveDir: act.path, expectId: entry.id, sha256, replace: opts.replace === true,
         });
-        return json(res, 200, { ...out, sha256, bytes: size });
+        return json(res, 200, { ...out, sha256, bytes: size, alsoInstalled });
       } catch (e) {
         return json(res, 400, { error: e.message });
       }
@@ -385,6 +480,28 @@ export function serve({ packsDir, saveDir, indexFile, port = 7666, host = '127.0
       const opts = await readBody(req);
       if (!opts) return json(res, 400, { error: 'bad request body' });
 
+      // From a link: a release page or a direct .zip.  Worth having because a
+      // mod the index has never heard of is otherwise unpublishable -- the URL
+      // is recorded against the install, so exporting a pack that includes it
+      // has something real to point at.
+      if (opts.url) {
+        try {
+          const found = await resolveDownload(opts.url, { id: opts.id ?? null });
+          const { buffer, sha256, size } = await downloadToBuffer(found.url);
+          const out = installMod(buffer, {
+            saveDir: act.path,
+            sha256,
+            replace: opts.replace === true,
+            source: { url: found.url, size: size ?? found.size ?? null },
+          });
+          return json(res, 200, {
+            ...out, sha256, bytes: size, from: found.from, source: found.url,
+          });
+        } catch (e) {
+          return json(res, 400, { error: e.message });
+        }
+      }
+
       let path = opts.path ?? null;
       if (!path) {
         path = await pickFile({ title: 'Choose a mod .zip', filter: FILTERS.zip });
@@ -398,7 +515,10 @@ export function serve({ packsDir, saveDir, indexFile, port = 7666, host = '127.0
         const out = installMod(buffer, {
           saveDir: act.path, sha256, replace: opts.replace === true,
         });
-        return json(res, 200, { ...out, sha256, from: path });
+        // No source recorded on purpose: a file on your disk is not something
+        // anybody else can fetch, and inventing a URL for it would produce a
+        // pack that fails for everyone but you.
+        return json(res, 200, { ...out, sha256, from: path, source: null });
       } catch (e) {
         return json(res, 400, { error: e.message });
       }
@@ -726,25 +846,40 @@ export function serve({ packsDir, saveDir, indexFile, port = 7666, host = '127.0
       const act = activeInstance();
       if (!act) return json(res, 400, { error: 'no active instance' });
 
-      let linked = null;
-      if (romVersionsIn(act.path).length === 0 && baseromsIn(act.path).length === 0) {
-        const romPath = config.read().romPath;
-        if (!romPath) {
+      // Unpacked data is what boots straight into the game.  A .gb sitting in
+      // baseroms/ is not the same thing -- the game imports it on first launch,
+      // which is the screen that looks like "it asked me for a ROM again".
+      //
+      // Checked on every Play, not only at creation: a setup made before any
+      // other had unpacked data would otherwise keep that import screen for
+      // ever, even once a copy became available seconds later.
+      let repaired = null;
+      if (romVersionsIn(act.path).length === 0) {
+        repaired = await giveGameData(act.path);
+        if (repaired.how === 'none' && baseromsIn(act.path).length === 0) {
           return json(res, 409, {
-            error: `${act.identity} has no game data, and no ROM is linked in Settings.`,
+            error: `${act.identity} has no game data, and ${repaired.reason}.`,
             needsRom: true,
           });
         }
-        try {
-          linked = linkRom(romPath, act.path);
-        } catch (e) {
-          return json(res, 409, { error: e.message, needsRom: true });
-        }
       }
 
+      // Which game to boot straight into.  Only a version this instance has
+      // actually unpacked -- asking for one it has not would land you on the
+      // launcher anyway, which is the screen we are trying to skip.
+      const have = romVersionsIn(act.path);
+      const preferred = config.read().playVersion;
+      const version = have.includes(preferred) ? preferred : (have[0] ?? null);
+
       try {
-        const out = launchGame({ exePath, identity: act.identity });
-        return json(res, 200, { ...out, linked: linked ? { label: linked.label } : null });
+        const out = launchGame({ exePath, identity: act.identity, version });
+        return json(res, 200, {
+          ...out,
+          // 'rom' means the game still has a one-time import to do, and saying
+          // so beats the player thinking the setup is broken.
+          gameData: repaired,
+          linked: repaired?.how === 'rom' ? { label: repaired.label } : null,
+        });
       } catch (e) {
         return json(res, 400, { error: e.message });
       }

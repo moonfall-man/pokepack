@@ -43,7 +43,9 @@ function readManifest(entries, root) {
  * replace: move any existing copy aside first.  Off by default -- overwriting
  * an install the player already has is their call, not ours.
  */
-export function installMod(buffer, { saveDir, expectId, sha256 = null, replace = false, pack = null } = {}) {
+export function installMod(buffer, {
+  saveDir, expectId, sha256 = null, replace = false, pack = null, source = null,
+} = {}) {
   const entries = zip.read(buffer);
   const root = zip.locateRoot(entries);
   if (typeof root !== 'string') throw new Error(root.error);
@@ -86,8 +88,8 @@ export function installMod(buffer, { saveDir, expectId, sha256 = null, replace =
 
   if (written === 0) throw new Error('the zip held no files for this mod');
 
-  if (sha256 || pack) {
-    recordInstall(saveDir, manifest.id, { version: manifest.version, sha256, pack });
+  if (sha256 || pack || source) {
+    recordInstall(saveDir, manifest.id, { version: manifest.version, sha256, pack, source });
   }
 
   return { id: manifest.id, version: manifest.version, dest, files: written, backedUp };
@@ -104,7 +106,7 @@ function readInstalledVersion(dir) {
 // The sidecar that makes hash comparison work later.  An installed mod is an
 // extracted folder, so the digest of the zip it came from is not recoverable
 // from disk -- it has to be written down at the moment we have it.
-export function recordInstall(saveDir, id, { version, sha256, pack = null }) {
+export function recordInstall(saveDir, id, { version, sha256, pack = null, source = null }) {
   const path = join(saveDir, LOCK_FILE);
   let doc = { mods: {} };
   if (existsSync(path)) {
@@ -115,7 +117,16 @@ export function recordInstall(saveDir, id, { version, sha256, pack = null }) {
       // a corrupt sidecar is not worth failing an install over; it gets rebuilt
     }
   }
-  doc.mods[id] = { version, sha256, ...(pack ? { pack } : {}) };
+  // source is where these exact bytes came from.  Recorded because a mod the
+  // index has never heard of is otherwise unpublishable: export can pin the
+  // hash but has no URL to put beside it, and a pack with no URL installs
+  // nowhere but here.
+  doc.mods[id] = {
+    version,
+    sha256,
+    ...(pack ? { pack } : {}),
+    ...(source?.url ? { source: { url: source.url, ...(source.size ? { size: source.size } : {}) } } : {}),
+  };
   writeFileSync(path, `${JSON.stringify(doc, null, 2)}\n`);
   return path;
 }

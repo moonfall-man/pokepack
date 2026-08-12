@@ -46,9 +46,12 @@ export function createInstance({ identity, loveRoot = null }) {
     throw new Error(`an instance called ${identity} already exists at ${path}`);
   }
 
-  // mods/ is what makes the folder recognisable as a game save before the game
-  // has ever run and written options.lua.
+  // mods/ plus our own lock file.  A bare mods/ folder is not enough to claim
+  // a directory under <APPDATA>, which is shared with every other application
+  // -- the lock file is what says this one is ours before the game has ever
+  // run and written options.lua.
   mkdirSync(join(path, 'mods'), { recursive: true });
+  writeFileSync(join(path, 'pokepack-installed.json'), `${JSON.stringify({ mods: {} }, null, 2)}\n`);
   return { path, identity, root };
 }
 
@@ -232,22 +235,87 @@ export function identityFor(saveDir) {
 }
 
 /**
+ * raiseWindow(pid) -> true | false
+ *
+ * Bring the game in front of the browser you pressed Play in.
+ *
+ * Best effort, and it says so: Windows refuses SetForegroundWindow to a process
+ * that does not already own the foreground, which a local server started from a
+ * browser tab generally does not.  The alt-key tap is the documented way round
+ * that -- it makes the shell hand over the foreground lock -- and it still fails
+ * sometimes.  Detached so a game that takes ten seconds to open its window does
+ * not hold up the response.
+ */
+function raiseWindow(pid) {
+  if (process.platform !== 'win32' || !pid) return false;
+  // AttachThreadInput to whichever thread currently owns the foreground: that
+  // borrows its foreground rights for the moment it takes to raise the window,
+  // and is the documented way through the lock.  SetForegroundWindow on its own
+  // is simply ignored from here -- tested, and it does nothing.
+  const script = `
+    Add-Type -MemberDefinition @'
+      [DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr h);
+      [DllImport("user32.dll")] public static extern bool BringWindowToTop(IntPtr h);
+      [DllImport("user32.dll")] public static extern bool ShowWindow(IntPtr h, int c);
+      [DllImport("user32.dll")] public static extern IntPtr GetForegroundWindow();
+      [DllImport("user32.dll")] public static extern uint GetWindowThreadProcessId(IntPtr h, IntPtr p);
+      [DllImport("user32.dll")] public static extern bool AttachThreadInput(uint a, uint b, bool f);
+      [DllImport("kernel32.dll")] public static extern uint GetCurrentThreadId();
+'@ -Name Fg -Namespace P | Out-Null
+    for ($i = 0; $i -lt 40; $i++) {
+      $p = Get-Process -Id ${pid} -ErrorAction SilentlyContinue
+      if (-not $p) { break }
+      $h = $p.MainWindowHandle
+      if ($h -ne 0) {
+        $me = [P.Fg]::GetCurrentThreadId()
+        $them = [P.Fg]::GetWindowThreadProcessId([P.Fg]::GetForegroundWindow(), [IntPtr]::Zero)
+        [P.Fg]::AttachThreadInput($me, $them, $true) | Out-Null
+        [P.Fg]::ShowWindow($h, 9) | Out-Null
+        [P.Fg]::BringWindowToTop($h) | Out-Null
+        [P.Fg]::SetForegroundWindow($h) | Out-Null
+        [P.Fg]::AttachThreadInput($me, $them, $false) | Out-Null
+        break
+      }
+      Start-Sleep -Milliseconds 250
+    }`;
+  try {
+    const child = spawn('powershell', ['-NoProfile', '-NonInteractive', '-Command', script], {
+      detached: true, stdio: 'ignore', windowsHide: true,
+    });
+    child.unref();
+    return true;
+  } catch {
+    return false; // never worth failing a launch over
+  }
+}
+
+/**
  * launchGame({ exePath, identity }) -> { pid }
  *
  * The exe comes from stored config, never from the request that asked to play.
  * A local server that will start whatever binary a caller names is a different
  * and much worse thing than one that starts the game you already pointed it at.
  */
-export function launchGame({ exePath, identity }) {
+export function launchGame({ exePath, identity, version = null }) {
   const check = checkGameExe(exePath);
   if (!check.ok) throw new Error(check.reason);
   if (identity !== null && !validIdentity(identity).ok && identity !== DEFAULT_IDENTITY) {
     throw new Error(`refusing to launch with a strange instance name: ${identity}`);
   }
+  if (version !== null && !VERSIONS.includes(version)) {
+    throw new Error(`not a game version: ${version}`);
+  }
 
   const env = { ...process.env };
   if (identity) env.POKEPORT_IDENTITY = identity;
   else delete env.POKEPORT_IDENTITY; // fall back to the game's own default
+
+  // Boot straight into the game instead of the engine's own launcher screen.
+  // gen1recomp reads this for exactly this case -- its own comment calls a menu
+  // in between a defect for shortcut launches -- and if the version turns out
+  // not to be imported it opens the launcher on that tab rather than failing.
+  if (version) env.POKEPORT_GAME = version;
+  else delete env.POKEPORT_GAME;
 
   const child = spawn(check.path, [], {
     env,
@@ -256,7 +324,8 @@ export function launchGame({ exePath, identity }) {
     stdio: 'ignore',
   });
   child.unref();
-  return { pid: child.pid, identity: identity ?? DEFAULT_IDENTITY };
+  const raised = raiseWindow(child.pid);
+  return { pid: child.pid, identity: identity ?? DEFAULT_IDENTITY, version, raised };
 }
 
 /**
@@ -265,8 +334,11 @@ export function launchGame({ exePath, identity }) {
  * A tiny script rather than a shortcut file: a .cmd is readable, editable, and
  * you can see exactly what it sets.  Nothing here is magic.
  */
-export function writeLauncher({ identity, exePath, outDir, packName = null }) {
+export function writeLauncher({ identity, exePath, outDir, packName = null, version = null }) {
   mkdirSync(outDir, { recursive: true });
+  if (version !== null && !VERSIONS.includes(version)) {
+    throw new Error(`not a game version: ${version}`);
+  }
 
   if (process.platform === 'win32') {
     const path = join(outDir, `play-${identity}.cmd`);
@@ -276,6 +348,10 @@ export function writeLauncher({ identity, exePath, outDir, packName = null }) {
       + (packName ? `rem Built for the pack "${packName}"\r\n` : '')
       + 'rem Mods, saves and settings here are separate from every other instance.\r\n'
       + `set "POKEPORT_IDENTITY=${identity}"\r\n`
+      + (version
+        ? 'rem Boots straight into the game instead of the launcher screen.\r\n'
+          + `set "POKEPORT_GAME=${version}"\r\n`
+        : '')
       + `start "" "${exePath}"\r\n`);
     return { path };
   }
@@ -285,6 +361,8 @@ export function writeLauncher({ identity, exePath, outDir, packName = null }) {
     '#!/bin/sh\n'
     + `# Launches gen1recomp in its own instance: "${identity}"\n`
     + (packName ? `# Built for the pack "${packName}"\n` : '')
-    + `POKEPORT_IDENTITY=${identity} exec "${exePath}"\n`, { mode: 0o755 });
+    + (version ? '# Boots straight into the game instead of the launcher screen.\n' : '')
+    + `POKEPORT_IDENTITY=${identity} ${version ? `POKEPORT_GAME=${version} ` : ''}exec "${exePath}"\n`,
+    { mode: 0o755 });
   return { path };
 }

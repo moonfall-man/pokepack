@@ -11,6 +11,11 @@ import * as zip from '../src/zip.js';
 import { installMod, writeProfile } from '../src/install.js';
 import { buildFeed, submitUrl, pagesBase } from '../src/feed.js';
 import * as votes from '../src/votes.js';
+import * as catalogue from '../src/catalogue.js';
+import * as deps from '../src/deps.js';
+import * as gh from '../src/github.js';
+import * as net from '../src/net.js';
+import * as update from '../src/update.js';
 import * as packfeed from '../src/packfeed.js';
 import { applyToOptions, setModEnabled } from '../src/liveapply.js';
 import { uninstall, planUninstall } from '../src/uninstall.js';
@@ -18,7 +23,7 @@ import { identifyRom, linkRom, baseromsIn } from '../src/rom.js';
 import { checkSaveDir, cleanPath, saveRoots } from '../src/discover.js';
 import {
   validIdentity, createInstance, writeLauncher, identityFor, launchGame,
-  romVersionsIn, seedRomData, describeInstance, trashInstance, TRASH_DIR,
+  romVersionsIn, seedRomData, describeInstance, trashInstance, TRASH_DIR, VERSIONS,
 } from '../src/instance.js';
 import * as pack from '../src/packformat.js';
 import { readSaveDir, releasesFromCache, indexFromFeeds } from '../src/state.js';
@@ -617,6 +622,36 @@ it('survives a path pasted with quotes, which is what Windows copies', () => {
   eq(cleanPath(undefined), '');
 });
 
+it('looks in the fused save root first, where a shipped game actually writes', () => {
+  // LOVE drops the LOVE/ folder for a fused build.  gen1recomp ships fused, so
+  // <APPDATA>/<identity> is real and <APPDATA>/LOVE/<identity> is a folder the
+  // game never reads -- a mod installed there is invisible, which is exactly
+  // what happened.
+  const roots = saveRoots();
+  if (roots.length < 2) return; // only one of the two exists on this machine
+  ok(!/[/\\](LOVE|love)$/.test(roots[0]), `fused root must come first, got ${roots[0]}`);
+  ok(/[/\\](LOVE|love)$/.test(roots[1]), `unfused root should still be searched, got ${roots[1]}`);
+});
+
+it('does not mistake another game for a pack', () => {
+  // The fused root is <APPDATA> itself, shared with everything else installed.
+  // "has mods/ and saves/" describes Factorio, and claiming it would put mods
+  // in somebody's Factorio install.
+  const root = join(HERE, '..', '.test-tmp-neighbours');
+  rmSync(root, { recursive: true, force: true });
+  mkdirSync(join(root, 'mods'), { recursive: true });
+  mkdirSync(join(root, 'saves'), { recursive: true });
+  writeFileSync(join(root, 'mods', 'some-mod_1.2.3.zip'), 'not ours');
+  eq(checkSaveDir(root).ok, false, 'mods/ and saves/ alone is not evidence');
+
+  // Ours: a mod folder carrying our manifest shape.
+  mkdirSync(join(root, 'mods', 'GHOST_LINK'), { recursive: true });
+  writeFileSync(join(root, 'mods', 'GHOST_LINK', 'manifest.json'), '{"id":"GHOST_LINK"}');
+  eq(checkSaveDir(root).ok, true, checkSaveDir(root).reason);
+
+  rmSync(root, { recursive: true, force: true });
+});
+
 it('accepts a quoted save folder and stores it unquoted', () => {
   const check = checkSaveDir(`"${SAVE}"`);
   eq(check.ok, true, check.reason);
@@ -661,6 +696,38 @@ it('refuses to guess an identity for a folder somewhere else', () => {
 it('will not launch without a real game executable', () => {
   throws(() => launchGame({ exePath: 'C:\\nope\\missing.exe', identity: 'x' }), 'does not exist');
   throws(() => launchGame({ exePath: '', identity: 'x' }), 'no path given');
+});
+
+it('refuses a made-up game version rather than putting it in the environment', () => {
+  throws(
+    () => launchGame({ exePath: 'C:\\nope\\missing.exe', identity: 'x', version: 'gold' }),
+    'does not exist',
+  );
+  eq(VERSIONS.includes('gold'), false, 'gold is not a gen 1 version');
+  eq(VERSIONS, ['red', 'blue', 'yellow']);
+});
+
+it('writes a launcher that boots straight into the game', () => {
+  // gen1recomp shows its own launcher screen unless POKEPORT_GAME is set --
+  // the engine supports this exactly so a shortcut has no menu in between.
+  const root = join(HERE, '..', '.test-tmp-launch');
+  rmSync(root, { recursive: true, force: true });
+  const { path } = writeLauncher({
+    identity: 'kanto', exePath: 'C:\\games\\gen1recomp.exe', outDir: root, version: 'red',
+  });
+  const script = readFileSync(path, 'utf8');
+  ok(script.includes('POKEPORT_IDENTITY=kanto'), 'still picks the instance');
+  ok(script.includes('POKEPORT_GAME=red'), 'and skips the launcher screen');
+
+  const plain = writeLauncher({ identity: 'kanto2', exePath: 'C:\\games\\gen1recomp.exe', outDir: root });
+  ok(!readFileSync(plain.path, 'utf8').includes('POKEPORT_GAME'),
+    'no version means the launcher, not a guess');
+
+  throws(() => writeLauncher({
+    identity: 'k', exePath: 'C:\\games\\gen1recomp.exe', outDir: root, version: 'crystal',
+  }), 'not a game version');
+
+  rmSync(root, { recursive: true, force: true });
 });
 
 it('spots which instances have unpacked ROM data', () => {
@@ -1122,6 +1189,216 @@ it('says when a pack is too big to send as a link rather than truncating it', ()
   // A silently cut-off file is a corrupt pack somebody then submits.
   const { tooLong } = submitUrl({ repo: 'a/b', pack: twoMods, text: 'x'.repeat(9000) });
   eq(tooLong, true);
+});
+
+// ------- deps
+
+describe('deps');
+
+it('splits a dependency into an id and a range', () => {
+  // The whole string used to come back as the id, so it matched no installed
+  // mod and every dependency quietly passed.
+  eq(deps.parseDep('DRAMATIC_SHAPE@>=1.7.0 <2.0.0'), { id: 'DRAMATIC_SHAPE', range: '>=1.7.0 <2.0.0' });
+  eq(deps.parseDep('PLAIN_MOD'), { id: 'PLAIN_MOD', range: null });
+  eq(deps.parseDep({ id: 'OBJ', range: '>=1' }), { id: 'OBJ', range: '>=1' });
+  eq(deps.parseDep('  SPACED  '), { id: 'SPACED', range: null });
+  eq(deps.parseDep(''), null);
+  eq(deps.parseDep(null), null);
+});
+
+it('reads the range dialect the engine uses', () => {
+  eq(deps.satisfies('1.8.2', '>=1.7.0 <2.0.0'), true);
+  eq(deps.satisfies('2.0.0', '>=1.7.0 <2.0.0'), false);
+  eq(deps.satisfies('1.6.9', '>=1.7.0 <2.0.0'), false);
+  eq(deps.satisfies('0.0.0-dev', '0.0.0-dev || >=0.1.37 <2.0.0'), true, 'alternatives are ORed');
+  eq(deps.satisfies('0.1.79', '0.0.0-dev || >=0.1.37 <2.0.0'), true);
+  eq(deps.satisfies('1.0.0', null), true, 'no range means any version');
+  eq(deps.satisfies(null, '>=9'), true, 'no version means we cannot tell, so do not cry wolf');
+});
+
+it('does not invent a problem out of a range dialect it does not know', () => {
+  // Warning somebody their setup is broken on a guess is worse than missing a
+  // real fault -- the game still checks properly either way.
+  eq(deps.satisfies('1.0.0', 'somethingweird'), true);
+});
+
+it('spots a missing dependency, a wrong version and a clash', () => {
+  const report = deps.check({
+    VOXEL_DEX: { version: '1.0.0', dependencies: ['DRAMATIC_SHAPE@>=1.7.0 <2.0.0'], conflicts: [] },
+    DRAMALESS_SHAPE: { version: '1.0.0', dependencies: [], conflicts: [] },
+    gen3_box: { version: '1.5.2', dependencies: [], conflicts: [] },
+  });
+  eq(report.VOXEL_DEX.missing.map((d) => d.id), ['DRAMATIC_SHAPE']);
+  eq(report.DRAMALESS_SHAPE.missing, []);
+  eq(deps.isHealthy(report.gen3_box), true);
+
+  const tooOld = deps.check({
+    A: { version: '1.0.0', dependencies: ['B@>=2.0.0'], conflicts: [] },
+    B: { version: '1.0.0', dependencies: [], conflicts: [] },
+  });
+  eq(tooOld.A.missing, [], 'it is installed, just not new enough');
+  eq(tooOld.A.wrongVersion[0].have, '1.0.0');
+});
+
+it('reports a conflict to both sides, whichever one declared it', () => {
+  // Only one manifest has to say it, and which one is not the player's problem.
+  const report = deps.check({
+    BATTLE_ART_VOXEL_FORK: { version: '1.8.3', conflicts: ['DRAMALESS_SHAPE'], dependencies: [] },
+    DRAMALESS_SHAPE: { version: '1.0.0', conflicts: [], dependencies: [] },
+  });
+  eq(report.BATTLE_ART_VOXEL_FORK.clashes, ['DRAMALESS_SHAPE']);
+  eq(report.DRAMALESS_SHAPE.clashes, ['BATTLE_ART_VOXEL_FORK'], 'the other side must hear about it too');
+});
+
+// ------- updating the app itself
+
+describe('update');
+
+await itAsync('spots a newer app version, and does not cry wolf on an equal one', async () => {
+  const serve = (version) => async () => ({ version, notes: 'nicer things', url: 'https://github.com/o/r' });
+  const here = update.currentVersion();
+  ok(here, 'the app must know its own version');
+
+  const older = await update.check({ url: 'x', force: true, now: 1 });
+  eq(typeof older.current, 'string');
+
+  // Injected through fetchJson would need a network; check the comparison
+  // directly instead, which is the part that can be wrong.
+  eq(compareVersions('0.2.0', '0.1.0') > 0, true, 'newer');
+  eq(compareVersions('0.1.0', '0.1.0') > 0, false, 'same is not newer');
+  eq(compareVersions('0.1.0', '0.2.0') > 0, false, 'older is not newer');
+  void serve;
+});
+
+it('refuses to pull over uncommitted work', () => {
+  // Uncommitted changes are the one thing in a checkout nobody else has a copy
+  // of, so this reports rather than stashing or resetting.
+  const st = update.status();
+  eq(typeof st.git, 'boolean');
+  if (st.git && !st.clean) ok(st.reason, 'an unpullable checkout has to say why');
+  if (!st.clean) throws(() => update.pull(), '', 'pull must refuse when status says it cannot');
+});
+
+// ------- github links
+
+describe('github');
+
+const RELEASE = {
+  tag_name: 'v1.8.2',
+  assets: [
+    { name: 'Source code.zip', size: 900, browser_download_url: 'https://e.com/src.zip' },
+    { name: 'DRAMATIC_SHAPE-1.8.2.zip', size: 21000, browser_download_url: 'https://e.com/mod.zip' },
+  ],
+};
+
+it('picks the mod zip out of a release, not the source archive', () => {
+  const got = gh.pickZip(RELEASE.assets, { id: 'DRAMATIC_SHAPE' });
+  eq(got.browser_download_url, 'https://e.com/mod.zip');
+  // With no id to go on, the bigger file is the better guess than the first.
+  eq(gh.pickZip(RELEASE.assets).browser_download_url, 'https://e.com/mod.zip');
+  eq(gh.pickZip([{ name: 'notes.txt', browser_download_url: 'x' }]), null);
+  eq(gh.pickZip([]), null);
+});
+
+await itAsync('resolves a release page to the file it publishes', async () => {
+  const seen = [];
+  const fake = async (u) => { seen.push(u); return RELEASE; };
+  const out = await gh.resolveDownload(
+    'https://github.com/scottcandy34/DramaticShapeVoxelMod-latest/releases/tag/v1.8.2',
+    { id: 'DRAMATIC_SHAPE', fetch: fake },
+  );
+  eq(out.url, 'https://e.com/mod.zip');
+  eq(out.version, '1.8.2', 'the v prefix is not part of the version');
+  eq(seen[0], 'https://api.github.com/repos/scottcandy34/DramaticShapeVoxelMod-latest/releases/tags/v1.8.2');
+});
+
+await itAsync('takes a bare repo or a direct zip too', async () => {
+  const fake = async () => RELEASE;
+  eq((await gh.resolveDownload('https://github.com/o/r', { fetch: fake })).url, 'https://e.com/mod.zip');
+  eq((await gh.resolveDownload('https://github.com/o/r/releases/latest', { fetch: fake })).url, 'https://e.com/mod.zip');
+  const direct = await gh.resolveDownload('https://files.example.com/GHOST_LINK-0.1.0.zip', { fetch: fake });
+  eq(direct.url, 'https://files.example.com/GHOST_LINK-0.1.0.zip');
+  eq(direct.from, 'direct link', 'no API call needed for a file');
+});
+
+await itAsync('refuses a link it cannot honestly resolve', async () => {
+  const fake = async () => RELEASE;
+  const rejects = async (link, match) => {
+    try {
+      await gh.resolveDownload(link, { fetch: fake });
+    } catch (e) {
+      ok(String(e.message).includes(match), `expected ${match}, got ${e.message}`);
+      return;
+    }
+    throw new Error(`expected ${link} to be refused`);
+  };
+  await rejects('http://github.com/o/r/releases/tag/v1', 'https');
+  await rejects('https://example.com/some/page', 'GitHub release page');
+  await rejects('not a url at all', 'not a URL');
+  await rejects('https://github.com/o/r/issues/4', 'release page');
+});
+
+it('names the anonymous rate limit instead of showing a bare 403', () => {
+  // Nothing here needs a GitHub account, but 60 requests an hour is shared per
+  // IP and pinning a pack spends one per repo.  A bare 403 reads as "the mod is
+  // gone", which sends people looking for the wrong problem.
+  const headers = new Map([
+    ['x-ratelimit-remaining', '0'],
+    ['x-ratelimit-reset', String(Math.floor(Date.now() / 1000) + 300)],
+  ]);
+  const res = { status: 403, headers: { get: (k) => headers.get(k) ?? null } };
+  const msg = net.rateLimited(res);
+  ok(msg.includes('rate-limiting'), msg);
+  ok(/\b5 minutes\b/.test(msg), `should say when it lifts, got: ${msg}`);
+
+  // A 403 with requests still on the clock is a different problem entirely.
+  headers.set('x-ratelimit-remaining', '42');
+  eq(net.rateLimited(res), null);
+  eq(net.rateLimited({ status: 404, headers: { get: () => null } }), null);
+});
+
+await itAsync('says so when a release publishes no zip', async () => {
+  const empty = async () => ({ tag_name: 'v1', assets: [{ name: 'readme.md', browser_download_url: 'x' }] });
+  try {
+    await gh.resolveDownload('https://github.com/o/r/releases/tag/v1', { fetch: empty });
+  } catch (e) {
+    ok(e.message.includes('no .zip asset'), e.message);
+    return;
+  }
+  throw new Error('expected a refusal');
+});
+
+// ------- catalogue
+
+describe('catalogue');
+
+const catMods = [
+  { id: 'A', title: 'A', categories: ['UI', 'QOL'] },
+  { id: 'B', title: 'B', categories: ['ART'] },
+  { id: 'C', title: 'C', categories: ['UI'] },
+  { id: 'D', title: 'D', categories: [] },
+];
+
+it('counts categories, commonest first', () => {
+  eq(catalogue.facets(catMods), [
+    { name: 'UI', count: 2 }, { name: 'ART', count: 1 }, { name: 'QOL', count: 1 },
+  ]);
+});
+
+it('derives the categories from the index rather than a fixed list', () => {
+  // One added upstream must appear without a release here.
+  const withNew = [...catMods, { id: 'E', categories: ['NEWFANGLED'] }];
+  ok(catalogue.facets(withNew).some((f) => f.name === 'NEWFANGLED'));
+  eq(catalogue.facets([]), [], 'and none reads as none, not as a stale list of zeroes');
+});
+
+it('filters by any of the ticked categories, not all of them', () => {
+  // All-of would empty the screen: almost nothing carries two tags.
+  eq(catalogue.byCategory(catMods, ['UI']).map((m) => m.id), ['A', 'C']);
+  eq(catalogue.byCategory(catMods, ['UI', 'ART']).map((m) => m.id), ['A', 'B', 'C']);
+  eq(catalogue.byCategory(catMods, ['ui']).map((m) => m.id), ['A', 'C'], 'case must not matter');
+  eq(catalogue.byCategory(catMods, []).length, 4, 'nothing ticked shows everything');
+  eq(catalogue.byCategory(catMods, ['NOPE']).length, 0);
 });
 
 // ------- votes
