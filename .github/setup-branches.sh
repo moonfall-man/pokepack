@@ -67,9 +67,11 @@ JSON
   echo "  protected: $branch (admins enforced: $admins, approvals: $approvals)"
 }
 
-# dev takes squash merges, so its history stays one commit per pack.  One
-# approval from the code owner, and admins bypass so your own work still moves.
-protect dev true false 1
+# dev takes merge commits from feature branches.  Linear history is off on
+# purpose: requiring it would forbid the merge commits that keep dev and master
+# able to see each other.  One approval from the code owner, and admins bypass
+# so your own work still moves.
+protect dev false false 1
 
 # master takes an ordinary merge commit from dev.  Linear history here would
 # force a squash, which rewrites the commits dev already has -- and then the two
@@ -78,6 +80,25 @@ protect dev true false 1
 # Enforced on admins, so not even you can push to it by hand; zero approvals, so
 # your own release PR is not waiting on a second person who does not exist.
 protect master false true 0
+
+# Squash merging off, and this is the important line in the file.
+#
+# Squashing a long-lived branch is what breaks this layout.  Merging dev into
+# master as a squash gives master one commit where dev has ten: the same code,
+# a different history, and neither branch can see the other's commits.  Git then
+# reads the same work arriving twice as two competing changes and conflicts in
+# files nobody touched.  It happened twice here before the cause was clear.
+#
+# Merge commits keep master an ancestor of dev, which is the whole trick.  Squash
+# is still right for a short-lived feature branch -- but GitHub only offers the
+# setting per repository, and getting it wrong on dev -> master costs an hour, so
+# the button is gone.  Rebase stays on because GitHub insists on squash or rebase.
+gh api -X PATCH "repos/$REPO" \
+  -F allow_squash_merge=false \
+  -F allow_rebase_merge=true \
+  -F allow_merge_commit=true \
+  -F delete_branch_on_merge=true >/dev/null
+echo "  merges: merge commits only (squash off), branches deleted after merge"
 
 # A fork's workflow run can otherwise start the moment a stranger opens a PR.
 gh api -X PUT "repos/$REPO/actions/permissions/workflow" \
