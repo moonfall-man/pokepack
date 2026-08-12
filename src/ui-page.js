@@ -508,9 +508,7 @@ function renderCommunity() {
   const bar = '<div class="bar"><button class="primary" data-import="1">Import a pack\\u2026</button>'
     + '<span class="dim">A <code>.pokepack</code> file or link somebody sent you.</span>'
     + '<span style="flex:1"></span>'
-    + (S.galleryUrl
-        ? '<span class="dim">' + S.gallery.length + ' published</span>'
-        : '<button class="ghost sm" data-settings="1">Connect a gallery\\u2026</button>')
+    + '<span class="dim">' + (S.gallery ?? []).length + ' published</span>'
     + '</div>';
 
   const all = [...(S.gallery ?? [])]
@@ -518,11 +516,11 @@ function renderCommunity() {
       || (a.name.toLowerCase() < b.name.toLowerCase() ? -1 : 1));
 
   if (all.length === 0) {
+    // Distinguishes "the gallery is empty" from "we could not reach it", which
+    // otherwise look identical and send you looking for the wrong problem.
     return bar + '<div class="empty"><div class="ball"></div>'
-      + (S.galleryUrl
-          ? '<b>Nothing published yet.</b><br>Be first \\u2014 press <b>Publish</b> on one of your packs.'
-          : '<b>No gallery connected.</b><br>Add its address in <b>Settings</b> to see what people have shared.')
-      + '</div>';
+      + '<b>Nothing published yet, or the gallery could not be reached.</b><br>'
+      + 'Be first \\u2014 press <b>Publish</b> on one of your packs.</div>';
   }
   return bar + '<div class="grid">' + all.map(p =>
     '<div class="card pick" data-pack="' + esc(p.id) + '">'
@@ -740,37 +738,17 @@ async function openSettings() {
       + '<div class="why" id="s-rom-msg"></div></div>'
       + '<div class="why">Checked against the known Red / Blue / Yellow checksums. Never uploaded.</div>'
       + '<div style="border-top:1px solid var(--line);padding-top:14px">'
-      + '<div class="why" style="margin-bottom:6px">Pack gallery \\u2014 the list of packs to browse</div>'
-      + '<div style="display:flex;gap:8px"><input id="s-gallery" value="' + esc(s.packIndexUrl ?? '')
-      + '" placeholder="https://\\u2026/data/packs.json">'
-      + '<button id="s-gallery-b" style="flex:none">Use</button></div>'
-      + '<div class="why" id="s-gallery-msg"></div></div>'
-      + '<div><div class="why" style="margin-bottom:6px">Where <b>Share this pack</b> submits</div>'
-      + '<div style="display:flex;gap:8px"><input id="s-repo" value="' + esc(s.submitRepo ?? '')
-      + '" placeholder="moonfall-man/pokepack">'
-      + '<button id="s-repo-b" style="flex:none">Use</button></div>'
-      + '<div class="why" id="s-repo-msg"></div></div>'
-      + '<div class="why">Saved in ' + esc(s.configPath) + '</div>',
+      + '<div class="why" style="margin-bottom:6px">Community packs come from</div>'
+      + '<div><code style="word-break:break-all">' + esc(s.packIndexUrl) + '</code></div>'
+      + '<div class="why" style="margin-top:8px">and <b>Publish</b> sends yours to <code>'
+      + esc(s.submitRepo) + '</code></div>'
+      + '<div class="why" style="margin-top:8px">Both are fixed in the build rather than settings. '
+      + 'A pack list decides what gets installed, so it should not be repointable from a text box \\u2014 '
+      + 'change it in <code>src/packfeed.js</code> and restart.</div></div>'
+      + '<div class="why">Your paths are saved in ' + esc(s.configPath) + '</div>',
     note: '',
     go: null,
   });
-
-  const wireText = (btn, key, input, msg, describe) => {
-    document.getElementById(btn).onclick = async () => {
-      const b = document.getElementById(btn);
-      b.disabled = true; b.textContent = 'Checking\\u2026';
-      const { ok, data } = await post('settings', { [key]: val(input) });
-      b.disabled = false; b.textContent = 'Use';
-      const m = document.getElementById(msg);
-      m.style.color = ok ? 'var(--ok)' : 'var(--bad)';
-      m.textContent = ok ? describe(data) : data.error;
-      if (ok) load();
-    };
-  };
-  wireText('s-gallery-b', 'packIndexUrl', 's-gallery', 's-gallery-msg',
-    (d) => (d.packIndexUrl ? d.packs + ' packs found.' : 'Gallery switched off.'));
-  wireText('s-repo-b', 'submitRepo', 's-repo', 's-repo-msg',
-    (d) => (d.submitRepo ? 'Submitting to ' + d.submitRepo + '.' : 'Cleared.'));
 
   const wire = (btn, kind, input, msg) => {
     document.getElementById(btn).onclick = async () => {

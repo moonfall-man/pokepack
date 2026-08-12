@@ -18,6 +18,19 @@ import { decode } from './packformat.js';
 export const SCHEMA_VERSION = 1;
 export const CACHE_TTL_MS = 6 * 60 * 60 * 1000;
 
+// The gallery, and where Share submits.  These two lines are the whole
+// configuration -- there is deliberately no setting for either.
+//
+// A pack list decides what the hub offers to install, so it is not a preference
+// somebody should be able to repoint from a text box: a field like that is one
+// convincing message away from being pointed at somebody else's list.  Changing
+// it is a code change, reviewed like any other.
+//
+// The bargain is the same as the mod catalogue's: one https GET to a static
+// file, no account, no telemetry, and every recipe still validated on arrival.
+export const OFFICIAL_GALLERY = 'https://moonfall-man.github.io/pokepack/data/packs.json';
+export const OFFICIAL_REPO = 'moonfall-man/pokepack';
+
 export function cachePath() {
   return join(dirname(configPath()), 'gallery.json');
 }

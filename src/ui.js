@@ -121,8 +121,12 @@ export function serve({ packsDir, saveDir, indexFile, port = 7666, host = '127.0
 
   // The published gallery, if one is configured.  Never fatal: a gallery that
   // is unreachable should cost you the list, not the app.
+  // Fixed in code, not read from config: see the note in packfeed.js.  Any
+  // packIndexUrl left in an old config file is ignored rather than obeyed.
+  const galleryUrl = () => gallery.OFFICIAL_GALLERY;
+
   async function galleryPacks() {
-    const url = config.read().packIndexUrl;
+    const url = galleryUrl();
     if (!url) return [];
     try {
       const g = await gallery.load({ url });
@@ -177,12 +181,13 @@ export function serve({ packsDir, saveDir, indexFile, port = 7666, host = '127.0
         })),
         recipes: buildFeed(loadPacks(packsDir)).packs.map((p) => ({ ...p, origin: 'local' })),
         gallery: await galleryPacks(),
-        galleryUrl: cfg.packIndexUrl ?? null,
+        galleryUrl: galleryUrl(),
         settings: {
           gamePath: cfg.gamePath ?? null,
           romPath: cfg.romPath ?? null,
-          packIndexUrl: cfg.packIndexUrl ?? null,
-          submitRepo: cfg.submitRepo ?? null,
+          // Shown so you can see where packs come from; not editable here.
+          packIndexUrl: galleryUrl(),
+          submitRepo: gallery.OFFICIAL_REPO,
           configPath: config.configPath(),
         },
       });
@@ -594,15 +599,10 @@ export function serve({ packsDir, saveDir, indexFile, port = 7666, host = '127.0
       const entry = loadPacks(packsDir).find((e) => !e.error && e.pack.id === wanted);
       if (!entry) return json(res, 404, { error: `no pack file called ${wanted} here` });
       const cfg = config.read();
-      if (!cfg.submitRepo) {
-        return json(res, 409, {
-          error: 'no gallery repo set -- add one in Settings (owner/name)',
-          needsRepo: true,
-        });
-      }
+      const repo = cfg.submitRepo ?? gallery.OFFICIAL_REPO;
       try {
         const built = submitUrl({
-          repo: cfg.submitRepo,
+          repo,
           branch: cfg.submitBranch ?? 'dev',
           pack: entry.pack,
           text: readFileSync(entry.path, 'utf8'),
@@ -611,7 +611,7 @@ export function serve({ packsDir, saveDir, indexFile, port = 7666, host = '127.0
           ...built,
           id: entry.pack.id,
           name: entry.pack.name,
-          repo: cfg.submitRepo,
+          repo,
           unpinned: unpinned(entry.pack),
         });
       } catch (e) {
@@ -797,42 +797,15 @@ export function serve({ packsDir, saveDir, indexFile, port = 7666, host = '127.0
         config.write({ gamePath: exe.path });
         return json(res, 200, { gamePath: exe.path });
       }
-      // The gallery to browse.  https only: this list decides what the hub
-      // offers to install, and it is fetched on a schedule without anybody
-      // watching, which is the worst possible thing to serve over plain http.
-      if (opts.packIndexUrl !== undefined) {
-        const raw = cleanPath(opts.packIndexUrl);
-        if (raw === '') {
-          config.write({ packIndexUrl: null });
-          return json(res, 200, { packIndexUrl: null });
-        }
-        let parsed;
-        try {
-          parsed = new URL(raw);
-        } catch {
-          return json(res, 400, { error: `that is not a URL: ${raw}` });
-        }
-        if (parsed.protocol !== 'https:') return json(res, 400, { error: 'the gallery URL must be https' });
-        try {
-          const g = await gallery.load({ url: raw, force: true });
-          config.write({ packIndexUrl: raw });
-          return json(res, 200, { packIndexUrl: raw, packs: g.packs.length });
-        } catch (e) {
-          return json(res, 400, { error: `could not read that gallery: ${e.message}` });
-        }
-      }
-      // Where "Share this pack" submits to.
-      if (opts.submitRepo !== undefined) {
-        const raw = cleanPath(opts.submitRepo).replace(/^https:\/\/github\.com\//, '').replace(/\.git$/, '');
-        if (raw === '') {
-          config.write({ submitRepo: null });
-          return json(res, 200, { submitRepo: null });
-        }
-        if (!/^[\w.-]+\/[\w.-]+$/.test(raw)) {
-          return json(res, 400, { error: 'give it as owner/name, e.g. moonfall-man/pokepack' });
-        }
-        config.write({ submitRepo: raw });
-        return json(res, 200, { submitRepo: raw });
+      // No endpoint for the gallery or the submit repo, on purpose.  Those two
+      // decide what the hub offers to install and where your packs get sent,
+      // and a writable setting for either is one convincing message away from
+      // pointing somewhere else.  They live in packfeed.js; changing them is a
+      // code change.
+      if (opts.packIndexUrl !== undefined || opts.submitRepo !== undefined) {
+        return json(res, 403, {
+          error: 'the gallery is fixed in the build -- change it in src/packfeed.js and restart',
+        });
       }
       return json(res, 400, { error: 'nothing to set' });
     }

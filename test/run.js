@@ -1171,6 +1171,18 @@ await itAsync('opens a thread only for packs that have none', async () => {
   eq(calls.length, 1, 'and nothing else is touched -- that thread holds other people\'s votes');
 });
 
+it('fixes the gallery in the build rather than in a setting', () => {
+  // The list decides what the hub offers to install, so it must not be
+  // repointable from a text box -- and it must work with nothing set up.
+  ok(packfeed.OFFICIAL_GALLERY.startsWith('https://'), packfeed.OFFICIAL_GALLERY);
+  ok(packfeed.OFFICIAL_GALLERY.endsWith('.json'), packfeed.OFFICIAL_GALLERY);
+  ok(/^[\w.-]+\/[\w.-]+$/.test(packfeed.OFFICIAL_REPO), packfeed.OFFICIAL_REPO);
+  // The built-in gallery and the built-in submit target must be the same
+  // project, or Share sends packs somewhere nobody is browsing.
+  const owner = packfeed.OFFICIAL_REPO.split('/')[0].toLowerCase();
+  ok(packfeed.OFFICIAL_GALLERY.includes(owner), 'gallery and submit repo must agree');
+});
+
 it('refuses a gallery link that is not https, wherever it appears', () => {
   // These end up as an href and an img src in the hub, out of a file somebody
   // else publishes.  javascript: in a link is the obvious one; nothing else has
