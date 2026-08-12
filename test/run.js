@@ -12,6 +12,7 @@ import { installMod, writeProfile } from '../src/install.js';
 import { buildFeed, submitUrl, pagesBase } from '../src/feed.js';
 import * as votes from '../src/votes.js';
 import * as catalogue from '../src/catalogue.js';
+import * as deps from '../src/deps.js';
 import * as packfeed from '../src/packfeed.js';
 import { applyToOptions, setModEnabled } from '../src/liveapply.js';
 import { uninstall, planUninstall } from '../src/uninstall.js';
@@ -1185,6 +1186,65 @@ it('says when a pack is too big to send as a link rather than truncating it', ()
   // A silently cut-off file is a corrupt pack somebody then submits.
   const { tooLong } = submitUrl({ repo: 'a/b', pack: twoMods, text: 'x'.repeat(9000) });
   eq(tooLong, true);
+});
+
+// ------- deps
+
+describe('deps');
+
+it('splits a dependency into an id and a range', () => {
+  // The whole string used to come back as the id, so it matched no installed
+  // mod and every dependency quietly passed.
+  eq(deps.parseDep('DRAMATIC_SHAPE@>=1.7.0 <2.0.0'), { id: 'DRAMATIC_SHAPE', range: '>=1.7.0 <2.0.0' });
+  eq(deps.parseDep('PLAIN_MOD'), { id: 'PLAIN_MOD', range: null });
+  eq(deps.parseDep({ id: 'OBJ', range: '>=1' }), { id: 'OBJ', range: '>=1' });
+  eq(deps.parseDep('  SPACED  '), { id: 'SPACED', range: null });
+  eq(deps.parseDep(''), null);
+  eq(deps.parseDep(null), null);
+});
+
+it('reads the range dialect the engine uses', () => {
+  eq(deps.satisfies('1.8.2', '>=1.7.0 <2.0.0'), true);
+  eq(deps.satisfies('2.0.0', '>=1.7.0 <2.0.0'), false);
+  eq(deps.satisfies('1.6.9', '>=1.7.0 <2.0.0'), false);
+  eq(deps.satisfies('0.0.0-dev', '0.0.0-dev || >=0.1.37 <2.0.0'), true, 'alternatives are ORed');
+  eq(deps.satisfies('0.1.79', '0.0.0-dev || >=0.1.37 <2.0.0'), true);
+  eq(deps.satisfies('1.0.0', null), true, 'no range means any version');
+  eq(deps.satisfies(null, '>=9'), true, 'no version means we cannot tell, so do not cry wolf');
+});
+
+it('does not invent a problem out of a range dialect it does not know', () => {
+  // Warning somebody their setup is broken on a guess is worse than missing a
+  // real fault -- the game still checks properly either way.
+  eq(deps.satisfies('1.0.0', 'somethingweird'), true);
+});
+
+it('spots a missing dependency, a wrong version and a clash', () => {
+  const report = deps.check({
+    VOXEL_DEX: { version: '1.0.0', dependencies: ['DRAMATIC_SHAPE@>=1.7.0 <2.0.0'], conflicts: [] },
+    DRAMALESS_SHAPE: { version: '1.0.0', dependencies: [], conflicts: [] },
+    gen3_box: { version: '1.5.2', dependencies: [], conflicts: [] },
+  });
+  eq(report.VOXEL_DEX.missing.map((d) => d.id), ['DRAMATIC_SHAPE']);
+  eq(report.DRAMALESS_SHAPE.missing, []);
+  eq(deps.isHealthy(report.gen3_box), true);
+
+  const tooOld = deps.check({
+    A: { version: '1.0.0', dependencies: ['B@>=2.0.0'], conflicts: [] },
+    B: { version: '1.0.0', dependencies: [], conflicts: [] },
+  });
+  eq(tooOld.A.missing, [], 'it is installed, just not new enough');
+  eq(tooOld.A.wrongVersion[0].have, '1.0.0');
+});
+
+it('reports a conflict to both sides, whichever one declared it', () => {
+  // Only one manifest has to say it, and which one is not the player's problem.
+  const report = deps.check({
+    BATTLE_ART_VOXEL_FORK: { version: '1.8.3', conflicts: ['DRAMALESS_SHAPE'], dependencies: [] },
+    DRAMALESS_SHAPE: { version: '1.0.0', conflicts: [], dependencies: [] },
+  });
+  eq(report.BATTLE_ART_VOXEL_FORK.clashes, ['DRAMALESS_SHAPE']);
+  eq(report.DRAMALESS_SHAPE.clashes, ['BATTLE_ART_VOXEL_FORK'], 'the other side must hear about it too');
 });
 
 // ------- catalogue
