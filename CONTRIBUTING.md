@@ -117,10 +117,24 @@ installed them by hand.
 ## How a change reaches people
 
 ```
-  your fork  --PR-->  dev  --PR-->  master
-                       ^              ^
-                  CI + review    CI + review
+  branch off dev  --PR-->  dev  --PR-->  master
+                            ^              ^
+                       CI + review    CI + review
 ```
+
+Start every branch from `dev`, not `master` — `dev` is ahead, and branching from
+`master` gives you a change that will not apply cleanly.
+
+```bash
+git switch dev && git pull && git switch -c my-change
+```
+
+**Merge commits only.** Squash merging is switched off, and that is deliberate
+rather than fussiness: squashing `dev` into `master` gives master one commit
+where dev has ten. Same code, different history, neither branch able to see the
+other's commits — and git then reads the same work arriving twice as two
+competing changes, conflicting in files nobody touched. It cost an hour here
+before the cause was obvious.
 
 Every pull request needs an approving review from the code owner and a green
 `test` and `validate` before the merge button lights up. Neither branch can be
