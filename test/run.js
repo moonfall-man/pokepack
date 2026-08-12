@@ -618,6 +618,36 @@ it('survives a path pasted with quotes, which is what Windows copies', () => {
   eq(cleanPath(undefined), '');
 });
 
+it('looks in the fused save root first, where a shipped game actually writes', () => {
+  // LOVE drops the LOVE/ folder for a fused build.  gen1recomp ships fused, so
+  // <APPDATA>/<identity> is real and <APPDATA>/LOVE/<identity> is a folder the
+  // game never reads -- a mod installed there is invisible, which is exactly
+  // what happened.
+  const roots = saveRoots();
+  if (roots.length < 2) return; // only one of the two exists on this machine
+  ok(!/[/\\](LOVE|love)$/.test(roots[0]), `fused root must come first, got ${roots[0]}`);
+  ok(/[/\\](LOVE|love)$/.test(roots[1]), `unfused root should still be searched, got ${roots[1]}`);
+});
+
+it('does not mistake another game for a pack', () => {
+  // The fused root is <APPDATA> itself, shared with everything else installed.
+  // "has mods/ and saves/" describes Factorio, and claiming it would put mods
+  // in somebody's Factorio install.
+  const root = join(HERE, '..', '.test-tmp-neighbours');
+  rmSync(root, { recursive: true, force: true });
+  mkdirSync(join(root, 'mods'), { recursive: true });
+  mkdirSync(join(root, 'saves'), { recursive: true });
+  writeFileSync(join(root, 'mods', 'some-mod_1.2.3.zip'), 'not ours');
+  eq(checkSaveDir(root).ok, false, 'mods/ and saves/ alone is not evidence');
+
+  // Ours: a mod folder carrying our manifest shape.
+  mkdirSync(join(root, 'mods', 'GHOST_LINK'), { recursive: true });
+  writeFileSync(join(root, 'mods', 'GHOST_LINK', 'manifest.json'), '{"id":"GHOST_LINK"}');
+  eq(checkSaveDir(root).ok, true, checkSaveDir(root).reason);
+
+  rmSync(root, { recursive: true, force: true });
+});
+
 it('accepts a quoted save folder and stores it unquoted', () => {
   const check = checkSaveDir(`"${SAVE}"`);
   eq(check.ok, true, check.reason);
