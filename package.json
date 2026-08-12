@@ -1,6 +1,6 @@
 {
   "name": "@moonfall-man/pokepack",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Modpack recipes for gen1recomp: pinned mods, tested settings, no hosting.",
   "type": "module",
   "bin": {
