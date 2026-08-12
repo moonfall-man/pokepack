@@ -100,7 +100,10 @@ export function serve({ packsDir, saveDir, indexFile, port = 7666, host = '127.0
   // instance you already play (instant, skips the game's import step), else the
   // ROM linked in Settings.
   async function giveGameData(path) {
-    const src = romSources()[0];
+    // Never seed from the folder being repaired -- romSources() lists every
+    // instance including this one, and copying a folder onto itself is at best
+    // a no-op reported as success.
+    const src = romSources().find((s) => s.path !== path);
     if (src) {
       try {
         const { copied } = seedRomData(src.path, path);
@@ -737,25 +740,33 @@ export function serve({ packsDir, saveDir, indexFile, port = 7666, host = '127.0
       const act = activeInstance();
       if (!act) return json(res, 400, { error: 'no active instance' });
 
-      let linked = null;
-      if (romVersionsIn(act.path).length === 0 && baseromsIn(act.path).length === 0) {
-        const romPath = config.read().romPath;
-        if (!romPath) {
+      // Unpacked data is what boots straight into the game.  A .gb sitting in
+      // baseroms/ is not the same thing -- the game imports it on first launch,
+      // which is the screen that looks like "it asked me for a ROM again".
+      //
+      // Checked on every Play, not only at creation: a setup made before any
+      // other had unpacked data would otherwise keep that import screen for
+      // ever, even once a copy became available seconds later.
+      let repaired = null;
+      if (romVersionsIn(act.path).length === 0) {
+        repaired = await giveGameData(act.path);
+        if (repaired.how === 'none' && baseromsIn(act.path).length === 0) {
           return json(res, 409, {
-            error: `${act.identity} has no game data, and no ROM is linked in Settings.`,
+            error: `${act.identity} has no game data, and ${repaired.reason}.`,
             needsRom: true,
           });
-        }
-        try {
-          linked = linkRom(romPath, act.path);
-        } catch (e) {
-          return json(res, 409, { error: e.message, needsRom: true });
         }
       }
 
       try {
         const out = launchGame({ exePath, identity: act.identity });
-        return json(res, 200, { ...out, linked: linked ? { label: linked.label } : null });
+        return json(res, 200, {
+          ...out,
+          // 'rom' means the game still has a one-time import to do, and saying
+          // so beats the player thinking the setup is broken.
+          gameData: repaired,
+          linked: repaired?.how === 'rom' ? { label: repaired.label } : null,
+        });
       } catch (e) {
         return json(res, 400, { error: e.message });
       }

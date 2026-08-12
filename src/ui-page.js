@@ -673,7 +673,12 @@ document.getElementById('play').onclick = async () => {
     return;
   }
   toast('Launched "' + data.identity + '".'
-    + (data.linked ? ' Copied your ' + data.linked.label + ' ROM in first.' : ''));
+    + (data.gameData?.how === 'copied'
+        ? ' Game data copied from "' + data.gameData.from + '" first.'
+        : data.linked
+          ? ' Copied your ' + data.linked.label + ' ROM in \\u2014 the game will import it once, '
+            + 'then start straight up after that.'
+          : ''));
 };
 
 document.getElementById('new').onclick = () => {
@@ -695,7 +700,10 @@ document.getElementById('new').onclick = () => {
       }
       dlg.close();
       toast('Created "' + data.identity + '" and switched to it.'
-        + (data.gameData.how === 'none' ? ' No game data — link your ROM in Settings.' : ''));
+        + (data.gameData.how === 'copied' ? ' Game data copied in — ready to play.'
+          : data.gameData.how === 'rom' ? ' Your ' + data.gameData.label
+            + ' ROM was copied in; the game imports it once on first launch.'
+          : ' No game data — ' + data.gameData.reason + '.'));
       tab = 'mods';
       await load();
       loadMods(false);
