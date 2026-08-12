@@ -131,7 +131,7 @@ export function buildFeed(entries, {
  */
 export const URL_LIMIT = 8000;
 
-export function submitUrl({ repo, branch = 'dev', pack, text }) {
+export function submitUrl({ repo, branch = 'master', pack, text }) {
   if (!repo || !/^[\w.-]+\/[\w.-]+$/.test(repo)) {
     throw new Error('set the gallery repo first (owner/name)');
   }

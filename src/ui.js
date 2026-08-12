@@ -723,7 +723,7 @@ export function serve({ packsDir, saveDir, indexFile, port = 7666, host = '127.0
       try {
         const built = submitUrl({
           repo,
-          branch: cfg.submitBranch ?? 'dev',
+          branch: cfg.submitBranch ?? 'master',
           pack: entry.pack,
           text: readFileSync(entry.path, 'utf8'),
         });

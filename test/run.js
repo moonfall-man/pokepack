@@ -1176,7 +1176,9 @@ it('builds a submit link GitHub can open, and refuses a silly repo', () => {
   const { url, tooLong } = submitUrl({
     repo: 'moonfall-man/pokepack', pack: twoMods, text: 'PACK 1\n{"id":"x"}',
   });
-  ok(url.startsWith('https://github.com/moonfall-man/pokepack/new/dev?'), url);
+  // master, not dev: there is only one long-lived branch, and a link pointing
+  // at a branch that does not exist is a dead Publish button.
+  ok(url.startsWith('https://github.com/moonfall-man/pokepack/new/master?'), url);
   ok(url.includes(`filename=${encodeURIComponent(`packs/${twoMods.id}.pokepack`)}`), url);
   ok(url.includes(encodeURIComponent('{"id":"x"}')), 'the file has to travel in the link');
   eq(tooLong, false);
