@@ -326,6 +326,15 @@ export function serve({ packsDir, saveDir, indexFile, port = 7666, host = '127.0
       if (filter === 'installed') mods = mods.filter((m) => m.installedVersion);
       else if (filter === 'available') mods = mods.filter((m) => !m.installedVersion);
 
+      // Counted before the category filter is applied, so each chip says how
+      // many you would get by ticking it.  Counting afterwards would zero every
+      // other chip the moment you picked one.
+      const categories = catalogue.facets(mods);
+
+      const wanted = (url.searchParams.get('category') ?? '')
+        .split(',').map((c) => c.trim()).filter(Boolean);
+      mods = catalogue.byCategory(mods, wanted);
+
       mods.sort((a, b) => (a.title.toLowerCase() < b.title.toLowerCase() ? -1 : 1));
 
       return json(res, 200, {
@@ -334,6 +343,8 @@ export function serve({ packsDir, saveDir, indexFile, port = 7666, host = '127.0
         stale: cat.stale ?? false,
         total: cat.mods.length,
         installedCount: Object.keys(installed).length,
+        categories,
+        selected: wanted,
         mods,
       });
     }

@@ -130,6 +130,36 @@ export async function load({ url = OFFICIAL_INDEX, force = false, now = Date.now
   }
 }
 
+/**
+ * facets(mods) -> [{ name, count }]
+ *
+ * Which categories are present, commonest first.  Derived from the mods rather
+ * than from a hardcoded list, so a category the index adds tomorrow shows up
+ * without a release -- and one nobody uses does not sit there reading zero.
+ */
+export function facets(mods) {
+  const counts = new Map();
+  for (const m of mods) {
+    for (const c of m.categories ?? []) counts.set(c, (counts.get(c) ?? 0) + 1);
+  }
+  return [...counts.entries()]
+    .map(([name, count]) => ({ name, count }))
+    .sort((a, b) => (b.count - a.count) || (a.name < b.name ? -1 : 1));
+}
+
+/**
+ * byCategory(mods, wanted) -> mods
+ *
+ * Any-of, not all-of.  Picking UI and ART means "show me both kinds", which is
+ * what two ticked boxes look like they should do; all-of would empty the screen
+ * because almost nothing is tagged with both.
+ */
+export function byCategory(mods, wanted) {
+  if (!wanted || wanted.length === 0) return mods;
+  const want = new Set(wanted.map((c) => c.toUpperCase()));
+  return mods.filter((m) => (m.categories ?? []).some((c) => want.has(c.toUpperCase())));
+}
+
 // Free-text search over the fields somebody would actually type.
 export function search(mods, query) {
   const q = String(query ?? '').trim().toLowerCase();

@@ -11,6 +11,7 @@ import * as zip from '../src/zip.js';
 import { installMod, writeProfile } from '../src/install.js';
 import { buildFeed, submitUrl, pagesBase } from '../src/feed.js';
 import * as votes from '../src/votes.js';
+import * as catalogue from '../src/catalogue.js';
 import * as packfeed from '../src/packfeed.js';
 import { applyToOptions, setModEnabled } from '../src/liveapply.js';
 import { uninstall, planUninstall } from '../src/uninstall.js';
@@ -1122,6 +1123,39 @@ it('says when a pack is too big to send as a link rather than truncating it', ()
   // A silently cut-off file is a corrupt pack somebody then submits.
   const { tooLong } = submitUrl({ repo: 'a/b', pack: twoMods, text: 'x'.repeat(9000) });
   eq(tooLong, true);
+});
+
+// ------- catalogue
+
+describe('catalogue');
+
+const catMods = [
+  { id: 'A', title: 'A', categories: ['UI', 'QOL'] },
+  { id: 'B', title: 'B', categories: ['ART'] },
+  { id: 'C', title: 'C', categories: ['UI'] },
+  { id: 'D', title: 'D', categories: [] },
+];
+
+it('counts categories, commonest first', () => {
+  eq(catalogue.facets(catMods), [
+    { name: 'UI', count: 2 }, { name: 'ART', count: 1 }, { name: 'QOL', count: 1 },
+  ]);
+});
+
+it('derives the categories from the index rather than a fixed list', () => {
+  // One added upstream must appear without a release here.
+  const withNew = [...catMods, { id: 'E', categories: ['NEWFANGLED'] }];
+  ok(catalogue.facets(withNew).some((f) => f.name === 'NEWFANGLED'));
+  eq(catalogue.facets([]), [], 'and none reads as none, not as a stale list of zeroes');
+});
+
+it('filters by any of the ticked categories, not all of them', () => {
+  // All-of would empty the screen: almost nothing carries two tags.
+  eq(catalogue.byCategory(catMods, ['UI']).map((m) => m.id), ['A', 'C']);
+  eq(catalogue.byCategory(catMods, ['UI', 'ART']).map((m) => m.id), ['A', 'B', 'C']);
+  eq(catalogue.byCategory(catMods, ['ui']).map((m) => m.id), ['A', 'C'], 'case must not matter');
+  eq(catalogue.byCategory(catMods, []).length, 4, 'nothing ticked shows everything');
+  eq(catalogue.byCategory(catMods, ['NOPE']).length, 0);
 });
 
 // ------- votes
