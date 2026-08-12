@@ -596,6 +596,14 @@ async function loadMods(force) {
          : !m.installedVersion && m.latestVersion ? '<span class="badge">' + esc(m.latestVersion) + '</span>' : '')
       + (m.unlisted ? '<span class="badge">not in the index</span>'
          : m.installable ? '' : '<span class="badge broken">no download</span>')
+      // What the game would refuse to load, said here instead of in there.
+      + (m.missing ?? []).map(d =>
+          '<span class="badge broken">needs ' + esc(d.id) + '</span>').join('')
+      + (m.wrongVersion ?? []).map(d =>
+          '<span class="badge broken">needs ' + esc(d.id) + ' ' + esc(d.range)
+          + ', have ' + esc(d.have ?? '?') + '</span>').join('')
+      + (m.clashes ?? []).map(c =>
+          '<span class="badge broken">clashes with ' + esc(c) + '</span>').join('')
       + (m.categories ?? []).slice(0,2).map(c => '<span class="badge">' + esc(c) + '</span>').join('')
       + '</div><div class="acts">'
       + (m.installedVersion && m.enabled !== null
@@ -949,6 +957,13 @@ document.getElementById('mods-grid').addEventListener('click', async (e) => {
     replace: doing === 'update',
   });
 
+  // The mod needs something else, or fights something already here.  Asked
+  // before anything downloads rather than found out by the game later.
+  if (!ok && (data.needsDeps || data.hasClashes)) {
+    btn.disabled = false; btn.textContent = was;
+    return askAboutDeps(data, doing === 'update');
+  }
+
   if (!ok || ((doing === 'enable' || doing === 'disable') && !data.changed)) {
     btn.disabled = false; btn.textContent = was;
     return toast(data.error || data.reason || 'could not do that', true);
@@ -960,6 +975,61 @@ document.getElementById('mods-grid').addEventListener('click', async (e) => {
   await loadMods(false);
   load();
 });
+
+function askAboutDeps(data, isUpdate) {
+  const missing = data.dependencies ?? [];
+  const gettable = missing.filter(d => d.installable);
+  const stuck = missing.filter(d => !d.installable);
+
+  dialog({
+    title: data.title + ' needs company',
+    sub: missing.length
+      ? 'It depends on ' + missing.length + ' other mod' + (missing.length === 1 ? '' : 's') + '.'
+      : 'It conflicts with something you already have.',
+    body: (missing.length
+        ? '<div>' + missing.map(d =>
+            '<div class="row"><span style="flex:1"><b>' + esc(d.title) + '</b> '
+            + '<span class="why">' + esc(d.id) + (d.range ? ' ' + esc(d.range) : '') + '</span></span>'
+            + (d.installable
+                ? '<span class="badge ready">will install ' + esc(d.version ?? '') + '</span>'
+                : '<span class="badge broken">not in the index</span>') + '</div>').join('') + '</div>'
+        : '')
+      + (data.clashes?.length
+          ? '<div class="note bad"><b>Clashes with ' + data.clashes.map(esc).join(', ') + '.</b><br>'
+            + 'Two mods that replace the same thing cannot both run \\u2014 the game will refuse '
+            + 'to load one of them. Remove the other first if you want this one.</div>'
+          : '')
+      + (stuck.length
+          ? '<div class="note bad">' + stuck.map(d => esc(d.id)).join(', ')
+            + ' cannot be fetched \\u2014 not in the index. You would have to add it yourself with '
+            + '<b>Add .zip\\u2026</b>, and until then the game will not load '
+            + esc(data.title) + '.</div>'
+          : '')
+      + '<div id="dep-out"></div>',
+    go: gettable.length ? 'Install all ' + (gettable.length + 1) : 'Install anyway',
+    danger: data.hasClashes && !gettable.length,
+    onGo: async () => {
+      const b = document.getElementById('d-go');
+      b.disabled = true; b.textContent = 'Installing\\u2026';
+      const res = await post('mod', {
+        id: data.id, action: 'install', replace: isUpdate,
+        acknowledged: true, withDeps: gettable.length > 0,
+      });
+      if (!res.ok) {
+        document.getElementById('dep-out').innerHTML =
+          '<div class="note bad">' + esc(res.data.error) + '</div>';
+        b.disabled = false; b.textContent = 'Try again';
+        return;
+      }
+      dlg.close();
+      const also = res.data.alsoInstalled ?? [];
+      toast(data.id + ' installed'
+        + (also.length ? ' with ' + also.map(a => a.id).join(', ') : '') + '.');
+      await loadMods(false);
+      load();
+    },
+  });
+}
 
 let modsTimer = null;
 document.getElementById('mods-q').addEventListener('input', () => {

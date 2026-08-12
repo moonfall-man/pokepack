@@ -36,6 +36,7 @@ import {
 import { identifyRom, linkRom, baseromsIn } from './rom.js';
 import { pickFile, pickFolder, FILTERS } from './filepicker.js';
 import * as catalogue from './catalogue.js';
+import * as deps from './deps.js';
 import * as gallery from './packfeed.js';
 import * as config from './config.js';
 import { page } from './ui-page.js';
@@ -300,15 +301,24 @@ export function serve({ packsDir, saveDir, indexFile, port = 7666, host = '127.0
       const q = (url.searchParams.get('q') ?? '').trim();
       const filter = url.searchParams.get('filter') ?? 'all';
 
+      // What the game will complain about on the next launch, worked out from
+      // the installed manifests rather than the index -- these are the files it
+      // will actually read.
+      const health = deps.check(installed);
+
       let mods = catalogue.search(cat.mods, q).map((m) => {
         const src = catalogue.installableFrom(m);
         const have = installed[m.id];
+        const h = health[m.id];
         return {
           ...m,
           installable: !!src,
           latestVersion: src?.version ?? m.version ?? null,
           installedVersion: have?.version ?? null,
           enabled: have ? have.enabled : null,
+          missing: h?.missing ?? [],
+          wrongVersion: h?.wrongVersion ?? [],
+          clashes: h?.clashes ?? [],
         };
       });
 
@@ -319,10 +329,12 @@ export function serve({ packsDir, saveDir, indexFile, port = 7666, host = '127.0
       for (const m of Object.values(installed)) {
         if (listed.has(m.id)) continue;
         if (needle && !m.id.toLowerCase().includes(needle)) continue;
+        const h = health[m.id];
         mods.push({
           id: m.id, title: m.id, author: null, summary: '', categories: [],
           github: m.github, installable: false, unlisted: true,
           latestVersion: null, installedVersion: m.version, enabled: m.enabled,
+          missing: h?.missing ?? [], wrongVersion: h?.wrongVersion ?? [], clashes: h?.clashes ?? [],
         });
       }
 
@@ -379,11 +391,61 @@ export function serve({ packsDir, saveDir, indexFile, port = 7666, host = '127.0
         const src = catalogue.installableFrom(entry);
         if (!src) return json(res, 409, { error: `${entry.title} publishes no installable download` });
 
+        // What else this mod needs, and what it would fight with.  Answered
+        // before anything downloads, so the choice is made with the facts
+        // rather than discovered by the game an hour later.
+        const have = stateOf(act.path).mods;
+        const wants = deps.parseDeps(entry.dependencies)
+          .filter((d) => !have[d.id])
+          .map((d) => {
+            const dep = cat.mods.find((m) => m.id === d.id);
+            const depSrc = dep ? catalogue.installableFrom(dep) : null;
+            return {
+              id: d.id,
+              range: d.range,
+              title: dep?.title ?? d.id,
+              version: depSrc?.version ?? dep?.version ?? null,
+              installable: !!depSrc,
+            };
+          });
+        const clashes = deps.check({ ...have, [entry.id]: entry })[entry.id]?.clashes ?? [];
+
+        if ((wants.length || clashes.length) && opts.acknowledged !== true) {
+          return json(res, 409, {
+            needsDeps: wants.length > 0,
+            hasClashes: clashes.length > 0,
+            id: entry.id,
+            title: entry.title,
+            dependencies: wants,
+            clashes,
+            error: wants.length
+              ? `${entry.title} needs ${wants.map((w) => w.id).join(', ')}`
+              : `${entry.title} conflicts with ${clashes.join(', ')}`,
+          });
+        }
+
+        // Dependencies first, so the mod is never on disk in a state the game
+        // will refuse to load.  A dependency that fails stops the whole thing.
+        const alsoInstalled = [];
+        if (opts.withDeps === true) {
+          for (const want of wants) {
+            if (!want.installable) continue;
+            const dep = cat.mods.find((m) => m.id === want.id);
+            const depSrc = catalogue.installableFrom(dep);
+            const got = await downloadToBuffer(depSrc.url);
+            const done = installMod(got.buffer, {
+              saveDir: act.path, expectId: dep.id, sha256: got.sha256,
+            });
+            setModEnabled(act.path, dep.id, true, { exePath });
+            alsoInstalled.push({ id: done.id, version: done.version });
+          }
+        }
+
         const { buffer, sha256, size } = await downloadToBuffer(src.url);
         const out = installMod(buffer, {
           saveDir: act.path, expectId: entry.id, sha256, replace: opts.replace === true,
         });
-        return json(res, 200, { ...out, sha256, bytes: size });
+        return json(res, 200, { ...out, sha256, bytes: size, alsoInstalled });
       } catch (e) {
         return json(res, 400, { error: e.message });
       }

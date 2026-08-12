@@ -60,6 +60,11 @@ export function readSaveDir(dir) {
         sha256: lock[id]?.sha256 ?? null,
         github: typeof manifest.github === 'string' ? manifest.github : null,
         repo: typeof manifest.repo === 'string' ? manifest.repo : null,
+        // Straight off the installed manifest rather than the index: this is
+        // what the engine will actually read, and the index can be a release
+        // or two behind what somebody has on disk.
+        dependencies: Array.isArray(manifest.dependencies) ? manifest.dependencies : [],
+        conflicts: Array.isArray(manifest.conflicts) ? manifest.conflicts : [],
       };
     }
   }
