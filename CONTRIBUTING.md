@@ -45,15 +45,14 @@ CI runs the same thing, so this only saves you a round trip.
 
 ## Open the PR
 
-Easiest way: press **Share this pack…** — in Browse on the pack, or right after
+Easiest way: press **Publish** on the pack, or **Share this pack…** right after
 you export it. That opens GitHub with the file already filled in; press
 **Propose new file** and you are done. GitHub makes your copy of the repo for
 you, so you need no git and nothing installed.
 
-By hand, if you prefer: **target `dev`, not `master`.** `master` is what
-everyone's copy of the tool reads; nothing lands there except a reviewed change
-that already passed CI on `dev`. Both branches refuse direct pushes, so a PR is
-the only way in — that applies to the maintainer too.
+By hand, if you prefer: branch off `master` and open a pull request back into
+it. `master` refuses direct pushes from everybody, the maintainer included, so a
+pull request is the only way in.
 
 Commit just your `.pokepack` file. Nothing else should change.
 
@@ -117,24 +116,27 @@ installed them by hand.
 ## How a change reaches people
 
 ```
-  branch off dev  --PR-->  dev  --PR-->  master
-                            ^              ^
-                       CI + review    CI + review
+  branch off master  --PR-->  master
+                                ^
+                          CI + review
 ```
 
-Start every branch from `dev`, not `master` — `dev` is ahead, and branching from
-`master` gives you a change that will not apply cleanly.
+One branch, one pull request per change.
 
 ```bash
-git switch dev && git pull && git switch -c my-change
+git switch master && git pull && git switch -c my-change
 ```
 
-**Merge commits only.** Squash merging is switched off, and that is deliberate
-rather than fussiness: squashing `dev` into `master` gives master one commit
-where dev has ten. Same code, different history, neither branch able to see the
-other's commits — and git then reads the same work arriving twice as two
-competing changes, conflicting in files nobody touched. It cost an hour here
-before the cause was obvious.
+`master` takes no direct pushes from anybody, including the maintainer — a pull
+request with green CI is the only way in, and the branch is deleted on merge.
+
+There was a `dev` branch in front of this and it was removed. A second
+long-lived branch buys nothing that master's protection does not already give,
+costs a second pull request per change, and drifts out of sync the moment
+anything is squash-merged between the two — a squash gives one branch a single
+commit where the other has ten, so git reads the same work arriving twice as a
+conflict in files nobody touched. Short-lived branches never live long enough
+for that to happen.
 
 Every pull request needs an approving review from the code owner and a green
 `test` and `validate` before the merge button lights up. Neither branch can be

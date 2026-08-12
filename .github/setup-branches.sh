@@ -1,26 +1,25 @@
 #!/bin/sh
-# One-time setup: two branches, both protected, you as the only approver.
+# One-time setup: one protected branch, you as the only approver.
 #
-#   master  what everyone's copy of the tool reads.  Nothing lands here except
-#           a reviewed PR from dev that passed CI.
-#   dev     where pack submissions and work in progress land first.
+#   master   what everyone's copy of the tool reads.  Nothing lands here except
+#            a pull request you approved, with green CI.
 #
-# Contributors fork, PR into dev.  You review, merge, and promote dev -> master
-# when you are happy.
+# There used to be a `dev` branch in front of it.  It was removed, and the
+# reasoning is worth keeping because the idea is tempting:
 #
-# The two branches are locked down differently, and the reason is a GitHub rule
-# with no way around it: nobody can approve their own pull request.
+#   A second long-lived branch buys nothing that master's own protection does
+#   not already give -- no direct pushes, a pull request as the only way in,
+#   your review required, CI green required -- and it costs a second pull
+#   request for every change.  Worse, the two branches drift apart the moment
+#   anything is squash-merged between them, because a squash gives one branch a
+#   single commit where the other has ten: identical code, unrelated history,
+#   and git then reads the same work arriving twice as a conflict in files
+#   nobody touched.  That happened twice in one evening before the cause was
+#   clear.
 #
-#   master  enforced on everyone, you included.  No direct pushes at all -- a
-#           pull request and green CI are the only way in.  Zero approvals
-#           required, because requiring one on a solo project means your own
-#           release PR can never be merged by anybody, ever.
-#   dev     one approval from the code owner, so nothing a contributor writes
-#           lands without you clicking approve.  Admins bypass, which is what
-#           lets you merge your own work in without a second person.
-#
-# So: strangers cannot get anything into either branch without your approval,
-# and master cannot be pushed to by hand even by you.
+#   Short-lived feature branches never live long enough to drift.  Add a staging
+#   branch the day you actually need one -- adding a branch is free, untangling
+#   two divergent ones is not.
 #
 # Run once, after the repo exists on GitHub:
 #   sh .github/setup-branches.sh
@@ -29,31 +28,31 @@
 set -e
 
 REPO=$(gh repo view --json nameWithOwner -q .nameWithOwner)
-OWNER=$(gh api user -q .login)
-echo "Setting up $REPO (owner: $OWNER)"
+echo "Setting up $REPO"
 
-# --- the dev branch, if it does not exist yet
-if ! git show-ref --quiet refs/heads/dev; then
-  git branch dev master
-  git push -u origin dev
-fi
+gh api -X PATCH "repos/$REPO" -f default_branch=master >/dev/null
+echo "  default branch: master"
 
-# Contributors should land on dev, not master, when they open a PR.
-gh api -X PATCH "repos/$REPO" -f default_branch=dev >/dev/null
-echo "  default branch for new PRs: dev"
+# Squash merging stays available: with only short-lived branches merging into
+# master, squashing is the *right* button -- it keeps master's history one
+# commit per change, and the branch it squashed is deleted immediately after.
+gh api -X PATCH "repos/$REPO" \
+  -F allow_squash_merge=true \
+  -F allow_merge_commit=true \
+  -F delete_branch_on_merge=true >/dev/null
+echo "  merges: branches deleted after merge"
 
-protect() {
-  branch=$1
-  linear=$2
-  admins=$3
-  approvals=$4
-  gh api -X PUT "repos/$REPO/branches/$branch/protection" --input - >/dev/null <<JSON
+# strict=false on purpose.  "Require branches to be up to date before merging"
+# means every pull request demands an Update branch click the moment anything
+# else lands, which on a one-person project is pure friction for a race that
+# barely exists -- and CI runs on master after the merge regardless.
+gh api -X PUT "repos/$REPO/branches/master/protection" --input - >/dev/null <<'JSON'
 {
-  "required_status_checks": { "strict": true, "contexts": ["test", "validate"] },
-  "enforce_admins": $admins,
+  "required_status_checks": { "strict": false, "contexts": ["test", "validate"] },
+  "enforce_admins": true,
   "required_pull_request_reviews": {
-    "required_approving_review_count": $approvals,
-    "require_code_owner_reviews": $( [ "$approvals" -gt 0 ] && echo true || echo false ),
+    "required_approving_review_count": 0,
+    "require_code_owner_reviews": false,
     "dismiss_stale_reviews": true,
     "require_last_push_approval": false
   },
@@ -61,46 +60,19 @@ protect() {
   "allow_force_pushes": false,
   "allow_deletions": false,
   "required_conversation_resolution": true,
-  "required_linear_history": $linear
+  "required_linear_history": false
 }
 JSON
-  echo "  protected: $branch (admins enforced: $admins, approvals: $approvals)"
-}
+echo "  protected: master (no direct pushes, enforced on admins too)"
 
-# dev takes merge commits from feature branches.  Linear history is off on
-# purpose: requiring it would forbid the merge commits that keep dev and master
-# able to see each other.  One approval from the code owner, and admins bypass
-# so your own work still moves.
-protect dev false false 1
+# Zero approvals required, and that is not a hole -- it is the only workable
+# setting for a solo maintainer.  GitHub forbids approving your own pull
+# request, so requiring one would leave your own releases unmergeable by anyone,
+# for ever.  A stranger still cannot merge: they have no write access, and the
+# merge button is yours alone.  Raise this to 1 the day a second maintainer
+# arrives, and add .github/CODEOWNERS back to the required-review setting.
 
-# master takes an ordinary merge commit from dev.  Linear history here would
-# force a squash, which rewrites the commits dev already has -- and then the two
-# branches diverge and every promotion needs a force-push to fix.
-#
-# Enforced on admins, so not even you can push to it by hand; zero approvals, so
-# your own release PR is not waiting on a second person who does not exist.
-protect master false true 0
-
-# Squash merging off, and this is the important line in the file.
-#
-# Squashing a long-lived branch is what breaks this layout.  Merging dev into
-# master as a squash gives master one commit where dev has ten: the same code,
-# a different history, and neither branch can see the other's commits.  Git then
-# reads the same work arriving twice as two competing changes and conflicts in
-# files nobody touched.  It happened twice here before the cause was clear.
-#
-# Merge commits keep master an ancestor of dev, which is the whole trick.  Squash
-# is still right for a short-lived feature branch -- but GitHub only offers the
-# setting per repository, and getting it wrong on dev -> master costs an hour, so
-# the button is gone.  Rebase stays on because GitHub insists on squash or rebase.
-gh api -X PATCH "repos/$REPO" \
-  -F allow_squash_merge=false \
-  -F allow_rebase_merge=true \
-  -F allow_merge_commit=true \
-  -F delete_branch_on_merge=true >/dev/null
-echo "  merges: merge commits only (squash off), branches deleted after merge"
-
-# A fork's workflow run can otherwise start the moment a stranger opens a PR.
+# Actions get a read-only token and cannot approve pull requests.
 gh api -X PUT "repos/$REPO/actions/permissions/workflow" \
   -f default_workflow_permissions=read \
   -F can_approve_pull_request_reviews=false >/dev/null
@@ -113,23 +85,20 @@ gh api -X POST "repos/$REPO/pages" -f build_type=workflow >/dev/null 2>&1 \
   && echo "  Pages: on, published by the gallery workflow" \
   || echo "  Pages: already on"
 
-# The gallery publishes from master, but master is not the default branch any
-# more -- and a fresh github-pages environment only lets the default branch
-# deploy.  Allow any protected branch instead.
-gh api -X PUT "repos/$REPO/environments/github-pages" --input - >/dev/null 2>&1 <<'JSON' \
+# A fresh github-pages environment only lets the default branch deploy; allow
+# any protected branch so it keeps working if the default ever moves.
+gh api -X PUT "repos/$REPO/environments/github-pages" --input - >/dev/null 2>&1 \
   && echo "  Pages: protected branches may deploy" || true
 {"deployment_branch_policy":{"protected_branches":true,"custom_branch_policies":false}}
 JSON
 
 cat <<'DONE'
 
-Two things the API cannot set -- do these in the browser once:
+One thing the API cannot set -- do this in the browser once:
 
   Settings -> Actions -> General -> Fork pull request workflows
     "Require approval for all external contributors"
     Otherwise a stranger's first PR runs CI without you looking at it.
-
-  Settings -> Moderation -> Interaction limits (only if it gets busy)
 
 Check it worked by trying to push straight to master. It should be refused.
 DONE

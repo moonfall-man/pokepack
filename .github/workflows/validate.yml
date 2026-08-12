@@ -12,12 +12,12 @@ name: validate packs
 
 on:
   push:
-    branches: [master, dev]
+    branches: [master]
   # Deliberately no path filter.  `test` and `validate` are required checks on
-  # both protected branches, and a required check that never runs never reports
-  # -- which leaves the PR blocked for ever rather than passing.
+  # master, and a required check that never runs never reports -- which leaves
+  # the PR blocked for ever rather than passing.
   pull_request:
-    branches: [master, dev]
+    branches: [master]
   schedule:
     - cron: '17 4 * * *'   # nightly link check
     - cron: '17 5 * * 0'   # Sunday deep check

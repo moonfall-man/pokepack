@@ -15,7 +15,9 @@ name: publish gallery
 on:
   push:
     branches: [master]
-    paths: ['packs/**', 'src/**', 'bin/**']
+    # package.json is in the list because the published version file is built
+    # from it -- leave it out and a release ships without anybody being told.
+    paths: ['packs/**', 'src/**', 'bin/**', 'package.json']
   schedule:
     - cron: '41 3 * * *'   # nightly, to pick up the day's votes
   workflow_dispatch:
