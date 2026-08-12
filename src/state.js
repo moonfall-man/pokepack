@@ -58,6 +58,9 @@ export function readSaveDir(dir) {
         // disabled mod and leaves a never-touched mod missing, which means on.
         enabled: options.mods?.[id] !== false,
         sha256: lock[id]?.sha256 ?? null,
+        // Where these bytes came from, when it was an explicit link rather than
+        // the index.  This is what lets export publish an unlisted mod.
+        source: lock[id]?.source ?? null,
         github: typeof manifest.github === 'string' ? manifest.github : null,
         repo: typeof manifest.repo === 'string' ? manifest.repo : null,
         // Straight off the installed manifest rather than the index: this is

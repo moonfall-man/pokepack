@@ -37,6 +37,7 @@ import { identifyRom, linkRom, baseromsIn } from './rom.js';
 import { pickFile, pickFolder, FILTERS } from './filepicker.js';
 import * as catalogue from './catalogue.js';
 import * as deps from './deps.js';
+import { resolveDownload } from './github.js';
 import * as gallery from './packfeed.js';
 import * as config from './config.js';
 import { page } from './ui-page.js';
@@ -461,6 +462,28 @@ export function serve({ packsDir, saveDir, indexFile, port = 7666, host = '127.0
       const opts = await readBody(req);
       if (!opts) return json(res, 400, { error: 'bad request body' });
 
+      // From a link: a release page or a direct .zip.  Worth having because a
+      // mod the index has never heard of is otherwise unpublishable -- the URL
+      // is recorded against the install, so exporting a pack that includes it
+      // has something real to point at.
+      if (opts.url) {
+        try {
+          const found = await resolveDownload(opts.url, { id: opts.id ?? null });
+          const { buffer, sha256, size } = await downloadToBuffer(found.url);
+          const out = installMod(buffer, {
+            saveDir: act.path,
+            sha256,
+            replace: opts.replace === true,
+            source: { url: found.url, size: size ?? found.size ?? null },
+          });
+          return json(res, 200, {
+            ...out, sha256, bytes: size, from: found.from, source: found.url,
+          });
+        } catch (e) {
+          return json(res, 400, { error: e.message });
+        }
+      }
+
       let path = opts.path ?? null;
       if (!path) {
         path = await pickFile({ title: 'Choose a mod .zip', filter: FILTERS.zip });
@@ -474,7 +497,10 @@ export function serve({ packsDir, saveDir, indexFile, port = 7666, host = '127.0
         const out = installMod(buffer, {
           saveDir: act.path, sha256, replace: opts.replace === true,
         });
-        return json(res, 200, { ...out, sha256, from: path });
+        // No source recorded on purpose: a file on your disk is not something
+        // anybody else can fetch, and inventing a URL for it would produce a
+        // pack that fails for everyone but you.
+        return json(res, 200, { ...out, sha256, from: path, source: null });
       } catch (e) {
         return json(res, 400, { error: e.message });
       }
