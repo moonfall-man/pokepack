@@ -16,8 +16,28 @@ async function request(url, init = {}) {
 
 export async function fetchJson(url) {
   const res = await request(url, { headers: { accept: 'application/json' } });
-  if (!res.ok) throw new Error(`${res.status} ${res.statusText} for ${url}`);
+  if (!res.ok) throw new Error(rateLimited(res) ?? `${res.status} ${res.statusText} for ${url}`);
   return res.json();
+}
+
+/**
+ * rateLimited(res) -> message | null
+ *
+ * Nothing here needs a GitHub account, which is the point -- but anonymous
+ * requests get 60 an hour, and pinning a pack spends one per repo.  Hitting
+ * that arrives as a bare 403 and looks like the mod is gone, so name it and
+ * say when it lifts.
+ */
+export function rateLimited(res) {
+  if (res.status !== 403 && res.status !== 429) return null;
+  if (res.headers.get('x-ratelimit-remaining') !== '0') return null;
+  const reset = Number(res.headers.get('x-ratelimit-reset'));
+  const mins = Number.isFinite(reset)
+    ? Math.max(1, Math.ceil((reset * 1000 - Date.now()) / 60000))
+    : null;
+  return 'GitHub is rate-limiting anonymous requests (60 an hour)'
+    + (mins ? ` -- it lifts in about ${mins} minute${mins === 1 ? '' : 's'}` : '')
+    + '. A direct link to the .zip works in the meantime.';
 }
 
 // Download and hash in one pass.  Mod zips run to tens of megabytes, so the
