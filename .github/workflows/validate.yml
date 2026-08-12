@@ -63,8 +63,16 @@ jobs:
           shopt -s nullglob
           packs=(packs/*.pokepack)
           if [ ${#packs[@]} -eq 0 ]; then echo "no packs yet"; exit 0; fi
-          node bin/pokepack.js validate "${packs[@]}" ${{ steps.mode.outputs.deep }} --json > status.json
+          # Readable output first, and set +e around both.  The exit code is
+          # the verdict, not an error, so bash -e would abort the step on a
+          # broken pack -- before printing which pack or why, and before the
+          # JSON the artifact needs.  A failure that hides its own reason is
+          # worse than no check at all.
+          set +e
           node bin/pokepack.js validate "${packs[@]}" ${{ steps.mode.outputs.deep }}
+          verdict=$?
+          node bin/pokepack.js validate "${packs[@]}" ${{ steps.mode.outputs.deep }} --json > status.json
+          exit $verdict
 
       # status.json is what a gallery feed serves so the launcher can show
       # "currently works" without every client re-deriving it.
