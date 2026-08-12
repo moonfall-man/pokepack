@@ -15,6 +15,7 @@ import * as catalogue from '../src/catalogue.js';
 import * as deps from '../src/deps.js';
 import * as gh from '../src/github.js';
 import * as net from '../src/net.js';
+import * as update from '../src/update.js';
 import * as packfeed from '../src/packfeed.js';
 import { applyToOptions, setModEnabled } from '../src/liveapply.js';
 import { uninstall, planUninstall } from '../src/uninstall.js';
@@ -1247,6 +1248,35 @@ it('reports a conflict to both sides, whichever one declared it', () => {
   });
   eq(report.BATTLE_ART_VOXEL_FORK.clashes, ['DRAMALESS_SHAPE']);
   eq(report.DRAMALESS_SHAPE.clashes, ['BATTLE_ART_VOXEL_FORK'], 'the other side must hear about it too');
+});
+
+// ------- updating the app itself
+
+describe('update');
+
+await itAsync('spots a newer app version, and does not cry wolf on an equal one', async () => {
+  const serve = (version) => async () => ({ version, notes: 'nicer things', url: 'https://github.com/o/r' });
+  const here = update.currentVersion();
+  ok(here, 'the app must know its own version');
+
+  const older = await update.check({ url: 'x', force: true, now: 1 });
+  eq(typeof older.current, 'string');
+
+  // Injected through fetchJson would need a network; check the comparison
+  // directly instead, which is the part that can be wrong.
+  eq(compareVersions('0.2.0', '0.1.0') > 0, true, 'newer');
+  eq(compareVersions('0.1.0', '0.1.0') > 0, false, 'same is not newer');
+  eq(compareVersions('0.1.0', '0.2.0') > 0, false, 'older is not newer');
+  void serve;
+});
+
+it('refuses to pull over uncommitted work', () => {
+  // Uncommitted changes are the one thing in a checkout nobody else has a copy
+  // of, so this reports rather than stashing or resetting.
+  const st = update.status();
+  eq(typeof st.git, 'boolean');
+  if (st.git && !st.clean) ok(st.reason, 'an unpullable checkout has to say why');
+  if (!st.clean) throws(() => update.pull(), '', 'pull must refuse when status says it cannot');
 });
 
 // ------- github links

@@ -122,6 +122,9 @@ pre.log { background:var(--bg); border:1px solid var(--line); border-radius:10px
 code { font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:.92em; }
 #toast { display:none; padding:11px 28px; font-size:13.5px; font-weight:600;
   border-bottom:1px solid var(--line); background:var(--panel); }
+#uptodate { padding:10px 28px; font-size:13.5px; background:var(--gold); color:#1b1b12;
+  border-bottom:1px solid var(--line); display:flex; gap:12px; align-items:center; flex-wrap:wrap; }
+#uptodate button { padding:5px 12px; font-size:12.5px; border-color:#1b1b12; color:#1b1b12; }
 </style>
 </head>
 <body>
@@ -140,6 +143,7 @@ code { font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:.92em;
   <button id="tab-browse">Community<span class="count" id="c-browse">0</span></button>
 </nav>
 <div id="toast"></div>
+<div id="uptodate" hidden></div>
 <main>
   <div id="pane-mods" hidden>
     <div class="bar">
@@ -196,6 +200,43 @@ async function post(path, payload) {
     body: JSON.stringify(payload ?? {}),
   });
   return { ok: res.ok, data: await res.json() };
+}
+
+// The app's own version.  The pack list looks after itself -- it is fetched
+// every time this page loads -- but the code is a checkout on disk, and only a
+// pull moves it.  Nothing here interrupts anything: a banner, and a button that
+// refuses to run if there is uncommitted work.
+async function checkForUpdate() {
+  let u;
+  try {
+    u = await (await fetch(api('update'))).json();
+  } catch {
+    return; // an update check must never be the thing that breaks the screen
+  }
+  if (!u.newer) return;
+  const bar = document.getElementById('uptodate');
+  bar.hidden = false;
+  bar.innerHTML = '<b>pokepack ' + esc(u.latest) + ' is out</b>'
+    + '<span>you have ' + esc(u.current ?? '?') + (u.notes ? ' \\u00b7 ' + esc(u.notes.split('\\n')[0]) : '') + '</span>'
+    + '<span style="flex:1"></span>'
+    + (u.checkout?.clean
+        ? '<button id="up-go">Update now</button>'
+        : '<span class="why" style="color:#1b1b12">' + esc(u.checkout?.reason ?? '') + '</span>')
+    + (u.url ? '<a href="' + esc(u.url) + '" target="_blank" rel="noopener" style="color:#1b1b12">what changed \\u2197</a>' : '')
+    + '<button id="up-hide">Later</button>';
+
+  document.getElementById('up-hide').onclick = () => { bar.hidden = true; };
+  const go = document.getElementById('up-go');
+  if (go) {
+    go.onclick = async () => {
+      go.disabled = true; go.textContent = 'Pulling\\u2026';
+      const { ok, data } = await post('update');
+      if (!ok) { go.disabled = false; go.textContent = 'Update now'; return toast(data.error, true); }
+      bar.innerHTML = '<b>Updated to ' + esc(data.version ?? '?') + '</b>'
+        + '<span>' + esc(data.from) + ' \\u2192 ' + esc(data.to)
+        + ' \\u2014 stop the hub (Ctrl+C) and start it again to run the new code.</span>';
+    };
+  }
 }
 
 async function load() {
@@ -518,6 +559,7 @@ function renderCommunity() {
     + '<span class="dim">A <code>.pokepack</code> file or link somebody sent you.</span>'
     + '<span style="flex:1"></span>'
     + '<span class="dim">' + (S.gallery ?? []).length + ' published</span>'
+    + '<button class="ghost sm" data-refresh-gallery="1">Check for new</button>'
     + '</div>';
 
   const all = [...(S.gallery ?? [])]
@@ -888,6 +930,13 @@ document.getElementById('grid').addEventListener('click', async (e) => {
   if (exp) return exportInstance(exp.dataset.exportInst);
   if (e.target.closest('[data-import]')) return importPack();
   if (e.target.closest('[data-settings]')) return openSettings();
+  if (e.target.closest('[data-refresh-gallery]')) {
+    const was = (S.gallery ?? []).length;
+    S = await (await fetch(api('state', '&refresh=1'))).json();
+    render();
+    const now = (S.gallery ?? []).length;
+    return toast(now === was ? 'No new packs published.' : (now - was) + ' new pack(s) published.');
+  }
   const share = e.target.closest('[data-share]');
   if (share) return sharePack(share.dataset.share);
   const recipe = e.target.closest('[data-pack]');
@@ -1122,6 +1171,7 @@ document.getElementById('tab-packs').onclick = () => { tab = 'packs'; render(); 
 document.getElementById('tab-browse').onclick = () => { tab = 'browse'; render(); };
 document.getElementById('tab-mods').onclick = () => { tab = 'mods'; render(); loadMods(false); };
 document.getElementById('d-close').onclick = () => dlg.close();
+checkForUpdate();
 // Buttons inside a dialog body, which is rebuilt every time it opens.
 document.getElementById('d-body').addEventListener('click', (e) => {
   const share = e.target.closest('[data-share]');
