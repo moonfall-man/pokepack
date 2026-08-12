@@ -1,0 +1,36 @@
+{
+  "format": "pokepack",
+  "formatVersion": 1,
+  "id": "voxel-test",
+  "name": "voxel_test",
+  "author": "cory",
+  "summary": "test",
+  "thumbnail": null,
+  "engine": null,
+  "createdAt": "2026-08-12T18:50:23.887Z",
+  "strict": true,
+  "mods": [
+    {
+      "id": "BATTLE_ART_VOXEL_FORK",
+      "version": "1.7.9",
+      "source": {
+        "url": "https://github.com/absol89/DramaticShapeVoxelMod/releases/download/1.7.9/BATTLE_ART_VOXEL_FORK-1.7.9.zip",
+        "sha256": "8a749f6acb38d7617ed7140ef6e48a9f02d81c980e61d99421b1ff6a5b43f765",
+        "size": 21284483
+      },
+      "options": {}
+    },
+    {
+      "id": "VOXEL_DEX",
+      "version": "1.0.0",
+      "source": {
+        "url": "https://github.com/DavidSchuchert/gen1-voxel-dex/releases/download/v1.0.0/VOXEL_DEX-1.0.0.zip",
+        "sha256": "dc1fb3dcc24d7fb1c971b75793829d76b8b7556d7db927f955b35b2362a9db82",
+        "size": 17309
+      },
+      "options": {}
+    }
+  ],
+  "disable": [],
+  "slots": {}
+}
