@@ -14,6 +14,7 @@ import * as votes from '../src/votes.js';
 import * as catalogue from '../src/catalogue.js';
 import * as deps from '../src/deps.js';
 import * as gh from '../src/github.js';
+import * as net from '../src/net.js';
 import * as packfeed from '../src/packfeed.js';
 import { applyToOptions, setModEnabled } from '../src/liveapply.js';
 import { uninstall, planUninstall } from '../src/uninstall.js';
@@ -1305,6 +1306,25 @@ await itAsync('refuses a link it cannot honestly resolve', async () => {
   await rejects('https://example.com/some/page', 'GitHub release page');
   await rejects('not a url at all', 'not a URL');
   await rejects('https://github.com/o/r/issues/4', 'release page');
+});
+
+it('names the anonymous rate limit instead of showing a bare 403', () => {
+  // Nothing here needs a GitHub account, but 60 requests an hour is shared per
+  // IP and pinning a pack spends one per repo.  A bare 403 reads as "the mod is
+  // gone", which sends people looking for the wrong problem.
+  const headers = new Map([
+    ['x-ratelimit-remaining', '0'],
+    ['x-ratelimit-reset', String(Math.floor(Date.now() / 1000) + 300)],
+  ]);
+  const res = { status: 403, headers: { get: (k) => headers.get(k) ?? null } };
+  const msg = net.rateLimited(res);
+  ok(msg.includes('rate-limiting'), msg);
+  ok(/\b5 minutes\b/.test(msg), `should say when it lifts, got: ${msg}`);
+
+  // A 403 with requests still on the clock is a different problem entirely.
+  headers.set('x-ratelimit-remaining', '42');
+  eq(net.rateLimited(res), null);
+  eq(net.rateLimited({ status: 404, headers: { get: () => null } }), null);
 });
 
 await itAsync('says so when a release publishes no zip', async () => {
