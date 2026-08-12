@@ -1,0 +1,36 @@
+{
+  "format": "pokepack",
+  "formatVersion": 1,
+  "id": "test-2",
+  "name": "test-2",
+  "author": "test",
+  "summary": "testing",
+  "thumbnail": null,
+  "engine": null,
+  "createdAt": "2026-08-12T22:50:55.416Z",
+  "strict": true,
+  "mods": [
+    {
+      "id": "auto_battle",
+      "version": "0.1.9",
+      "source": {
+        "url": "https://github.com/eduardocalafell/gen1recomp-auto-battle/releases/download/v0.1.9/auto_battle-0.1.9.zip",
+        "sha256": "1b1ebfd68007f4f16a3ace125584b7b9fcdf730dbe2888dd7579c6ef23699b0e",
+        "size": 13412
+      },
+      "options": {}
+    },
+    {
+      "id": "no_exp_challenge",
+      "version": "1.0.1",
+      "source": {
+        "url": "https://github.com/1iminal/gen1recomp-no-exp-challenge/releases/download/v1.0.1/no_exp_challenge-1.0.1.zip",
+        "sha256": "0adfc6fb4587013d722ba6a2f7e29f1e8ded8716860e6c25c453b7cbad9403b7",
+        "size": 2103
+      },
+      "options": {}
+    }
+  ],
+  "disable": [],
+  "slots": {}
+}
