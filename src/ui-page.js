@@ -117,8 +117,12 @@ button:disabled { opacity:.4; cursor:not-allowed; }
 .pk .sub { font-size:11.5px; color:var(--dim); margin-top:1px; }
 .pk[aria-current="true"] { background:var(--panel); border-color:var(--line);
   box-shadow:inset 2px 0 0 var(--gold); }
-.pk-acts { display:flex; gap:4px; padding:6px 2px 2px; flex-wrap:wrap; }
-.pk-acts button { padding:3px 8px; font-size:11.5px; }
+/* What you can do to the pack sits beside its name in the top bar, not in the
+   rail: the rail answers "which one", the bar acts on the answer. */
+.pack-acts { display:flex; gap:4px; align-items:center;
+  padding-left:12px; margin-left:4px; border-left:1px solid var(--line); }
+.pack-acts button { padding:5px 10px; font-size:12.5px; }
+@media (max-width:700px) { .pack-acts { display:none; } }
 
 /* ---- main */
 .main { display:flex; flex-direction:column; min-height:0; }
@@ -147,19 +151,30 @@ textarea { resize:vertical; line-height:1.5; }
   color:var(--bg); }
 .chips .n { color:inherit; opacity:.55; font-variant-numeric:tabular-nums; }
 
-/* ---- mod rows */
-.rows { border:1px solid var(--line); border-radius:var(--r-lg); overflow:hidden;
-  background:var(--panel); }
-.row { display:grid; grid-template-columns:1fr auto; gap:12px; padding:10px 14px;
+/* ---- rows, used inside dialogs */
+.row { display:grid; grid-template-columns:1fr auto; gap:12px; padding:10px 0;
   border-bottom:1px solid var(--line-soft); align-items:center; }
 .row:last-child { border-bottom:0; }
-.row:hover { background:var(--raise); }
-.row .t { font-weight:600; font-size:13.5px; letter-spacing:-.01em; }
-.row .meta { font-size:12px; color:var(--dim); margin-top:2px;
-  display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
-.row .acts { display:flex; gap:6px; align-items:center; }
 .row a { color:var(--dim); text-decoration:none; }
 .row a:hover { color:var(--ink); text-decoration:underline; }
+
+/* ---- mod cards.  The stripe is the mod's own colour, derived from its id --
+   the same mod is the same colour every time, which is what makes a wall of
+   them scannable once you know them by sight. */
+.mod { background:var(--panel); border:1px solid var(--line); border-radius:var(--r-lg);
+  overflow:hidden; display:flex; flex-direction:column;
+  transition:border-color .12s, transform .12s; }
+.mod:hover { border-color:var(--dim); transform:translateY(-1px); }
+.mod .strip { height:4px; flex:none; }
+.mod .body { padding:12px 14px 13px; display:flex; flex-direction:column; gap:7px; flex:1; }
+.mod h3 { margin:0; font-size:14.5px; letter-spacing:-.015em; }
+.mod .by { font-size:12px; color:var(--dim); margin-top:-4px; }
+.mod .sum { font-size:12.5px; color:var(--ink-2); flex:1; }
+.mod .tags { display:flex; gap:5px; flex-wrap:wrap; }
+.mod .acts { display:flex; gap:6px; align-items:center; flex-wrap:wrap;
+  padding-top:2px; }
+.mod .acts a { color:var(--dim); text-decoration:none; font-size:12.5px; }
+.mod .acts a:hover { color:var(--ink); text-decoration:underline; }
 
 .tag { font-size:11px; font-weight:600; letter-spacing:.02em; padding:1px 7px;
   border-radius:999px; border:1px solid var(--line); color:var(--dim); }
@@ -218,6 +233,7 @@ label input, label textarea { margin-top:5px; }
 <div class="top">
   <span class="mark"><span class="ball"></span>pokepack</span>
   <div class="now"><span class="lbl">Playing</span><span class="who" id="who">…</span></div>
+  <div class="pack-acts" id="pack-acts"></div>
   <span style="flex:1"></span>
   <button id="play" class="primary">▶ Play</button>
   <button id="settings" class="quiet">Settings</button>
@@ -280,6 +296,13 @@ const cats = new Set();
 const esc = (s) => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const plural = (n, one, many) => n + ' ' + (n === 1 ? one : (many || one + 's'));
 
+// A mod's colour, from its id.  Stable, so the same mod is the same colour on
+// every screen and every machine -- that is the bit that makes it useful rather
+// than decorative.  Saturation and lightness are fixed so nothing shouts.
+const hue = (id) => { let h = 0; for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) % 360; return h; };
+const strip = (id) => 'linear-gradient(90deg,hsl(' + hue(id) + ' 62% 52%),hsl('
+  + ((hue(id) + 38) % 360) + ' 62% 44%))';
+
 function toast(msg, bad) {
   const el = document.getElementById('toast');
   el.textContent = msg;
@@ -337,6 +360,7 @@ async function load() {
   document.getElementById('c-packs').textContent = S.instances.length;
   document.getElementById('c-browse').textContent = (S.gallery ?? []).length;
   renderRail();
+  renderPackActions();
   render();
 }
 
@@ -352,21 +376,28 @@ function renderRail() {
   rail.innerHTML = S.instances.map(i => {
     const on = i.identity === S.active;
     const enabled = i.modList.filter(m => m.enabled).length;
-    return '<div>'
-      + '<button class="pk" data-act-inst="' + esc(i.identity) + '" aria-current="' + on + '">'
+    return '<button class="pk" data-act-inst="' + esc(i.identity) + '" aria-current="' + on + '">'
       + '<div class="nm">' + esc(i.identity) + '</div>'
       + '<div class="sub num">' + plural(i.mods, 'mod') + (i.mods ? ' \\u00b7 ' + enabled + ' on' : '')
       + (i.hasGameData ? '' : ' \\u00b7 no game data') + '</div>'
-      + '</button>'
-      + (on
-          ? '<div class="pk-acts">'
-            + (enabled ? '<button class="quiet" data-export-inst="' + esc(i.identity) + '">Export</button>'
-              + '<button class="quiet" data-publish="' + esc(i.identity) + '">Publish</button>' : '')
-            + (i.isDefault ? '' : '<button class="quiet danger" data-del-inst="' + esc(i.identity) + '">Delete</button>')
-            + '</div>'
-          : '')
-      + '</div>';
+      + '</button>';
   }).join('');
+}
+
+// What you can do to the pack you are on, beside its name.  The rail answers
+// "which one"; this acts on the answer.
+function renderPackActions() {
+  const bar = document.getElementById('pack-acts');
+  const inst = S.instances.find(i => i.identity === S.active);
+  if (!inst) { bar.innerHTML = ''; return; }
+  const enabled = inst.modList.filter(m => m.enabled).length;
+  bar.innerHTML =
+    (enabled
+      ? '<button class="quiet" data-export-inst="' + esc(inst.identity) + '">Export</button>'
+        + '<button class="quiet" data-publish="' + esc(inst.identity) + '">Publish</button>'
+      : '')
+    + (inst.isDefault ? ''
+      : '<button class="quiet danger" data-del-inst="' + esc(inst.identity) + '">Delete</button>');
 }
 
 // ------- Community
@@ -442,25 +473,28 @@ async function loadMods(force) {
     return;
   }
 
-  rows.innerHTML = '<div class="rows">' + CAT.mods.map(m => {
+  rows.innerHTML = '<div class="grid">' + CAT.mods.map(m => {
     const behind = m.installedVersion && m.latestVersion && m.installedVersion !== m.latestVersion;
     const faults = (m.missing ?? []).map(d => 'needs ' + esc(d.id))
       .concat((m.wrongVersion ?? []).map(d => 'needs ' + esc(d.id) + ' ' + esc(d.range)
         + ', have ' + esc(d.have ?? '?')))
       .concat((m.clashes ?? []).map(c => 'clashes with ' + esc(c)));
-    return '<div class="row">'
-      + '<div><div class="t">' + esc(m.title) + '</div><div class="meta">'
+    return '<div class="mod"><div class="strip" style="background:' + strip(m.id) + '"></div>'
+      + '<div class="body">'
+      + '<h3>' + esc(m.title) + '</h3>'
+      + (m.author ? '<div class="by">by ' + esc(m.author) + '</div>' : '')
+      + '<div class="sum">' + esc(m.summary || '\\u2014') + '</div>'
+      + '<div class="tags">'
       + (m.installedVersion
-          ? '<span class="ver">' + esc(m.installedVersion) + '</span>'
-          : m.latestVersion ? '<span class="ver">' + esc(m.latestVersion) + '</span>' : '')
-      + (m.author ? '<span>' + esc(m.author) + '</span>' : '')
-      + (m.categories ?? []).slice(0, 2).map(c => '<span>' + esc(c.replace(/_/g, ' ')) + '</span>').join('')
-      + (behind ? '<span class="tag warn">' + esc(m.latestVersion) + ' available</span>' : '')
+          ? '<span class="tag gold num">' + esc(m.installedVersion) + '</span>'
+          : m.latestVersion ? '<span class="tag num">' + esc(m.latestVersion) + '</span>' : '')
+      + (behind ? '<span class="tag warn num">' + esc(m.latestVersion) + ' available</span>' : '')
       + (m.unlisted ? '<span class="tag">not in the index</span>' : '')
       + (!m.unlisted && !m.installable ? '<span class="tag bad">no download</span>' : '')
       + faults.map(f => '<span class="tag bad">' + f + '</span>').join('')
-      + (m.summary ? '<span style="flex-basis:100%;color:var(--dim)">' + esc(m.summary) + '</span>' : '')
-      + '</div></div>'
+      + (m.categories ?? []).slice(0, 2).map(c =>
+          '<span class="tag">' + esc(c.replace(/_/g, ' ')) + '</span>').join('')
+      + '</div>'
       + '<div class="acts">'
       + (m.installedVersion && m.enabled !== null
           ? '<button class="sm' + (m.enabled ? ' on' : '') + '" data-mod="' + esc(m.id)
@@ -473,9 +507,10 @@ async function loadMods(force) {
           ? '<button class="sm quiet danger" data-mod="' + esc(m.id) + '" data-do="remove">Remove</button>'
           : m.installable
             ? '<button class="sm primary" data-mod="' + esc(m.id) + '" data-do="install">Install</button>' : '')
-      + (m.github ? '<a class="why" href="https://github.com/' + esc(m.github)
+      + '<span style="flex:1"></span>'
+      + (m.github ? '<a href="https://github.com/' + esc(m.github)
           + '" target="_blank" rel="noopener">repo \\u2197</a>' : '')
-      + '</div></div>';
+      + '</div></div></div>';
   }).join('') + '</div>';
 }
 
@@ -999,13 +1034,17 @@ document.getElementById('settings').onclick = openSettings;
 
 // ------- the rail's actions, delegated so they survive a re-render
 
-document.getElementById('rail').addEventListener('click', async (e) => {
+// Pack actions live in the top bar now, so they get their own listener.
+document.getElementById('pack-acts').addEventListener('click', (e) => {
   const del = e.target.closest('[data-del-inst]');
   if (del) return confirmDeleteInstance(del.dataset.delInst);
   const pub = e.target.closest('[data-publish]');
   if (pub) return publishInstance(pub.dataset.publish);
   const exp = e.target.closest('[data-export-inst]');
   if (exp) return exportInstance(exp.dataset.exportInst);
+});
+
+document.getElementById('rail').addEventListener('click', async (e) => {
   const card = e.target.closest('[data-act-inst]');
   if (!card) return;
   const { ok, data } = await post('activate', { identity: card.dataset.actInst });
