@@ -51,7 +51,24 @@ export async function downloadToBuffer(url) {
 //
 // HEAD first because it is free; some hosts refuse it, so fall back to a
 // one-byte ranged GET rather than reporting a live link as dead.
-export async function checkUrl(url) {
+export async function checkUrl(url, { retries = 3, delayMs = 1000 } = {}) {
+  let last;
+  for (let attempt = 0; ; attempt++) {
+    last = await checkOnce(url);
+    // Only a network-level failure is worth retrying.  A 404 is an answer, and
+    // asking again does not make a deleted release come back.  A 429 is the
+    // host asking us to wait, which is the one status that is worth repeating.
+    const retryable = !last.ok && (last.status === null || last.status === 429 || last.status >= 500);
+    if (last.ok || !retryable || attempt >= retries) return last;
+    // Backing off rather than hammering: a shared CI runner hitting a rate
+    // limit gets slower by asking faster.
+    await new Promise((r) => { setTimeout(r, delayMs * (attempt + 1)); });
+  }
+}
+
+// A run of this marks packs broken and fails CI, so a single flaky connection
+// must not be enough to cry wolf about somebody's pack.
+async function checkOnce(url) {
   try {
     const head = await request(url, { method: 'HEAD' });
     if (head.ok) {

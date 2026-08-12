@@ -646,8 +646,12 @@ export function serve({ packsDir, saveDir, indexFile, port = 7666, host = '127.0
     if (url.pathname === '/api/instance/export' && req.method === 'POST') {
       const opts = await readBody(req);
       if (!opts) return json(res, 400, { error: 'bad request body' });
-      const act = activeInstance();
-      if (!act) return json(res, 400, { error: 'no active instance' });
+      // Named explicitly when exporting from a card, so you do not have to
+      // switch to a setup just to share it.
+      const act = opts.identity
+        ? findSaveDirs().find((i) => i.identity === opts.identity)
+        : activeInstance();
+      if (!act) return json(res, 400, { error: opts.identity ? `no setup called ${opts.identity}` : 'no active instance' });
 
       const state = stateOf(act.path);
       const chosen = Array.isArray(opts.mods) && opts.mods.length

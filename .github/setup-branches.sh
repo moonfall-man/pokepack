@@ -6,8 +6,21 @@
 #   dev     where pack submissions and work in progress land first.
 #
 # Contributors fork, PR into dev.  You review, merge, and promote dev -> master
-# when you are happy.  Neither branch can be pushed to directly, force-pushed,
-# or deleted -- including by you, which is the point.
+# when you are happy.
+#
+# The two branches are locked down differently, and the reason is a GitHub rule
+# with no way around it: nobody can approve their own pull request.
+#
+#   master  enforced on everyone, you included.  No direct pushes at all -- a
+#           pull request and green CI are the only way in.  Zero approvals
+#           required, because requiring one on a solo project means your own
+#           release PR can never be merged by anybody, ever.
+#   dev     one approval from the code owner, so nothing a contributor writes
+#           lands without you clicking approve.  Admins bypass, which is what
+#           lets you merge your own work in without a second person.
+#
+# So: strangers cannot get anything into either branch without your approval,
+# and master cannot be pushed to by hand even by you.
 #
 # Run once, after the repo exists on GitHub:
 #   sh .github/setup-branches.sh
@@ -32,20 +45,17 @@ echo "  default branch for new PRs: dev"
 protect() {
   branch=$1
   linear=$2
-  # enforce_admins=false leaves you a way to promote dev -> master without a
-  # second human.  GitHub will not let anyone approve their own PR, so with it
-  # true and no collaborators, your own release PR would sit unmergeable for
-  # ever.  Everyone else still needs your approval; this is the one hole and it
-  # is yours.
+  admins=$3
+  approvals=$4
   gh api -X PUT "repos/$REPO/branches/$branch/protection" --input - >/dev/null <<JSON
 {
   "required_status_checks": { "strict": true, "contexts": ["test", "validate"] },
-  "enforce_admins": false,
+  "enforce_admins": $admins,
   "required_pull_request_reviews": {
-    "required_approving_review_count": 1,
-    "require_code_owner_reviews": true,
+    "required_approving_review_count": $approvals,
+    "require_code_owner_reviews": $( [ "$approvals" -gt 0 ] && echo true || echo false ),
     "dismiss_stale_reviews": true,
-    "require_last_push_approval": true
+    "require_last_push_approval": false
   },
   "restrictions": null,
   "allow_force_pushes": false,
@@ -54,21 +64,41 @@ protect() {
   "required_linear_history": $linear
 }
 JSON
-  echo "  protected: $branch (1 approval, CODEOWNERS required, no force-push, no delete)"
+  echo "  protected: $branch (admins enforced: $admins, approvals: $approvals)"
 }
 
-# dev takes squash merges, so its history stays one commit per pack.
-protect dev true
+# dev takes squash merges, so its history stays one commit per pack.  One
+# approval from the code owner, and admins bypass so your own work still moves.
+protect dev true false 1
+
 # master takes an ordinary merge commit from dev.  Linear history here would
 # force a squash, which rewrites the commits dev already has -- and then the two
 # branches diverge and every promotion needs a force-push to fix.
-protect master false
+#
+# Enforced on admins, so not even you can push to it by hand; zero approvals, so
+# your own release PR is not waiting on a second person who does not exist.
+protect master false true 0
 
 # A fork's workflow run can otherwise start the moment a stranger opens a PR.
 gh api -X PUT "repos/$REPO/actions/permissions/workflow" \
   -f default_workflow_permissions=read \
   -F can_approve_pull_request_reviews=false >/dev/null
 echo "  Actions: read-only token, cannot approve PRs"
+
+# Pages, for the gallery.  Turned on here rather than by the workflow: creating
+# the site needs a token that can write repo settings, and the workflow's token
+# is read-only by the line above.  Already-enabled is not an error.
+gh api -X POST "repos/$REPO/pages" -f build_type=workflow >/dev/null 2>&1 \
+  && echo "  Pages: on, published by the gallery workflow" \
+  || echo "  Pages: already on"
+
+# The gallery publishes from master, but master is not the default branch any
+# more -- and a fresh github-pages environment only lets the default branch
+# deploy.  Allow any protected branch instead.
+gh api -X PUT "repos/$REPO/environments/github-pages" --input - >/dev/null 2>&1 <<'JSON' \
+  && echo "  Pages: protected branches may deploy" || true
+{"deployment_branch_policy":{"protected_branches":true,"custom_branch_policies":false}}
+JSON
 
 cat <<'DONE'
 

@@ -75,10 +75,10 @@ jobs:
           <p><a href="data/packs.json">data/packs.json</a></p>
           HTML
 
-      # enablement turns Pages on the first time this runs, so the gallery does
-      # not need a click in Settings before it can publish.
+      # Deliberately not `enablement: true`.  Creating the Pages site needs a
+      # token that can write repo settings, and this workflow's token is
+      # read-only on purpose.  setup-branches.sh turns Pages on once, as you.
       - uses: actions/configure-pages@v5
-        with: { enablement: true }
       - uses: actions/upload-pages-artifact@v3
         with: { path: site }
       - id: deploy
