@@ -13,6 +13,7 @@ import { buildFeed, submitUrl, pagesBase } from '../src/feed.js';
 import * as votes from '../src/votes.js';
 import * as catalogue from '../src/catalogue.js';
 import * as deps from '../src/deps.js';
+import * as gh from '../src/github.js';
 import * as packfeed from '../src/packfeed.js';
 import { applyToOptions, setModEnabled } from '../src/liveapply.js';
 import { uninstall, planUninstall } from '../src/uninstall.js';
@@ -1245,6 +1246,76 @@ it('reports a conflict to both sides, whichever one declared it', () => {
   });
   eq(report.BATTLE_ART_VOXEL_FORK.clashes, ['DRAMALESS_SHAPE']);
   eq(report.DRAMALESS_SHAPE.clashes, ['BATTLE_ART_VOXEL_FORK'], 'the other side must hear about it too');
+});
+
+// ------- github links
+
+describe('github');
+
+const RELEASE = {
+  tag_name: 'v1.8.2',
+  assets: [
+    { name: 'Source code.zip', size: 900, browser_download_url: 'https://e.com/src.zip' },
+    { name: 'DRAMATIC_SHAPE-1.8.2.zip', size: 21000, browser_download_url: 'https://e.com/mod.zip' },
+  ],
+};
+
+it('picks the mod zip out of a release, not the source archive', () => {
+  const got = gh.pickZip(RELEASE.assets, { id: 'DRAMATIC_SHAPE' });
+  eq(got.browser_download_url, 'https://e.com/mod.zip');
+  // With no id to go on, the bigger file is the better guess than the first.
+  eq(gh.pickZip(RELEASE.assets).browser_download_url, 'https://e.com/mod.zip');
+  eq(gh.pickZip([{ name: 'notes.txt', browser_download_url: 'x' }]), null);
+  eq(gh.pickZip([]), null);
+});
+
+await itAsync('resolves a release page to the file it publishes', async () => {
+  const seen = [];
+  const fake = async (u) => { seen.push(u); return RELEASE; };
+  const out = await gh.resolveDownload(
+    'https://github.com/scottcandy34/DramaticShapeVoxelMod-latest/releases/tag/v1.8.2',
+    { id: 'DRAMATIC_SHAPE', fetch: fake },
+  );
+  eq(out.url, 'https://e.com/mod.zip');
+  eq(out.version, '1.8.2', 'the v prefix is not part of the version');
+  eq(seen[0], 'https://api.github.com/repos/scottcandy34/DramaticShapeVoxelMod-latest/releases/tags/v1.8.2');
+});
+
+await itAsync('takes a bare repo or a direct zip too', async () => {
+  const fake = async () => RELEASE;
+  eq((await gh.resolveDownload('https://github.com/o/r', { fetch: fake })).url, 'https://e.com/mod.zip');
+  eq((await gh.resolveDownload('https://github.com/o/r/releases/latest', { fetch: fake })).url, 'https://e.com/mod.zip');
+  const direct = await gh.resolveDownload('https://files.example.com/GHOST_LINK-0.1.0.zip', { fetch: fake });
+  eq(direct.url, 'https://files.example.com/GHOST_LINK-0.1.0.zip');
+  eq(direct.from, 'direct link', 'no API call needed for a file');
+});
+
+await itAsync('refuses a link it cannot honestly resolve', async () => {
+  const fake = async () => RELEASE;
+  const rejects = async (link, match) => {
+    try {
+      await gh.resolveDownload(link, { fetch: fake });
+    } catch (e) {
+      ok(String(e.message).includes(match), `expected ${match}, got ${e.message}`);
+      return;
+    }
+    throw new Error(`expected ${link} to be refused`);
+  };
+  await rejects('http://github.com/o/r/releases/tag/v1', 'https');
+  await rejects('https://example.com/some/page', 'GitHub release page');
+  await rejects('not a url at all', 'not a URL');
+  await rejects('https://github.com/o/r/issues/4', 'release page');
+});
+
+await itAsync('says so when a release publishes no zip', async () => {
+  const empty = async () => ({ tag_name: 'v1', assets: [{ name: 'readme.md', browser_download_url: 'x' }] });
+  try {
+    await gh.resolveDownload('https://github.com/o/r/releases/tag/v1', { fetch: empty });
+  } catch (e) {
+    ok(e.message.includes('no .zip asset'), e.message);
+    return;
+  }
+  throw new Error('expected a refusal');
 });
 
 // ------- catalogue

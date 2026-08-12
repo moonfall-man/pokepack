@@ -22,6 +22,17 @@ function sourceFor(id, version, { index, releasesByRepo, state }) {
   const installed = state?.mods?.[id];
   const repo = installed?.github ?? entry?.github ?? null;
 
+  // A link given by hand when the mod was installed beats everything else: the
+  // player pointed at that file, these are the bytes that came back, and for a
+  // mod the index has never heard of it is the only source there is.
+  if (installed?.source?.url) {
+    return {
+      url: installed.source.url,
+      size: installed.source.size ?? undefined,
+      why: 'the link it was installed from',
+    };
+  }
+
   // A mod's own version and the release it ships in are frequently not the
   // same string -- GHOST_LINK 0.1.0 lives inside release v0.3.1 of the couch
   // multiplayer repo.  So match the release tag *or* the asset name, which is

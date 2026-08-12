@@ -149,7 +149,7 @@ code { font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:.92em;
         <button data-f="all">All</button>
       </div>
       <input id="mods-q" placeholder="Search mods…" style="flex:1;min-width:200px">
-      <button id="mods-zip">Add .zip…</button>
+      <button id="mods-zip">Add a mod…</button>
       <button id="mods-refresh">Refresh</button>
       <span class="dim" id="mods-meta"></span>
     </div>
@@ -1036,29 +1036,70 @@ document.getElementById('mods-q').addEventListener('input', () => {
   clearTimeout(modsTimer);
   modsTimer = setTimeout(() => loadMods(false), 200);
 });
-document.getElementById('mods-zip').onclick = async () => {
-  const b = document.getElementById('mods-zip');
-  b.disabled = true; b.textContent = 'Choosing…';
-  const { ok, data } = await post('mod/zip', {});
-  b.disabled = false; b.textContent = 'Add .zip…';
+// Add a mod the index has never heard of: a file, or a link.
+//
+// The link matters more than it looks.  A mod installed from a file on your
+// disk cannot be published -- export can pin its hash but has nowhere to point
+// anybody else -- whereas one installed from a release page carries its URL
+// into every pack you make from it.
+document.getElementById('mods-zip').onclick = () => {
+  dialog({
+    title: 'Add a mod',
+    sub: 'For anything the index does not list.',
+    body: '<label>Link to a GitHub release, or straight to a .zip<br>'
+      + '<input id="az-url" placeholder="https://github.com/owner/repo/releases/tag/v1.8.2"></label>'
+      + '<div class="note">A link is the one that can be shared. The exact file and its checksum '
+      + 'are recorded, so a pack you export can point other people at it.</div>'
+      + '<div class="why" style="text-align:center">or</div>'
+      + '<div style="display:flex;gap:8px;align-items:center">'
+      + '<button id="az-file" style="flex:none">Choose a file\\u2026</button>'
+      + '<span class="why">installs here only \\u2014 nobody else can fetch a file on your disk, '
+      + 'so a pack built from it will not work for them</span></div>'
+      + '<div id="az-out"></div>',
+    go: 'Fetch and install',
+    onGo: () => {
+      const link = val('az-url');
+      if (!link) {
+        document.getElementById('az-out').innerHTML =
+          '<div class="note bad">Paste a link first, or choose a file instead.</div>';
+        return;
+      }
+      addMod({ url: link });
+    },
+  });
+  document.getElementById('az-file').onclick = () => addMod({});
+};
+
+async function addMod(payload) {
+  const out = document.getElementById('az-out');
+  const b = document.getElementById('d-go');
+  const f = document.getElementById('az-file');
+  b.disabled = true; f.disabled = true;
+  b.textContent = payload.url ? 'Fetching\\u2026' : 'Choosing\\u2026';
+  const { ok, data } = await post('mod/zip', payload);
+  b.disabled = false; f.disabled = false; b.textContent = 'Fetch and install';
   if (data.cancelled) return;
+
   if (!ok) {
-    // Already installed is the common case, and re-installing your own build
-    // while iterating is exactly what you want -- so offer it.
+    // Already installed is the ordinary case when iterating on your own build.
     if (/already installed/.test(data.error || '')) {
-      const msg = data.error + '\\n\\nReplace it? The old copy is kept in the backup folder.';
-      if (!confirm(msg)) return;
-      const again = await post('mod/zip', { replace: true });
-      if (!again.ok) return toast(again.data.error, true);
-      toast(again.data.id + ' ' + again.data.version + ' replaced.');
-      await loadMods(false); return load();
+      out.innerHTML = '<div class="note"><b>' + esc(data.error) + '</b><br>'
+        + 'Replace it? The old copy is kept in the backup folder.'
+        + '<br><br><button class="primary sm" id="az-replace">Replace it</button></div>';
+      document.getElementById('az-replace').onclick = () => addMod({ ...payload, replace: true });
+      return;
     }
-    return toast(data.error, true);
+    out.innerHTML = '<div class="note bad">' + esc(data.error) + '</div>';
+    return;
   }
-  toast(data.id + ' ' + data.version + ' installed from your .zip.');
+
+  dlg.close();
+  toast(data.id + ' ' + data.version + ' installed'
+    + (data.from ? ' from ' + data.from : '')
+    + (data.source ? ' \\u2014 packs can point at it.' : ' \\u2014 local only, not publishable.'));
   await loadMods(false);
   load();
-};
+}
 document.getElementById('mods-refresh').onclick = () => loadMods(true);
 document.getElementById('mod-filter').addEventListener('click', (e) => {
   const b = e.target.closest('button[data-f]');
