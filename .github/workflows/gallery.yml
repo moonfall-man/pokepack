@@ -65,9 +65,13 @@ jobs:
           node -e '
             const pkg = require("./package.json");
             const sha = process.env.GITHUB_SHA || "";
+            // Subject line only.  A squash merge carries every commit message
+            // it swallowed, which was publishing seven kilobytes of changelog
+            // into a file whose one job is to say "there is a newer version".
+            const subject = (process.env.SUBJECT || "").split("\n")[0].trim();
             process.stdout.write(JSON.stringify({
               version: pkg.version,
-              notes: process.env.SUBJECT || null,
+              notes: subject.slice(0, 200) || null,
               url: `https://github.com/${process.env.GITHUB_REPOSITORY}/commits/master`,
               commit: sha.slice(0, 7),
             }, null, 2) + "\n");
