@@ -232,6 +232,61 @@ export function identityFor(saveDir) {
 }
 
 /**
+ * raiseWindow(pid) -> true | false
+ *
+ * Bring the game in front of the browser you pressed Play in.
+ *
+ * Best effort, and it says so: Windows refuses SetForegroundWindow to a process
+ * that does not already own the foreground, which a local server started from a
+ * browser tab generally does not.  The alt-key tap is the documented way round
+ * that -- it makes the shell hand over the foreground lock -- and it still fails
+ * sometimes.  Detached so a game that takes ten seconds to open its window does
+ * not hold up the response.
+ */
+function raiseWindow(pid) {
+  if (process.platform !== 'win32' || !pid) return false;
+  // AttachThreadInput to whichever thread currently owns the foreground: that
+  // borrows its foreground rights for the moment it takes to raise the window,
+  // and is the documented way through the lock.  SetForegroundWindow on its own
+  // is simply ignored from here -- tested, and it does nothing.
+  const script = `
+    Add-Type -MemberDefinition @'
+      [DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr h);
+      [DllImport("user32.dll")] public static extern bool BringWindowToTop(IntPtr h);
+      [DllImport("user32.dll")] public static extern bool ShowWindow(IntPtr h, int c);
+      [DllImport("user32.dll")] public static extern IntPtr GetForegroundWindow();
+      [DllImport("user32.dll")] public static extern uint GetWindowThreadProcessId(IntPtr h, IntPtr p);
+      [DllImport("user32.dll")] public static extern bool AttachThreadInput(uint a, uint b, bool f);
+      [DllImport("kernel32.dll")] public static extern uint GetCurrentThreadId();
+'@ -Name Fg -Namespace P | Out-Null
+    for ($i = 0; $i -lt 40; $i++) {
+      $p = Get-Process -Id ${pid} -ErrorAction SilentlyContinue
+      if (-not $p) { break }
+      $h = $p.MainWindowHandle
+      if ($h -ne 0) {
+        $me = [P.Fg]::GetCurrentThreadId()
+        $them = [P.Fg]::GetWindowThreadProcessId([P.Fg]::GetForegroundWindow(), [IntPtr]::Zero)
+        [P.Fg]::AttachThreadInput($me, $them, $true) | Out-Null
+        [P.Fg]::ShowWindow($h, 9) | Out-Null
+        [P.Fg]::BringWindowToTop($h) | Out-Null
+        [P.Fg]::SetForegroundWindow($h) | Out-Null
+        [P.Fg]::AttachThreadInput($me, $them, $false) | Out-Null
+        break
+      }
+      Start-Sleep -Milliseconds 250
+    }`;
+  try {
+    const child = spawn('powershell', ['-NoProfile', '-NonInteractive', '-Command', script], {
+      detached: true, stdio: 'ignore', windowsHide: true,
+    });
+    child.unref();
+    return true;
+  } catch {
+    return false; // never worth failing a launch over
+  }
+}
+
+/**
  * launchGame({ exePath, identity }) -> { pid }
  *
  * The exe comes from stored config, never from the request that asked to play.
@@ -266,7 +321,8 @@ export function launchGame({ exePath, identity, version = null }) {
     stdio: 'ignore',
   });
   child.unref();
-  return { pid: child.pid, identity: identity ?? DEFAULT_IDENTITY, version };
+  const raised = raiseWindow(child.pid);
+  return { pid: child.pid, identity: identity ?? DEFAULT_IDENTITY, version, raised };
 }
 
 /**
