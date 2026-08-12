@@ -1,0 +1,46 @@
+{
+  "format": "pokepack",
+  "formatVersion": 1,
+  "id": "voxel-basic",
+  "name": "voxel_basic",
+  "author": "Cory",
+  "summary": "basic voxel pack",
+  "thumbnail": null,
+  "engine": null,
+  "createdAt": "2026-08-12T21:48:52.000Z",
+  "strict": true,
+  "mods": [
+    {
+      "id": "DRAMATIC_SHAPE",
+      "version": "1.8.2",
+      "source": {
+        "url": "https://github.com/scottcandy34/DramaticShapeVoxelMod-latest/releases/download/v1.8.2/DRAMATIC_SHAPE-1.8.2.zip",
+        "sha256": "31a6a4e810610d540b830d411b6c47272407e9254b2969171aca780fcbe874f2",
+        "size": 8380403
+      },
+      "options": {}
+    },
+    {
+      "id": "VOXEL_DEX",
+      "version": "1.0.0",
+      "source": {
+        "url": "https://github.com/DavidSchuchert/gen1-voxel-dex/releases/download/v1.0.0/VOXEL_DEX-1.0.0.zip",
+        "sha256": "dc1fb3dcc24d7fb1c971b75793829d76b8b7556d7db927f955b35b2362a9db82",
+        "size": 17309
+      },
+      "options": {}
+    },
+    {
+      "id": "unique_menu_icons",
+      "version": "1.4.0",
+      "source": {
+        "url": "https://github.com/menyas/unique-menu-icons/releases/download/1.4.0/unique_menu_icons-1.4.0.zip",
+        "sha256": "2c3ccd9b6413ad6df8d3ef6114b4fa6d977cd3aa047cb479b2bb35a60c12324a",
+        "size": 372121
+      },
+      "options": {}
+    }
+  ],
+  "disable": [],
+  "slots": {}
+}
