@@ -19,6 +19,13 @@ downloads/
 # thing you deleted is the last thing that should come back in a commit.
 .trash/
 
+# Packs you export land in packs/ alongside the published ones, so a plain
+# `git add -A` sweeps your half-finished experiments into the repo -- and from
+# there into the gallery. Ignoring them does not hide the published packs:
+# gitignore has no effect on files git already tracks, so anything merged stays
+# tracked, and publishing a new one goes through the PR flow (or `git add -f`).
+packs/*.pokepack
+
 node_modules/
 *.log
 .cache/
