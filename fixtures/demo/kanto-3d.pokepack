@@ -1,0 +1,45 @@
+{
+  "format": "pokepack",
+  "formatVersion": 1,
+  "id": "kanto-3d",
+  "name": "KANTO 3D",
+  "author": "moonfall-man",
+  "summary": "Voxel battles tuned for two on one screen.",
+  "engine": null,
+  "createdAt": "2026-08-11T22:18:47.184Z",
+  "strict": true,
+  "mods": [
+    {
+      "id": "BATTLE_ART_VOXEL_FORK",
+      "version": "1.7.1",
+      "source": {
+        "url": "https://github.com/absol89/DramaticShapeVoxelMod/releases/download/1.7.1/BATTLE_ART_VOXEL_FORK-1.7.1.zip",
+        "size": 20880412
+      },
+      "options": {
+        "aa": 2,
+        "battles": true,
+        "curve": 0,
+        "playerView": "front",
+        "water": "full"
+      }
+    },
+    {
+      "id": "GHOST_LINK",
+      "version": "0.1.0",
+      "source": {
+        "url": "https://github.com/moonfall-man/pokemon-couch-multiplayer/releases/download/v0.3.1/GHOST_LINK-0.1.0.zip",
+        "size": 69803
+      },
+      "options": {
+        "players": 2
+      }
+    }
+  ],
+  "disable": [
+    "DRAMATIC_SHAPE"
+  ],
+  "slots": {
+    "red": "slot1"
+  }
+}

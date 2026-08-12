@@ -1,0 +1,119 @@
+// The only module that touches the wire.  Kept separate so build/resolve stay
+// testable without a network, the same split src/mods/ModIndex.lua uses.
+
+import { createHash } from 'node:crypto';
+
+const UA = 'pokepack/0.1 (+https://github.com/moonfall-man/pokepack)';
+
+async function request(url, init = {}) {
+  const res = await fetch(url, {
+    redirect: 'follow',
+    headers: { 'user-agent': UA, ...(init.headers ?? {}) },
+    ...init,
+  });
+  return res;
+}
+
+export async function fetchJson(url) {
+  const res = await request(url, { headers: { accept: 'application/json' } });
+  if (!res.ok) throw new Error(`${res.status} ${res.statusText} for ${url}`);
+  return res.json();
+}
+
+// Download and hash in one pass.  Mod zips run to tens of megabytes, so the
+// body is streamed rather than buffered -- we want the digest, not the file.
+export async function hashUrl(url, { onProgress } = {}) {
+  const res = await request(url);
+  if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+  const hash = createHash('sha256');
+  let size = 0;
+  for await (const chunk of res.body) {
+    hash.update(chunk);
+    size += chunk.length;
+    if (onProgress) onProgress(size);
+  }
+  return { sha256: hash.digest('hex'), size };
+}
+
+// Download and hash in one pass, keeping the bytes.  Used by `fetch`, where we
+// need both the file and the proof it is the right file -- hashing after
+// writing to disk would leave a window where an unverified zip is sitting
+// somewhere a player might pick it up.
+export async function downloadToBuffer(url) {
+  const res = await request(url);
+  if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+  const buffer = Buffer.from(await res.arrayBuffer());
+  return { buffer, sha256: createHash('sha256').update(buffer).digest('hex'), size: buffer.length };
+}
+
+// Does this link still resolve?  The question `validate` asks on a schedule so
+// no player's launcher has to.
+//
+// HEAD first because it is free; some hosts refuse it, so fall back to a
+// one-byte ranged GET rather than reporting a live link as dead.
+export async function checkUrl(url) {
+  try {
+    const head = await request(url, { method: 'HEAD' });
+    if (head.ok) {
+      return {
+        ok: true,
+        status: head.status,
+        size: Number(head.headers.get('content-length')) || null,
+      };
+    }
+    if (head.status !== 403 && head.status !== 405 && head.status !== 501) {
+      return { ok: false, status: head.status, reason: `${head.status} ${head.statusText}` };
+    }
+  } catch (e) {
+    // fall through to the ranged GET; a refused HEAD is not a dead link
+    void e;
+  }
+
+  try {
+    const res = await request(url, { headers: { range: 'bytes=0-0' } });
+    if (!res.ok && res.status !== 206) {
+      return { ok: false, status: res.status, reason: `${res.status} ${res.statusText}` };
+    }
+    const range = res.headers.get('content-range');
+    const total = range ? Number(range.split('/')[1]) : null;
+    if (res.body) await res.body.cancel().catch(() => {});
+    return { ok: true, status: res.status, size: Number.isFinite(total) ? total : null };
+  } catch (e) {
+    return { ok: false, status: null, reason: e.message };
+  }
+}
+
+// Every release of a repo, in the shape state.releasesFromCache produces, so
+// the two are interchangeable to build().
+//
+// This is the same endpoint src/mods/ModUpdate.lua uses.  Unauthenticated
+// GitHub allows 60 requests an hour, which is plenty for the handful of mods
+// in a pack but not for a loop -- callers should ask once per repo.
+export async function fetchReleases(repo) {
+  const doc = await fetchJson(`https://api.github.com/repos/${repo}/releases?per_page=100`);
+  if (!Array.isArray(doc)) return [];
+  return doc.map((rel) => {
+    const zip = (rel.assets ?? []).find((a) => typeof a.name === 'string' && a.name.toLowerCase().endsWith('.zip'));
+    return {
+      version: String(rel.tag_name ?? '').replace(/^[vV]/, '') || null,
+      tag: rel.tag_name ?? null,
+      published: rel.published_at ?? null,
+      prerelease: rel.prerelease === true,
+      zip: zip ? { name: zip.name, url: zip.browser_download_url, size: zip.size ?? null } : null,
+    };
+  });
+}
+
+export async function mapLimit(items, limit, fn) {
+  const out = new Array(items.length);
+  let next = 0;
+  const workers = Array.from({ length: Math.min(limit, items.length) }, async () => {
+    for (;;) {
+      const i = next++;
+      if (i >= items.length) return;
+      out[i] = await fn(items[i], i);
+    }
+  });
+  await Promise.all(workers);
+  return out;
+}

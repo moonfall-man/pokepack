@@ -1,0 +1,89 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-08-11T02:05:38Z",
+  "categories": ["CONTROLS", "MULTIPLAYER", "VISUAL"],
+  "mods": [
+    {
+      "id": "BATTLE_ART_VOXEL_FORK",
+      "folder": "BATTLE_ART_VOXEL_FORK",
+      "title": "BATTLE ART VOXEL FORK",
+      "author": "absol89",
+      "version": "1.7.6",
+      "summary": "Voxel battle scenes with configurable camera and water.",
+      "categories": ["VISUAL"],
+      "github": "absol89/DramaticShapeVoxelMod",
+      "repo": "https://github.com/absol89/DramaticShapeVoxelMod",
+      "api": 2,
+      "game_version": "0.0.0-dev || >=0.1.37 <2.0.0",
+      "profile": "content",
+      "dependencies": [],
+      "conflicts": ["DRAMATIC_SHAPE"],
+      "update_check": "ok",
+      "latest": {
+        "version": "1.7.6",
+        "tag": "1.7.6",
+        "prerelease": false,
+        "published_at": "2026-08-06",
+        "zip": {
+          "name": "BATTLE_ART_VOXEL_FORK-1.7.6.zip",
+          "url": "https://github.com/absol89/DramaticShapeVoxelMod/releases/download/1.7.6/BATTLE_ART_VOXEL_FORK-1.7.6.zip",
+          "size": 21066153
+        }
+      }
+    },
+    {
+      "id": "DRAMATIC_SHAPE",
+      "folder": "DRAMATIC_SHAPE",
+      "title": "DRAMATIC SHAPE VOXEL MOD",
+      "author": "DramaticShape",
+      "version": "1.6.2",
+      "summary": "The upstream voxel battle mod.",
+      "categories": ["VISUAL"],
+      "github": "DramaticShape/DramaticShapeVoxelMod",
+      "api": 2,
+      "game_version": ">=0.1.37 <2.0.0",
+      "dependencies": [],
+      "conflicts": ["BATTLE_ART_VOXEL_FORK"],
+      "update_check": "off"
+    },
+    {
+      "id": "GHOST_LINK",
+      "folder": "GHOST_LINK",
+      "title": "GHOST LINK",
+      "author": "moonfall-man",
+      "version": "0.1.0",
+      "summary": "See other players walking around your own world.",
+      "categories": ["MULTIPLAYER"],
+      "github": "moonfall-man/pokemon-couch-multiplayer",
+      "api": 2,
+      "game_version": "0.0.0-dev || >=0.1.37 <2.0.0",
+      "dependencies": [],
+      "conflicts": [],
+      "update_check": "ok",
+      "latest": {
+        "version": "0.3.1",
+        "tag": "v0.3.1",
+        "prerelease": false,
+        "zip": {
+          "name": "GHOST_LINK-0.1.0.zip",
+          "url": "https://github.com/moonfall-man/pokemon-couch-multiplayer/releases/download/v0.3.1/GHOST_LINK-0.1.0.zip",
+          "size": 69803
+        }
+      }
+    },
+    {
+      "id": "KANTO_FIRST_PERSON",
+      "folder": "KANTO_FIRST_PERSON",
+      "title": "KANTO IN FIRST PERSON",
+      "author": "someone",
+      "version": "0.4.0",
+      "summary": "First-person overworld camera. Needs the voxel renderer.",
+      "categories": ["VISUAL"],
+      "api": 2,
+      "game_version": ">=0.1.37 <2.0.0",
+      "dependencies": [{ "id": "BATTLE_ART_VOXEL_FORK", "range": ">=1.7.0" }],
+      "conflicts": [],
+      "update_check": "no installable release"
+    }
+  ]
+}

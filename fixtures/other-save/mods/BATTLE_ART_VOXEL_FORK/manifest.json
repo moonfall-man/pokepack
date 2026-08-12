@@ -1,0 +1,11 @@
+{
+  "id": "BATTLE_ART_VOXEL_FORK",
+  "name": "BATTLE ART VOXEL FORK",
+  "version": "1.7.6",
+  "api": 2,
+  "github": "absol89/DramaticShapeVoxelMod",
+  "entry": "main.lua",
+  "priority": 40,
+  "dependencies": [],
+  "conflicts": ["DRAMATIC_SHAPE"]
+}

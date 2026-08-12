@@ -1,0 +1,10 @@
+# Every change needs the owner's review.
+#
+# This is what makes "only I approve PRs" true rather than a convention: with
+# "Require review from Code Owners" switched on, GitHub adds @moonfall-man as a
+# required reviewer on every pull request and refuses the merge until it is
+# approved. Nobody can self-merge around it, including a future collaborator.
+#
+# Deliberately one catch-all line. A per-directory split invites the case where
+# a PR touches only files nobody owns and merges unreviewed.
+* @moonfall-man

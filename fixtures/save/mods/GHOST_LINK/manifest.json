@@ -1,0 +1,11 @@
+{
+  "id": "GHOST_LINK",
+  "name": "GHOST LINK",
+  "version": "0.1.0",
+  "api": 2,
+  "github": "moonfall-man/pokemon-couch-multiplayer",
+  "entry": "main.lua",
+  "priority": 50,
+  "dependencies": [],
+  "conflicts": []
+}

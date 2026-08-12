@@ -1,0 +1,31 @@
+{
+  "format": "pokepack",
+  "formatVersion": 1,
+  "id": "couch-coop",
+  "name": "COUCH CO-OP",
+  "author": "moonfall-man",
+  "summary": "Split screen on one PC. Two players, one save each, nothing shared.",
+  "thumbnail": null,
+  "engine": "0.0.0-dev || >=0.1.37 <2.0.0",
+  "createdAt": "2026-08-11T00:00:00Z",
+  "strict": true,
+  "mods": [
+    {
+      "id": "COUCH_MULTIPLAYER",
+      "version": "0.3.1",
+      "source": {
+        "url": "https://github.com/moonfall-man/pokemon-couch-multiplayer/releases/download/v0.3.1/COUCH_MULTIPLAYER-0.3.1.zip",
+        "sha256": "fe4b3b932a7cdfcc94b98ff84d91c5746394ffa517d9dab2cd009ea9759e95da",
+        "size": 69803
+      },
+      "options": {},
+      "notes": "Set PLAYERS in the mod's own options once installed."
+    }
+  ],
+  "disable": [
+    "PAD_OWNER",
+    "PAD_HOTKEYS",
+    "GHOST_LINK"
+  ],
+  "slots": {}
+}

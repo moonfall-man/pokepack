@@ -1,0 +1,11 @@
+{
+  "id": "DRAMATIC_SHAPE",
+  "name": "DRAMATIC SHAPE VOXEL MOD",
+  "version": "1.6.2",
+  "api": 2,
+  "github": "DramaticShape/DramaticShapeVoxelMod",
+  "entry": "main.lua",
+  "priority": 40,
+  "dependencies": [],
+  "conflicts": ["BATTLE_ART_VOXEL_FORK"]
+}

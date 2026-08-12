@@ -1,0 +1,52 @@
+{
+    "schema_version":  1,
+    "generated_at":  "2026-08-11T02:05:38Z",
+    "categories":  [
+                       "CONTROLS",
+                       "MULTIPLAYER"
+                   ],
+    "mods":  [
+                 {
+                     "id":  "COUCH_MULTIPLAYER",
+                     "folder":  "COUCH_MULTIPLAYER",
+                     "title":  "COUCH MULTIPLAYER",
+                     "author":  "moonfall-man",
+                     "version":  "0.3.1",
+                     "summary":  "Split screen on one PC -- set PLAYERS and load your save. Nothing else to install.",
+                     "categories":  [
+                                        "MULTIPLAYER"
+                                    ],
+                     "tags":  [
+                                  "multiplayer",
+                                  "splitscreen",
+                                  "couch",
+                                  "co-op",
+                                  "ghosts",
+                                  "followers",
+                                  "controls"
+                              ],
+                     "license":  "MIT",
+                     "repo":  "https://github.com/moonfall-man/pokemon-couch-multiplayer",
+                     "github":  "moonfall-man/pokemon-couch-multiplayer",
+                     "downloadURL":  "https://github.com/moonfall-man/pokemon-couch-multiplayer/releases/download/v0.3.1/COUCH_MULTIPLAYER-0.3.1.zip",
+                     "api":  2,
+                     "game_version":  "0.0.0-dev || \u003e=0.1.37 \u003c2.0.0",
+                     "profile":  "content",
+                     "affects_link":  false,
+                     "permissions":  [
+                                         "network",
+                                         "engine_internals",
+                                         "filesystem"
+                                     ],
+                     "dependencies":  [
+
+                                      ],
+                     "conflicts":  [
+                                       "PAD_OWNER",
+                                       "PAD_HOTKEYS",
+                                       "GHOST_LINK"
+                                   ],
+                     "description_url":  "https://github.com/moonfall-man/pokemon-couch-multiplayer/blob/master/COUCH_MULTIPLAYER/README.md"
+                 }
+             ]
+}

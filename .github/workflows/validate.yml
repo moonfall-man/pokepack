@@ -1,0 +1,80 @@
+name: validate packs
+
+# Rot detection, run here rather than in anybody's launcher.
+#
+# Mods move, get unpublished, and get re-uploaded under the same tag.  One
+# scheduled run answers "do these links still work" for every player at once;
+# the alternative is every copy of the game asking GitHub the same question.
+#
+# Two cadences, because the two checks cost wildly different amounts:
+#   - link check   : a HEAD per mod. Cheap. On every push, and nightly.
+#   - deep check   : downloads every mod and verifies its sha256. Weekly.
+
+on:
+  push:
+    branches: [master, dev]
+  # Deliberately no path filter.  `test` and `validate` are required checks on
+  # both protected branches, and a required check that never runs never reports
+  # -- which leaves the PR blocked for ever rather than passing.
+  pull_request:
+    branches: [master, dev]
+  schedule:
+    - cron: '17 4 * * *'   # nightly link check
+    - cron: '17 5 * * 0'   # Sunday deep check
+  workflow_dispatch:
+    inputs:
+      deep:
+        description: 'Download and verify every hash'
+        type: boolean
+        default: false
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '20' }
+      - run: node test/run.js
+
+  validate:
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '20' }
+
+      - name: Decide how hard to look
+        id: mode
+        run: |
+          if [ "${{ github.event.schedule }}" = "17 5 * * 0" ] || [ "${{ inputs.deep }}" = "true" ]; then
+            echo "deep=--deep" >> "$GITHUB_OUTPUT"
+          else
+            echo "deep=" >> "$GITHUB_OUTPUT"
+          fi
+
+      # Keep going after a failure so one dead pack does not hide the rest --
+      # the report is the product here, not the exit code.
+      - name: Check every pack
+        id: check
+        continue-on-error: true
+        run: |
+          shopt -s nullglob
+          packs=(packs/*.pokepack)
+          if [ ${#packs[@]} -eq 0 ]; then echo "no packs yet"; exit 0; fi
+          node bin/pokepack.js validate "${packs[@]}" ${{ steps.mode.outputs.deep }} --json > status.json
+          node bin/pokepack.js validate "${packs[@]}" ${{ steps.mode.outputs.deep }}
+
+      # status.json is what a gallery feed serves so the launcher can show
+      # "currently works" without every client re-deriving it.
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pack-status
+          path: status.json
+
+      - name: Fail if anything rotted
+        if: steps.check.outcome == 'failure'
+        run: |
+          echo "::error::At least one pack no longer resolves. See the run log and pack-status."
+          exit 1

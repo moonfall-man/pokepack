@@ -1,0 +1,85 @@
+name: publish gallery
+
+# The pack list everyone's copy of the tool downloads.
+#
+# Published as a static file on Pages, so a merged pull request is live for
+# everybody immediately and nobody has to update anything.  That is the whole
+# reason the gallery is fetched at runtime instead of shipped in the code.
+#
+# It also carries the votes.  Each pack gets a GitHub issue; the thumbs-up count
+# on that issue is read here and written into packs.json.  No server, no
+# accounts, no database -- and reacting needs a GitHub account, which is most of
+# the spam problem solved for nothing.  The cost is that counts are as fresh as
+# the last run of this workflow, which for ordering a browse screen is fine.
+
+on:
+  push:
+    branches: [master]
+    paths: ['packs/**', 'src/**', 'bin/**']
+  schedule:
+    - cron: '41 3 * * *'   # nightly, to pick up the day's votes
+  workflow_dispatch:
+
+# Only what it needs: write issues (to open a thread for a new pack) and publish
+# Pages.  Nothing here should be able to touch the repo's contents.
+permissions:
+  contents: read
+  issues: write
+  pages: write
+  id-token: write
+
+# A scheduled run and a merge landing at the same moment would otherwise race to
+# publish, and the loser silently wins.
+concurrency:
+  group: gallery
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '20' }
+
+      - run: node test/run.js
+
+      - name: Build the list, with votes
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          mkdir -p site/data
+          node bin/pokepack.js gallery packs \
+            --repo "$GITHUB_REPOSITORY" \
+            --out site/data/packs.json
+          cp packs/*.pokepack site/data/ 2>/dev/null || true
+
+      # The recipes are served next to the list so a gallery entry's url can
+      # point at one.  They are small text files; this is not hosting a mod.
+      - name: Landing page
+        run: |
+          count=$(node -e "process.stdout.write(String(require('./site/data/packs.json').counts.total))")
+          cat > site/index.html <<HTML
+          <!doctype html><meta charset="utf-8"><title>pokepack gallery</title>
+          <meta name="viewport" content="width=device-width,initial-scale=1">
+          <style>body{font:16px/1.6 system-ui,sans-serif;max-width:38rem;margin:6rem auto;padding:0 1.5rem}
+          code{background:#eee;padding:.15em .4em;border-radius:4px}</style>
+          <h1>pokepack gallery</h1>
+          <p>$count packs for gen1recomp. This is a machine-readable list, not a shop.</p>
+          <p>Point the tool at <code>data/packs.json</code> and it shows up in Browse.</p>
+          <p>Every pack is a recipe that links to each mod author's own downloads.
+          Nothing is hosted here and no ROM is distributed.</p>
+          <p><a href="data/packs.json">data/packs.json</a></p>
+          HTML
+
+      # enablement turns Pages on the first time this runs, so the gallery does
+      # not need a click in Settings before it can publish.
+      - uses: actions/configure-pages@v5
+        with: { enablement: true }
+      - uses: actions/upload-pages-artifact@v3
+        with: { path: site }
+      - id: deploy
+        uses: actions/deploy-pages@v4
