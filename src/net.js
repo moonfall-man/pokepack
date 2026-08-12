@@ -51,7 +51,19 @@ export async function downloadToBuffer(url) {
 //
 // HEAD first because it is free; some hosts refuse it, so fall back to a
 // one-byte ranged GET rather than reporting a live link as dead.
-export async function checkUrl(url) {
+export async function checkUrl(url, { retries = 1, delayMs = 1500 } = {}) {
+  for (let attempt = 0; ; attempt++) {
+    const out = await checkOnce(url);
+    // Only a network-level failure is worth retrying.  A 404 is an answer, and
+    // asking again does not make a deleted release come back.
+    if (out.ok || out.status !== null || attempt >= retries) return out;
+    await new Promise((r) => { setTimeout(r, delayMs); });
+  }
+}
+
+// A run of this marks packs broken and fails CI, so a single flaky connection
+// must not be enough to cry wolf about somebody's pack.
+async function checkOnce(url) {
   try {
     const head = await request(url, { method: 'HEAD' });
     if (head.ok) {

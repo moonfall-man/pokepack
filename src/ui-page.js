@@ -88,8 +88,9 @@ button.danger { color:var(--bad); border-color:var(--bad); }
 button.on { border-color:var(--ok); color:var(--ok); }
 button.sm { padding:6px 12px; font-size:12.5px; }
 button:disabled { opacity:.45; cursor:not-allowed; }
-input, select { width:100%; padding:9px 11px; border-radius:9px; border:1px solid var(--line);
+input, select, textarea { width:100%; padding:9px 11px; border-radius:9px; border:1px solid var(--line);
   background:var(--bg); color:var(--ink); font:inherit; font-size:13px; }
+textarea { resize:vertical; line-height:1.45; }
 .bar { display:flex; gap:10px; align-items:center; margin-bottom:18px; flex-wrap:wrap; }
 .seg { display:flex; border:1px solid var(--line); border-radius:9px; overflow:hidden; }
 .seg button { border:0; border-radius:0; padding:8px 14px; font-size:13px; }
@@ -131,7 +132,7 @@ code { font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:.92em;
 <nav>
   <button id="tab-packs" class="on">My packs<span class="count" id="c-packs">0</span></button>
   <button id="tab-mods">Mods<span class="count" id="c-mods">–</span></button>
-  <button id="tab-browse">Browse<span class="count" id="c-browse">0</span></button>
+  <button id="tab-browse">Community<span class="count" id="c-browse">0</span></button>
 </nav>
 <div id="toast"></div>
 <main>
@@ -192,7 +193,7 @@ async function load() {
   S = await (await fetch(api('state'))).json();
   document.getElementById('who').textContent = S.active ?? 'nothing yet';
   document.getElementById('c-packs').textContent = S.instances.length;
-  document.getElementById('c-browse').textContent = S.recipes.length;
+  document.getElementById('c-browse').textContent = (S.gallery ?? []).length;
   render();
 }
 
@@ -220,6 +221,10 @@ function renderPacks() {
       + '</div><div class="acts">'
       + '<span class="why">' + (on ? 'playing now' : 'click to play this one') + '</span>'
       + '<span style="flex:1"></span>'
+      + (enabled
+          ? '<button class="ghost sm" data-export-inst="' + esc(i.identity) + '">Export\\u2026</button>'
+            + '<button class="ghost sm" data-publish="' + esc(i.identity) + '">Publish\\u2026</button>'
+          : '')
       // The game's own save folder gets no Delete button: it is where a plain
       // launch writes, so removing it is never what somebody meant.
       + (i.isDefault ? '' : '<button class="ghost sm" data-del-inst="' + esc(i.identity) + '">Delete</button>')
@@ -354,12 +359,55 @@ async function runImport(payload) {
   showPack(data.id); // straight to what it contains, so Install is one click away
 }
 
+// Publishing one of your setups: export it as a pack, then send that for
+// review.  One action, because "export then find the file then share it" is
+// three steps for what is obviously one intention.
+function publishInstance(identity) {
+  const inst = S.instances.find(i => i.identity === identity);
+  if (!inst) return toast('no such setup', true);
+  const on = inst.modList.filter(m => m.enabled);
+
+  dialog({
+    title: 'Publish "' + identity + '"',
+    sub: on.length + ' mod' + (on.length === 1 ? '' : 's') + ' switched on will be included.',
+    body: field('pb-name', 'Pack name', identity)
+      + field('pb-author', 'Your name', '')
+      + '<label>What is it for?<br><input id="pb-summary" placeholder="Voxel battles tuned for two players"></label>'
+      + '<label>Anything the reviewer should know<br>'
+      + '<textarea id="pb-note" rows="3" placeholder="What you tested, how long you played, '
+      + 'and any setting that looks like a typo but is the point."></textarea></label>'
+      + '<div class="note">Publishing downloads each mod once to lock its exact bytes, then opens '
+      + 'GitHub with the pack filled in. It goes to the review branch \\u2014 nothing is live until '
+      + 'it is merged.</div>'
+      + '<div id="pb-out"></div>',
+    go: 'Export and publish',
+    onGo: async () => {
+      const b = document.getElementById('d-go');
+      const out = document.getElementById('pb-out');
+      b.disabled = true; b.textContent = 'Pinning\\u2026';
+      const { ok, data } = await post('instance/export', {
+        identity, name: val('pb-name'), author: val('pb-author'),
+        summary: val('pb-summary'), pin: true, overwrite: true,
+      });
+      if (!ok) {
+        out.innerHTML = '<pre class="log">' + esc(data.error) + '\\n'
+          + (data.warnings || []).map(esc).join('\\n') + '</pre>';
+        b.disabled = false; b.textContent = 'Export and publish';
+        return;
+      }
+      const note = document.getElementById('pb-note').value.trim();
+      await load();
+      sharePack(data.id, { note, warnings: data.warnings });
+    },
+  });
+}
+
 // Submitting a pack to the gallery.
 //
 // The whole PR happens on github.com: this only opens the right link, which
 // carries the filename and the file's contents.  GitHub does the forking, the
 // commit and the pull request, so nobody needs git installed or a clone.
-async function sharePack(id) {
+async function sharePack(id, extra = {}) {
   const r = await (await fetch(api('pack/share', '&id=' + encodeURIComponent(id)))).json();
   if (r.needsRepo) {
     toast(r.error, true);
@@ -368,12 +416,21 @@ async function sharePack(id) {
   if (r.error) return toast(r.error, true);
 
   dialog({
-    title: 'Share "' + r.name + '"',
+    title: 'Publish "' + r.name + '"',
     sub: 'Sends it to ' + r.repo + ' for review.',
     body: '<div class="note">Opening this fills in a new file on GitHub with your pack '
       + 'already in it. Press <b>Propose new file</b> there and it becomes a pull request. '
       + 'GitHub makes your own copy of the repo for you \\u2014 nothing is installed and '
       + 'you need no git.</div>'
+      // GitHub's new-file page has its own message box and nothing in the link
+      // can fill it in, so hand the text over to be pasted rather than pretend.
+      + (extra.note
+          ? '<div><div class="why" style="margin-bottom:6px">Paste this into the description on GitHub:</div>'
+            + '<textarea id="sh-note" rows="3" readonly>' + esc(extra.note) + '</textarea>'
+            + '<button class="sm" id="sh-copy" style="margin-top:6px">Copy it</button></div>'
+          : '')
+      + ((extra.warnings ?? []).length
+          ? '<pre class="log">' + extra.warnings.map(esc).join('\\n') + '</pre>' : '')
       + (r.unpinned.length
           ? '<div class="note bad"><b>' + r.unpinned.length + ' mod'
             + (r.unpinned.length === 1 ? ' is' : 's are') + ' unpinned.</b> '
@@ -394,6 +451,20 @@ async function sharePack(id) {
       toast('Opened GitHub. Press "Propose new file" there to finish.');
     },
   });
+
+  const copy = document.getElementById('sh-copy');
+  if (copy) {
+    copy.onclick = async () => {
+      try {
+        await navigator.clipboard.writeText(extra.note);
+        copy.textContent = 'Copied';
+      } catch {
+        // Clipboard access can be refused; selecting it is just as good.
+        document.getElementById('sh-note').select();
+        copy.textContent = 'Selected \\u2014 press Ctrl+C';
+      }
+    };
+  }
 }
 
 // Deleting the shareable file, which is a much smaller thing than deleting a
@@ -426,27 +497,32 @@ function confirmDeletePack(id, name) {
   input.focus();
 }
 
-// ------- Browse (shareable recipes)
+// ------- Community (packs published in the gallery)
 
-function renderBrowse() {
+// Community packs: the ones published in the gallery, and nothing of yours.
+//
+// Kept apart from My packs deliberately.  They answer different questions --
+// "what has somebody else made" versus "what am I playing" -- and mixing them
+// made the browse list a pile of things with no shared meaning.
+function renderCommunity() {
   const bar = '<div class="bar"><button class="primary" data-import="1">Import a pack\\u2026</button>'
     + '<span class="dim">A <code>.pokepack</code> file or link somebody sent you.</span>'
     + '<span style="flex:1"></span>'
     + (S.galleryUrl
-        ? '<span class="dim">' + S.gallery.length + ' from the gallery</span>'
+        ? '<span class="dim">' + S.gallery.length + ' published</span>'
         : '<button class="ghost sm" data-settings="1">Connect a gallery\\u2026</button>')
     + '</div>';
 
-  // Yours and the gallery's in one list, most-voted first.  Two separate
-  // sections would make "which of these can I install" a question about where
-  // a file happens to live, which is not something anybody cares about.
-  const all = [...(S.gallery ?? []), ...S.recipes]
+  const all = [...(S.gallery ?? [])]
     .sort((a, b) => ((b.votes ?? 0) - (a.votes ?? 0))
       || (a.name.toLowerCase() < b.name.toLowerCase() ? -1 : 1));
 
   if (all.length === 0) {
-    return bar + '<div class="empty"><div class="ball"></div><b>No shared packs here yet.</b><br>'
-      + 'Import one a friend sent you, or make your own with <b>Export</b>.</div>';
+    return bar + '<div class="empty"><div class="ball"></div>'
+      + (S.galleryUrl
+          ? '<b>Nothing published yet.</b><br>Be first \\u2014 press <b>Publish</b> on one of your packs.'
+          : '<b>No gallery connected.</b><br>Add its address in <b>Settings</b> to see what people have shared.')
+      + '</div>';
   }
   return bar + '<div class="grid">' + all.map(p =>
     '<div class="card pick" data-pack="' + esc(p.id) + '">'
@@ -460,17 +536,12 @@ function renderBrowse() {
     + (p.disable.length ? '<span class="badge">' + p.disable.length + ' off</span>' : '')
     + (p.mods.every(m => m.pinned) ? '' : '<span class="badge work">unpinned</span>')
     + (p.status === 'broken' ? '<span class="badge broken">broken</span>' : '')
-    + (p.origin === 'local' ? '<span class="badge">yours</span>' : '')
     + '</div>'
-    + '<div class="acts"><span class="why">click for details</span>'
+    + '<div class="acts"><span class="why">click to install</span>'
     + '<span style="flex:1"></span>'
-    // On the card, not only inside the details -- submitting a pack you made is
-    // a thing you go looking for, and a button you have to open something else
-    // to find may as well not exist.
-    + (p.origin === 'local'
-        ? '<button class="ghost sm" data-share="' + esc(p.id) + '">Share\\u2026</button>' : '')
     + (p.thread
-        ? '<a class="why" href="' + esc(p.thread) + '" target="_blank" rel="noopener">discussion \\u2197</a>'
+        ? '<a class="why" href="' + esc(p.thread) + '" target="_blank" rel="noopener">'
+          + '\\u25b2 ' + (p.votes ?? 0) + ' \\u00b7 discuss \\u2197</a>'
         : '')
     + '</div>'
     + '</div></div>').join('') + '</div>';
@@ -533,7 +604,7 @@ function render() {
   grid.hidden = tab === 'mods';
   document.getElementById('empty').hidden = true;
   if (tab === 'packs') grid.innerHTML = renderPacks();
-  else if (tab === 'browse') grid.innerHTML = renderBrowse();
+  else if (tab === 'browse') grid.innerHTML = renderCommunity();
 }
 
 // ------- dialogs
@@ -612,8 +683,10 @@ document.getElementById('new').onclick = () => {
   });
 };
 
-document.getElementById('export').onclick = () => {
-  const inst = S.instances.find(i => i.identity === S.active);
+document.getElementById('export').onclick = () => exportInstance(S.active);
+
+function exportInstance(identity) {
+  const inst = S.instances.find(i => i.identity === identity);
   if (!inst) return toast('nothing to export', true);
   const on = inst.modList.filter(m => m.enabled);
   dialog({
@@ -792,6 +865,10 @@ document.getElementById('grid').addEventListener('click', async (e) => {
   // click-to-play, and clicking it must not also switch to that setup.
   const del = e.target.closest('[data-del-inst]');
   if (del) return confirmDeleteInstance(del.dataset.delInst);
+  const pub = e.target.closest('[data-publish]');
+  if (pub) return publishInstance(pub.dataset.publish);
+  const exp = e.target.closest('[data-export-inst]');
+  if (exp) return exportInstance(exp.dataset.exportInst);
   if (e.target.closest('[data-import]')) return importPack();
   if (e.target.closest('[data-settings]')) return openSettings();
   const share = e.target.closest('[data-share]');
