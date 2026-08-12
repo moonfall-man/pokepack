@@ -95,6 +95,11 @@ textarea { resize:vertical; line-height:1.45; }
 .seg { display:flex; border:1px solid var(--line); border-radius:9px; overflow:hidden; }
 .seg button { border:0; border-radius:0; padding:8px 14px; font-size:13px; }
 .seg button.on { background:var(--red); color:#fff; }
+.chips { display:flex; gap:7px; flex-wrap:wrap; margin:-6px 0 18px; }
+.chips button { padding:5px 12px; font-size:12px; font-weight:650; border-radius:999px;
+  letter-spacing:.02em; }
+.chips button.on { background:var(--blue); border-color:var(--blue); color:#fff; }
+.chips button .n { opacity:.6; font-weight:500; margin-left:5px; }
 dialog { border:1px solid var(--line); border-radius:16px; background:var(--panel); color:var(--ink);
   padding:0; width:min(620px,93vw); max-height:88vh; box-shadow:var(--shadow); }
 dialog::backdrop { background:rgba(10,10,25,.5); }
@@ -148,6 +153,7 @@ code { font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:.92em;
       <button id="mods-refresh">Refresh</button>
       <span class="dim" id="mods-meta"></span>
     </div>
+    <div class="chips" id="mods-cats"></div>
     <div class="grid" id="mods-grid"></div>
   </div>
   <div class="grid" id="grid"></div>
@@ -167,6 +173,9 @@ code { font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:.92em;
 const TOKEN = ${JSON.stringify(token)};
 const api = (p, q = '') => '/api/' + p + '?token=' + TOKEN + q;
 let S = null, CAT = null, tab = 'packs', filter = 'installed';
+// Ticked categories. A set, and matched any-of, because picking UI and ART
+// means "show me both kinds" -- almost nothing is tagged with both.
+const cats = new Set();
 
 const esc = (s) => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const hue = (id) => { let h = 0; for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) % 360; return h; };
@@ -551,9 +560,22 @@ async function loadMods(force) {
   const q = document.getElementById('mods-q').value.trim();
   document.getElementById('mods-meta').textContent = 'loading\\u2026';
   const res = await fetch(api('catalogue', '&q=' + encodeURIComponent(q)
-    + '&filter=' + filter + (force ? '&refresh=1' : '')));
+    + '&filter=' + filter + '&category=' + encodeURIComponent([...cats].join(','))
+    + (force ? '&refresh=1' : '')));
   CAT = await res.json();
   if (!res.ok) { document.getElementById('mods-meta').textContent = CAT.error || 'could not load'; return; }
+
+  // Chips come from what is actually in the index, so a category added upstream
+  // appears without a release here.  Hidden when there is nothing to filter by
+  // -- a pack whose mods are all unlisted has no categories, and an empty row
+  // of buttons reads as broken rather than as "none".
+  const catBar = document.getElementById('mods-cats');
+  catBar.hidden = (CAT.categories ?? []).length === 0;
+  catBar.innerHTML =
+    (cats.size ? '<button data-cat="">Clear</button>' : '')
+    + (CAT.categories ?? []).map(c =>
+      '<button data-cat="' + esc(c.name) + '"' + (cats.has(c.name) ? ' class="on"' : '') + '>'
+      + esc(c.name.replace(/_/g, ' ')) + '<span class="n">' + c.count + '</span></button>').join('');
   document.getElementById('c-mods').textContent = CAT.installedCount;
   document.getElementById('mods-q').placeholder = filter === 'installed'
     ? 'Search this pack\\u2019s mods\\u2026' : 'Search ' + CAT.total + ' mods\\u2026';
@@ -964,6 +986,15 @@ document.getElementById('mod-filter').addEventListener('click', (e) => {
   if (!b) return;
   filter = b.dataset.f;
   for (const x of document.querySelectorAll('#mod-filter button')) x.classList.toggle('on', x === b);
+  loadMods(false);
+});
+document.getElementById('mods-cats').addEventListener('click', (e) => {
+  const b = e.target.closest('button[data-cat]');
+  if (!b) return;
+  const name = b.dataset.cat;
+  if (name === '') cats.clear();
+  else if (cats.has(name)) cats.delete(name);
+  else cats.add(name);
   loadMods(false);
 });
 
