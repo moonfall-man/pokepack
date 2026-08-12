@@ -238,16 +238,26 @@ export function identityFor(saveDir) {
  * A local server that will start whatever binary a caller names is a different
  * and much worse thing than one that starts the game you already pointed it at.
  */
-export function launchGame({ exePath, identity }) {
+export function launchGame({ exePath, identity, version = null }) {
   const check = checkGameExe(exePath);
   if (!check.ok) throw new Error(check.reason);
   if (identity !== null && !validIdentity(identity).ok && identity !== DEFAULT_IDENTITY) {
     throw new Error(`refusing to launch with a strange instance name: ${identity}`);
   }
+  if (version !== null && !VERSIONS.includes(version)) {
+    throw new Error(`not a game version: ${version}`);
+  }
 
   const env = { ...process.env };
   if (identity) env.POKEPORT_IDENTITY = identity;
   else delete env.POKEPORT_IDENTITY; // fall back to the game's own default
+
+  // Boot straight into the game instead of the engine's own launcher screen.
+  // gen1recomp reads this for exactly this case -- its own comment calls a menu
+  // in between a defect for shortcut launches -- and if the version turns out
+  // not to be imported it opens the launcher on that tab rather than failing.
+  if (version) env.POKEPORT_GAME = version;
+  else delete env.POKEPORT_GAME;
 
   const child = spawn(check.path, [], {
     env,
@@ -256,7 +266,7 @@ export function launchGame({ exePath, identity }) {
     stdio: 'ignore',
   });
   child.unref();
-  return { pid: child.pid, identity: identity ?? DEFAULT_IDENTITY };
+  return { pid: child.pid, identity: identity ?? DEFAULT_IDENTITY, version };
 }
 
 /**
@@ -265,8 +275,11 @@ export function launchGame({ exePath, identity }) {
  * A tiny script rather than a shortcut file: a .cmd is readable, editable, and
  * you can see exactly what it sets.  Nothing here is magic.
  */
-export function writeLauncher({ identity, exePath, outDir, packName = null }) {
+export function writeLauncher({ identity, exePath, outDir, packName = null, version = null }) {
   mkdirSync(outDir, { recursive: true });
+  if (version !== null && !VERSIONS.includes(version)) {
+    throw new Error(`not a game version: ${version}`);
+  }
 
   if (process.platform === 'win32') {
     const path = join(outDir, `play-${identity}.cmd`);
@@ -276,6 +289,10 @@ export function writeLauncher({ identity, exePath, outDir, packName = null }) {
       + (packName ? `rem Built for the pack "${packName}"\r\n` : '')
       + 'rem Mods, saves and settings here are separate from every other instance.\r\n'
       + `set "POKEPORT_IDENTITY=${identity}"\r\n`
+      + (version
+        ? 'rem Boots straight into the game instead of the launcher screen.\r\n'
+          + `set "POKEPORT_GAME=${version}"\r\n`
+        : '')
       + `start "" "${exePath}"\r\n`);
     return { path };
   }
@@ -285,6 +302,8 @@ export function writeLauncher({ identity, exePath, outDir, packName = null }) {
     '#!/bin/sh\n'
     + `# Launches gen1recomp in its own instance: "${identity}"\n`
     + (packName ? `# Built for the pack "${packName}"\n` : '')
-    + `POKEPORT_IDENTITY=${identity} exec "${exePath}"\n`, { mode: 0o755 });
+    + (version ? '# Boots straight into the game instead of the launcher screen.\n' : '')
+    + `POKEPORT_IDENTITY=${identity} ${version ? `POKEPORT_GAME=${version} ` : ''}exec "${exePath}"\n`,
+    { mode: 0o755 });
   return { path };
 }
