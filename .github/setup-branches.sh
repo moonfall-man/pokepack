@@ -85,6 +85,21 @@ gh api -X PUT "repos/$REPO/actions/permissions/workflow" \
   -F can_approve_pull_request_reviews=false >/dev/null
 echo "  Actions: read-only token, cannot approve PRs"
 
+# Pages, for the gallery.  Turned on here rather than by the workflow: creating
+# the site needs a token that can write repo settings, and the workflow's token
+# is read-only by the line above.  Already-enabled is not an error.
+gh api -X POST "repos/$REPO/pages" -f build_type=workflow >/dev/null 2>&1 \
+  && echo "  Pages: on, published by the gallery workflow" \
+  || echo "  Pages: already on"
+
+# The gallery publishes from master, but master is not the default branch any
+# more -- and a fresh github-pages environment only lets the default branch
+# deploy.  Allow any protected branch instead.
+gh api -X PUT "repos/$REPO/environments/github-pages" --input - >/dev/null 2>&1 <<'JSON' \
+  && echo "  Pages: protected branches may deploy" || true
+{"deployment_branch_policy":{"protected_branches":true,"custom_branch_policies":false}}
+JSON
+
 cat <<'DONE'
 
 Two things the API cannot set -- do these in the browser once:
