@@ -54,7 +54,15 @@ By hand, if you prefer: branch off `master` and open a pull request back into
 it. `master` refuses direct pushes from everybody, the maintainer included, so a
 pull request is the only way in.
 
-Commit just your `.pokepack` file. Nothing else should change.
+Commit just your `.pokepack` file. Nothing else should change:
+
+```bash
+git add packs/your-pack.pokepack && git commit -m "Add your-pack"
+```
+
+Name the file rather than staging everything — the hub exports into the same
+folder, so `git add -A` will bring along any other pack you were still fiddling
+with.
 
 In the description, say:
 
