@@ -19,7 +19,7 @@ import { identifyRom, linkRom, baseromsIn } from '../src/rom.js';
 import { checkSaveDir, cleanPath, saveRoots } from '../src/discover.js';
 import {
   validIdentity, createInstance, writeLauncher, identityFor, launchGame,
-  romVersionsIn, seedRomData, describeInstance, trashInstance, TRASH_DIR,
+  romVersionsIn, seedRomData, describeInstance, trashInstance, TRASH_DIR, VERSIONS,
 } from '../src/instance.js';
 import * as pack from '../src/packformat.js';
 import { readSaveDir, releasesFromCache, indexFromFeeds } from '../src/state.js';
@@ -662,6 +662,38 @@ it('refuses to guess an identity for a folder somewhere else', () => {
 it('will not launch without a real game executable', () => {
   throws(() => launchGame({ exePath: 'C:\\nope\\missing.exe', identity: 'x' }), 'does not exist');
   throws(() => launchGame({ exePath: '', identity: 'x' }), 'no path given');
+});
+
+it('refuses a made-up game version rather than putting it in the environment', () => {
+  throws(
+    () => launchGame({ exePath: 'C:\\nope\\missing.exe', identity: 'x', version: 'gold' }),
+    'does not exist',
+  );
+  eq(VERSIONS.includes('gold'), false, 'gold is not a gen 1 version');
+  eq(VERSIONS, ['red', 'blue', 'yellow']);
+});
+
+it('writes a launcher that boots straight into the game', () => {
+  // gen1recomp shows its own launcher screen unless POKEPORT_GAME is set --
+  // the engine supports this exactly so a shortcut has no menu in between.
+  const root = join(HERE, '..', '.test-tmp-launch');
+  rmSync(root, { recursive: true, force: true });
+  const { path } = writeLauncher({
+    identity: 'kanto', exePath: 'C:\\games\\gen1recomp.exe', outDir: root, version: 'red',
+  });
+  const script = readFileSync(path, 'utf8');
+  ok(script.includes('POKEPORT_IDENTITY=kanto'), 'still picks the instance');
+  ok(script.includes('POKEPORT_GAME=red'), 'and skips the launcher screen');
+
+  const plain = writeLauncher({ identity: 'kanto2', exePath: 'C:\\games\\gen1recomp.exe', outDir: root });
+  ok(!readFileSync(plain.path, 'utf8').includes('POKEPORT_GAME'),
+    'no version means the launcher, not a guess');
+
+  throws(() => writeLauncher({
+    identity: 'k', exePath: 'C:\\games\\gen1recomp.exe', outDir: root, version: 'crystal',
+  }), 'not a game version');
+
+  rmSync(root, { recursive: true, force: true });
 });
 
 it('spots which instances have unpacked ROM data', () => {

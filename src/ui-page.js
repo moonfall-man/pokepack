@@ -672,12 +672,13 @@ document.getElementById('play').onclick = async () => {
     if (data.needsRom || /executable/.test(data.error)) openSettings();
     return;
   }
-  toast('Launched "' + data.identity + '".'
+  toast('Launched "' + data.identity + '"'
+    + (data.version ? ' straight into ' + data.version[0].toUpperCase() + data.version.slice(1) + '.' : '.')
     + (data.gameData?.how === 'copied'
         ? ' Game data copied from "' + data.gameData.from + '" first.'
         : data.linked
-          ? ' Copied your ' + data.linked.label + ' ROM in \\u2014 the game will import it once, '
-            + 'then start straight up after that.'
+          ? ' Copied your ' + data.linked.label + ' ROM in \\u2014 the game imports it once, '
+            + 'then boots straight in after that.'
           : ''));
 };
 

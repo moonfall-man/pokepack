@@ -758,8 +758,15 @@ export function serve({ packsDir, saveDir, indexFile, port = 7666, host = '127.0
         }
       }
 
+      // Which game to boot straight into.  Only a version this instance has
+      // actually unpacked -- asking for one it has not would land you on the
+      // launcher anyway, which is the screen we are trying to skip.
+      const have = romVersionsIn(act.path);
+      const preferred = config.read().playVersion;
+      const version = have.includes(preferred) ? preferred : (have[0] ?? null);
+
       try {
-        const out = launchGame({ exePath, identity: act.identity });
+        const out = launchGame({ exePath, identity: act.identity, version });
         return json(res, 200, {
           ...out,
           // 'rom' means the game still has a one-time import to do, and saying
