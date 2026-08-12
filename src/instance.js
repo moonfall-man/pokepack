@@ -46,9 +46,12 @@ export function createInstance({ identity, loveRoot = null }) {
     throw new Error(`an instance called ${identity} already exists at ${path}`);
   }
 
-  // mods/ is what makes the folder recognisable as a game save before the game
-  // has ever run and written options.lua.
+  // mods/ plus our own lock file.  A bare mods/ folder is not enough to claim
+  // a directory under <APPDATA>, which is shared with every other application
+  // -- the lock file is what says this one is ours before the game has ever
+  // run and written options.lua.
   mkdirSync(join(path, 'mods'), { recursive: true });
+  writeFileSync(join(path, 'pokepack-installed.json'), `${JSON.stringify({ mods: {} }, null, 2)}\n`);
   return { path, identity, root };
 }
 

@@ -14,15 +14,31 @@ import { parse, toArray } from './luadata.js';
 export const DEFAULT_IDENTITY = 'pokemon-love2d';
 
 // Where LOVE puts save directories on each platform.
+//
+// There are two answers, and picking the wrong one is invisible until the game
+// reports no mods:
+//
+//   fused      <APPDATA>/<identity>          -- a standalone game.exe
+//   unfused    <APPDATA>/LOVE/<identity>     -- `love .` during development
+//
+// LOVE drops the LOVE/ folder for a fused build, because a shipped game has no
+// business filing itself under the engine's name.  gen1recomp ships fused, so
+// the real save directory is the first form -- and a mod installed into the
+// second lands in a folder the game never reads.
+//
+// Both are returned, fused first, so an instance made here goes where the
+// shipped game will look while a dev running from source is still found.
 export function saveRoots() {
   const home = homedir();
   const roots = [];
   if (process.platform === 'win32') {
-    if (process.env.APPDATA) roots.push(join(process.env.APPDATA, 'LOVE'));
+    if (process.env.APPDATA) roots.push(process.env.APPDATA, join(process.env.APPDATA, 'LOVE'));
   } else if (process.platform === 'darwin') {
-    roots.push(join(home, 'Library', 'Application Support', 'LOVE'));
+    const base = join(home, 'Library', 'Application Support');
+    roots.push(base, join(base, 'LOVE'));
   } else {
-    roots.push(join(process.env.XDG_DATA_HOME ?? join(home, '.local', 'share'), 'love'));
+    const base = process.env.XDG_DATA_HOME ?? join(home, '.local', 'share');
+    roots.push(base, join(base, 'love'));
   }
   return roots.filter(existsSync);
 }
@@ -43,7 +59,14 @@ function packsIn(path) {
   return out;
 }
 
-// Does this look like a gen1recomp save rather than some other LOVE game?
+// Does this look like a gen1recomp save rather than some other game?
+//
+// This has to be strict, because the fused save root is <APPDATA> itself --
+// shared with every other application on the machine.  "has a mods folder and a
+// saves folder" describes Factorio, and mistaking somebody's Factorio install
+// for a pack would put mods in it.  So the evidence has to be gen1recomp's:
+// its options keys, a mod with our manifest shape, an unpacked ROM cache, or a
+// lock file we wrote ourselves.
 function inspect(path) {
   const optionsPath = join(path, 'options.lua');
   const hasOptions = existsSync(optionsPath);
@@ -53,7 +76,10 @@ function inspect(path) {
 
   let mods = 0;
   let profiles = [];
-  let looksRight = hasMods || hasSaves;
+  // Ours beyond doubt: written by this tool, including for a brand new instance
+  // that has nothing else in it yet.
+  let looksRight = existsSync(join(path, 'pokepack-installed.json'))
+    || ['red', 'blue', 'yellow'].some((v) => existsSync(join(path, v, 'rom-cache.complete')));
 
   if (hasMods) {
     try {
@@ -61,6 +87,9 @@ function inspect(path) {
         .filter((n) => !n.startsWith('.') && existsSync(join(path, 'mods', n, 'manifest.json')))
         .length;
     } catch { /* unreadable is not fatal; it just scores lower */ }
+    // A gen1recomp mod is a folder with a manifest.json.  Factorio's mods are
+    // zips, and other games' are anything but this.
+    if (mods > 0) looksRight = true;
   }
 
   if (hasOptions) {
@@ -111,12 +140,26 @@ export function findSaveDirs() {
     }
   }
 
-  return found.sort((a, b) => {
+  // The same identity can exist under both roots -- typically because an older
+  // build wrote to the unfused one.  Keep the fused copy, which is the one the
+  // shipped game actually reads, and report the other as a stray so the hub can
+  // offer to move its mods across rather than silently ignoring them.
+  const seen = new Map();
+  const strays = [];
+  for (const entry of found) {
+    const first = seen.get(entry.identity);
+    if (first) strays.push({ ...entry, shadowedBy: first.path });
+    else seen.set(entry.identity, entry);
+  }
+
+  const out = [...seen.values()].sort((a, b) => {
     if (a.isDefault !== b.isDefault) return a.isDefault ? -1 : 1;
     if (a.profiles.length !== b.profiles.length) return b.profiles.length - a.profiles.length;
     if (a.mods !== b.mods) return b.mods - a.mods;
     return a.identity < b.identity ? -1 : 1;
   });
+  out.strays = strays;
+  return out;
 }
 
 // Windows Explorer's "Copy as path" wraps the path in double quotes, and any
