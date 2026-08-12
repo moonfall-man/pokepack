@@ -38,6 +38,7 @@ import { pickFile, pickFolder, FILTERS } from './filepicker.js';
 import * as catalogue from './catalogue.js';
 import * as deps from './deps.js';
 import { resolveDownload } from './github.js';
+import * as update from './update.js';
 import * as gallery from './packfeed.js';
 import * as config from './config.js';
 import { page } from './ui-page.js';
@@ -130,11 +131,11 @@ export function serve({ packsDir, saveDir, indexFile, port = 7666, host = '127.0
   // packIndexUrl left in an old config file is ignored rather than obeyed.
   const galleryUrl = () => gallery.OFFICIAL_GALLERY;
 
-  async function galleryPacks() {
+  async function galleryPacks({ force = false } = {}) {
     const url = galleryUrl();
     if (!url) return [];
     try {
-      const g = await gallery.load({ url });
+      const g = await gallery.load({ url, force });
       return g.packs.map((p) => ({ ...p, origin: 'gallery' }));
     } catch {
       return [];
@@ -185,7 +186,10 @@ export function serve({ packsDir, saveDir, indexFile, port = 7666, host = '127.0
             .sort((a, b) => (a.id < b.id ? -1 : 1)),
         })),
         recipes: buildFeed(loadPacks(packsDir)).packs.map((p) => ({ ...p, origin: 'local' })),
-        gallery: await galleryPacks(),
+        // The gallery is cached for six hours, which is right for a page that
+        // reloads constantly and wrong for "I just merged it, where is it" --
+        // so Community offers a way to ask now.
+        gallery: await galleryPacks({ force: url.searchParams.get('refresh') === '1' }),
         galleryUrl: galleryUrl(),
         settings: {
           gamePath: cfg.gamePath ?? null,
@@ -273,6 +277,20 @@ export function serve({ packsDir, saveDir, indexFile, port = 7666, host = '127.0
           };
         }),
       });
+    }
+
+    // The app's own version.  Nothing to do with the pack list, which updates
+    // itself -- this is code on disk and only a pull changes it.
+    if (url.pathname === '/api/update') {
+      if (req.method === 'POST') {
+        try {
+          return json(res, 200, update.pull());
+        } catch (e) {
+          return json(res, 400, { error: e.message });
+        }
+      }
+      const out = await update.check({ force: url.searchParams.get('refresh') === '1' });
+      return json(res, 200, { ...out, checkout: update.status() });
     }
 
     if (url.pathname === '/api/activate' && req.method === 'POST') {
