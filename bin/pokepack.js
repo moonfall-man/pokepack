@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // pokepack -- build, inspect, resolve and validate gen1recomp modpack recipes.
 
-import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs';
+import { readFileSync, writeFileSync, existsSync, mkdirSync, readSync } from 'node:fs';
 import { resolve as resolvePath, join, dirname } from 'node:path';
 import * as pack from '../src/packformat.js';
 import { readSaveDir, releasesFromCache, indexFromCache, indexFromFeeds } from '../src/state.js';
@@ -17,8 +17,23 @@ const MARK = {
   [UNAVAILABLE]: ' x  ', [BLOCKED]: ' -  ',
 };
 
+// Set once the arguments are known: true when this is the packaged build and
+// nobody passed any, which is what a double-click looks like from in here.
+let doubleClicked = false;
+
+// A double-clicked program gets a console window of its own, and that window
+// closes the instant the process does -- so an error printed and exited is a
+// black flash and nothing else.  Hold it open long enough to be read.
+function holdWindow() {
+  process.stderr.write('\nPress Enter to close this window.\n');
+  try {
+    readSync(0, Buffer.alloc(1), 0, 1, null);
+  } catch { /* no console attached; nothing to hold open */ }
+}
+
 function die(msg) {
   process.stderr.write(`pokepack: ${msg}\n`);
+  if (doubleClicked) holdWindow();
   process.exit(1);
 }
 
@@ -595,8 +610,18 @@ const commands = {
 // await cannot be bundled into the single executable (build/exe.mjs), and the
 // exe is how most people will meet this.  Identical behaviour either way.
 async function main() {
+  // No arguments means two different things depending on how you got here.
+  // At a prompt you typed a name and want to know what it does, so: help.
+  // Double-clicked, there is no prompt to read help at and the window shuts
+  // before you could -- what you wanted was the program.  So the packaged
+  // build with no arguments starts the hub, and `pokepack help` still prints
+  // help for anyone who asks for it by name.
+  const { isPackaged } = await import('../src/packaged.js');
+  doubleClicked = isPackaged() && !cmd;
+
   try {
-    if (!cmd || cmd === 'help' || cmd === '--help' || cmd === '-h') cmdHelp();
+    if (doubleClicked) await cmdUi({ flags: {} });
+    else if (!cmd || cmd === 'help' || cmd === '--help' || cmd === '-h') cmdHelp();
     else if (cmd === 'version' || cmd === '--version' || cmd === '-v') {
       // Matters more for the exe than the checkout: a file somebody was handed
       // months ago cannot be identified by looking at the folder it came in.
