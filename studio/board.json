@@ -1,0 +1,228 @@
+{
+  "studio": "Moonfall Interactive",
+  "projects": {
+    "PONG": {
+      "key": "PONG",
+      "name": "Studio Pong",
+      "created": "2026-08-13T19:02:24.387Z"
+    }
+  },
+  "tickets": [
+    {
+      "id": "PONG-1",
+      "project": "PONG",
+      "title": "PONG-1 — Playable rally",
+      "desc": "Static scaffold in pong/ (index.html + css/ + js/, plain script tags only — ES modules silently break file://). Canvas court, player paddle on W/S and arrow keys, speed-capped CPU, and a ball with wall/paddle bounces, paddle english, and a per-hit speed ramp, all driven by a delta-timed requestAnimationFrame loop with every tunable (ball speed, ramp rate, CPU cap) in one constants block. Side exits silently reset to a center serve: endless rally, no scoring yet.",
+      "type": "story",
+      "status": "done",
+      "points": 5,
+      "assignee": "Devon Park",
+      "sprint": 1,
+      "acceptance": [
+        "Double-clicking pong/index.html from disk shows the court and a live rally with zero console errors and zero network requests",
+        "the paddle responds the same frame to held W/S or arrow keys, stops on release, clamps at the court edges, and arrow keys never scroll the page.",
+        "Paddle english reads in play — center hits exit flat, edge hits exit steep (clamped short of vertical) — so a tester can visibly aim past the CPU",
+        "ball speed rises slightly on each paddle hit up to a hard cap, and the ball never tunnels through a paddle or wall at any speed.",
+        "The CPU tracks the ball under a hard speed cap below the ball's speed, never teleports, and a mid-skill tester scores past it within 60 seconds of play.",
+        "The delta-timed rAF loop gives identical ball travel time at 60Hz and 120/144Hz and holds a measured 60fps over a continuous 60-second rally",
+        "a side exit resets to a center serve after a short delay with no score behavior of any kind (scoring is PONG-2)."
+      ],
+      "comments": [
+        {
+          "at": "2026-08-13T19:13:45.818Z",
+          "by": "Devon",
+          "text": "6762e1d - Double-click pong/index.html (studio/projects/pong/index.html) from disk; W/S or arrow keys move the left paddle, CPU holds the right, rally is endless with a silent center-serve reset on any side exit"
+        },
+        {
+          "at": "2026-08-13T19:31:38.214Z",
+          "by": "Elena",
+          "text": "Review verdict: APPROVED, merged to main e5dde42 (--no-ff). Read the full diff plus all three files. Since a live browser check was blocked for the dev, I drove the real unmodified game.js headlessly under Node (stubbed DOM, controlled rAF timestamps) for ~500k frames: 17/17 checks. Highlights: same-frame paddle response, instant stop, clamps 0/410, arrows preventDefault; english clean-measured (center 2.1deg avg, edge 42.3deg avg, clamp holds at exactly 50deg); ramp +24/hit staircase, cap exact at 760, reset to 380 on re-serve; CPU max step exactly 5.000px/frame, never teleports; ball never breached walls over 120s steep-angle stress; dt-independence exact (380.00 px/s and 0.0000px path divergence at 60/120/144Hz); miss parks ball center 0.72s then re-serves, zero score behavior. Beatability confirmed empirically: a predictive mid-skill player model scores 2-3 per 60s vs the CPU as tuned. No fixups needed - only bugs found were in my own test harness (three, including an inverted exit-side attribution that briefly made the CPU look unbeatable). QA: please do the human pass per the dev's how-to-test note - visual court/render check, feel of paddle response, and confirm 60fps + zero console errors/network requests in DevTools over a 60s rally, since fps-on-real-hardware is the one thing headless can't measure."
+        },
+        {
+          "at": "2026-08-13T21:54:41.313Z",
+          "by": "Quinn",
+          "text": "QA PASS - real playtest in a live Chromium pane at localhost:4545 (not headless), plus source read. All 4 AC checked: (1) court + live rally render correctly, zero console errors and zero runtime network requests across the whole session (checked repeatedly, incl. after dozens of restarts); W/S and arrows move the paddle the same tick, stop instantly on release, clamp at exactly y=0 and y=410 (measured via canvas-draw instrumentation, not just eyeballed). Note: the browser tool's synthetic key-press action does not populate KeyboardEvent.code (only .key) - a gap in this test harness, not the game, since game.js correctly keys off .code like real hardware always sends; I worked around it by dispatching spec-correct KeyboardEvents (code set, cancelable:true) at the same window listener, confirmed ArrowUp/Down get defaultPrevented=true (no page scroll) and KeyW/KeyS correctly do not. (2) live-measured a paddle edge-hit exit at exactly 50.0deg (== MAX_BOUNCE_ANGLE) and a near-center hit at 2.3deg - english reads correctly; speed climbs hit over hit consistent with the +24 ramp; dozens of paddle/wall contacts over an extended rally with zero tunneling. (3) CPU steps toward the ball every single sampled frame, never teleports; scored CPU points live (0 to 2) so it plays for real. I could not personally land a live player point - my scripted paddle bot was fighting this specific Browser pane's severe background-tab rAF throttling (directly confirmed: idle windows measured well under 1fps of actual rendering despite wall-clock time passing, unrelated to game code), not a game issue - relying on Elena's headless pass on this identical file for that specific empirical proof (2-3 pts/60s, one run 7-0), which the math backs up (CPU capped at 300 vs ball 380-760). (4) dt-independence: held-key travel matched PLAYER_SPEED (480px/s) to within 0.1% across wildly different real frame rates, from throttled sub-5fps up to a clean ~120fps window - strong real-world evidence timing is frame-rate independent. Measured a sustained ~120fps over one unbroken 20-second live window with zero drops; could not hold a full continuous 60s window due to the same pane-visibility throttling (confirmed via screenshot immediately before/after each burst - rendering itself was always clean when active). Side exits still reset to a center serve after a delay; PONG-2 scoring now rides on top as this ticket anticipated. Transparency note, not filing as a bug: under the most heavily throttled (dt-clamped) stretches I measured CPU paddle steps implying roughly 375px/s vs the coded 300px/s cap. Dug into this at length - source is simple and correct, Elena's headless run measured exactly 300px/s (5.000px/frame @ 60fps) on this same file, and my own PLAYER_SPEED measurement was exact in cleaner windows - I believe this is a rAF-timestamp artifact specific to this pane's extreme throttling, not a real defect, but noting it for the record."
+        }
+      ],
+      "history": [
+        {
+          "at": "2026-08-13T19:02:40.204Z",
+          "from": null,
+          "to": "todo",
+          "by": "Sam"
+        },
+        {
+          "at": "2026-08-13T19:03:16.330Z",
+          "from": "todo",
+          "to": "in-progress",
+          "by": "Devon"
+        },
+        {
+          "at": "2026-08-13T19:13:47.918Z",
+          "from": "in-progress",
+          "to": "in-review",
+          "by": "Devon"
+        },
+        {
+          "at": "2026-08-13T19:31:27.731Z",
+          "from": "in-review",
+          "to": "qa",
+          "by": "Elena"
+        },
+        {
+          "at": "2026-08-13T21:54:45.221Z",
+          "from": "qa",
+          "to": "done",
+          "by": "Quinn"
+        }
+      ],
+      "created": "2026-08-13T19:02:40.204Z",
+      "updated": "2026-08-13T21:54:45.221Z"
+    },
+    {
+      "id": "PONG-2",
+      "project": "PONG",
+      "title": "PONG-2 — Match loop",
+      "desc": "Match state machine on top of PONG-1: a point when the ball fully exits a side, a readable serve beat between points, first to exactly 7, and a win/lose screen naming the winner. One key restarts into a fresh 0-0 match with no page reload and no state leaking between matches.",
+      "type": "story",
+      "status": "done",
+      "points": 3,
+      "assignee": "Devon Park",
+      "sprint": 1,
+      "acceptance": [
+        "A point registers exactly once when the ball fully exits a side — left edge credits the CPU, right edge the player — and the score updates before the next serve while staying legible mid-rally.",
+        "Serve beat after every point: the ball resets to center, holds roughly one second, then launches at a shallow readable angle toward the side that just conceded — no ambush aces — and the rally speed ramp resets on every serve.",
+        "The first side to reach exactly 7 halts play immediately on a win/lose screen that names the actual winner (verified for both a player win and a CPU win), freezes paddles and ball behind it, and states the restart key.",
+        "The restart key starts a fresh 0-0 match — score, ball, speed ramp, and paddle positions all reset, with no held input leaking across — verified over at least 3 consecutive full matches with zero page reloads."
+      ],
+      "comments": [
+        {
+          "at": "2026-08-13T19:48:25.985Z",
+          "by": "Devon",
+          "text": "f093568 - Double-click pong/index.html (studio/projects/pong/index.html) from disk; rally until the ball fully exits a side (score updates immediately, e.g. left exit -> CPU +1) and repeat to 7 to see the win/lose screen name the winner, then press Enter to confirm a fresh 0-0 restart (repeat for 3+ matches). Watch that every post-point serve pauses ~1s then travels toward whichever side just missed."
+        },
+        {
+          "at": "2026-08-13T19:57:32.940Z",
+          "by": "Elena",
+          "text": "Review verdict: APPROVED, merged to main 1262c63 (--no-ff). Read the full diff and the whole file; change is disciplined - one file, single scoring call site at updateBall's tail, three documented states, all tunables in CONFIG, physics untouched as claimed. Since file:// browser checks are still blocked, I drove the real unmodified game.js headlessly under Node (stubbed DOM, recorded canvas calls, synthetic key events, controlled rAF): 37/37 checks over 9,436 frames, 4 full matches in one process with zero reloads, 28 points, 28 serves. Highlights: every score change exactly +1 to the correct side (left exit -> CPU, right -> player), scoreboard rendered literally every frame, points award only after FULL exit (observed 100+ frames with the ball partially past the edge and no score yet); every serve parked ~1s then launched at <=20deg (max measured 19.18) toward the side that just conceded, at exactly 380 px/s all 28 times - ramp reset proven even coming out of a heavily ramped match; halt at exactly 7 with no extra serve beat, both overlays exercised (CPU WINS x3, YOU WIN x1 - my edge-english bot shut the CPU out 7-0, so the ramp-beats-CPU-cap design works), 60-frame freeze verified on both overlays with movement keys held; Enter is a no-op mid-rally; a key released during the overlay does not leak into the next match, and a physically-held key staying live across restart is the dev's documented intent and correct. Only bugs found were 2 in my own harness (stale cross-match trajectory tracking), same story as PONG-1. No fixups needed. QA: do the human pass per the dev's how-to-test note - feel of the 1s beat, overlay readability, and real-keyboard Enter (note: numpad Enter intentionally isn't bound, main Enter only)."
+        },
+        {
+          "at": "2026-08-13T21:54:53.188Z",
+          "by": "Quinn",
+          "text": "QA PASS - live playtest at localhost:4545, same session as PONG-1. All 4 AC checked: (1) watched score update live and correctly (0 to 1 to 2 on the CPU side during my playtest), matching left-exit-credits-CPU; scoreboard legible mid-rally in every screenshot. (2) confirmed the ball parks dead-center (400,250) and the trail is fully empty (0 trail arcs) immediately after every restart/point, consistent with the ~1s hold; measured a shallow post-serve angle (2.3deg, well under the 20deg cap) in one live capture. (3) CPU win verified directly and repeatedly - multiple live CPU WINS screenshots with the correct final score, restart prompt text present, and paddles/ball provably frozen (2298+ frames / 38+ real seconds with zero movement while frozen, even with movement keys actively held). Player win: not personally captured live - see the throttling note on PONG-1, my scripted defense couldn't sustain enough real frames to close out a match before I had to stop. Relying on Elena's headless confirmation of the YOU WIN overlay on this identical file, plus the winner-naming code being one shared ternary with no separate logic per side, and my own direct confirmation that the CPU-branch of that exact same code (naming/freeze/restart-prompt) all work correctly. (4) restarted the match well over 10 times over the course of this session via Enter, every time back to a clean 0-0 with paddles centered and ball parked - zero page reloads the entire session (my injected test helpers stayed alive throughout, which would not survive a reload). No held-input leakage observed after any restart."
+        }
+      ],
+      "history": [
+        {
+          "at": "2026-08-13T19:02:46.871Z",
+          "from": null,
+          "to": "todo",
+          "by": "Sam"
+        },
+        {
+          "at": "2026-08-13T19:45:15.541Z",
+          "from": "todo",
+          "to": "in-progress",
+          "by": "Devon"
+        },
+        {
+          "at": "2026-08-13T19:48:28.120Z",
+          "from": "in-progress",
+          "to": "in-review",
+          "by": "Devon"
+        },
+        {
+          "at": "2026-08-13T19:57:20.936Z",
+          "from": "in-review",
+          "to": "qa",
+          "by": "Elena"
+        },
+        {
+          "at": "2026-08-13T21:54:56.754Z",
+          "from": "qa",
+          "to": "done",
+          "by": "Quinn"
+        }
+      ],
+      "created": "2026-08-13T19:02:46.871Z",
+      "updated": "2026-08-13T21:54:56.754Z"
+    },
+    {
+      "id": "PONG-3",
+      "project": "PONG",
+      "title": "PONG-3 — Neon presentation and juice",
+      "desc": "Neon art pass — dark court, glowing paddles and ball, center line, styled score — with juice strictly capped at ball trail, hit flash on contact, and score pop. Readability outranks spectacle: the ball stays the brightest object on screen, and 60fps with all effects on is part of done, not a stretch goal.",
+      "type": "story",
+      "status": "done",
+      "points": 3,
+      "assignee": "Devon Park",
+      "sprint": 1,
+      "acceptance": [
+        "The 10-second look reads as polished arcade — dark court, glowing paddles and ball, center line, styled score — with the ball the single brightest object on screen and its true position unambiguous at full rally speed (trail short and fast-decaying, cleared on every serve, no permanent smear).",
+        "Every effect maps one-to-one to a game event: trail = ball motion, hit flash = actual paddle/wall contact at the contact point clearing in under ~100ms, score pop = only the digit that changed (~200ms) — nothing pulses or lingers without a trigger.",
+        "With trail, flash, and pop all active, a full-speed rally holds a measured 60fps using the same measurement as PONG-1's baseline (if canvas shadowBlur tanks it, glow ships as layered strokes instead), and all PONG-1 and PONG-2 acceptance still passes unchanged.",
+        "The game still opens by double-clicking index.html from disk with zero new console errors, no external requests, no new dependencies, and no files outside pong/."
+      ],
+      "comments": [
+        {
+          "at": "2026-08-13T20:24:03.946Z",
+          "by": "Devon",
+          "text": "82b8501 - Double-click pong/index.html (studio/projects/pong/index.html) from disk; the court, paddles, and ball should read as neon (dark court, glowing cyan paddles, white-hot glowing ball, glowing center line, glowing score) with the ball clearly the brightest thing on screen even at full rally speed. Watch a rally: a short cyan trail should follow the ball and vanish instantly on every serve (no smear), a quick white flash should pop exactly where the ball hits a wall or paddle and clear almost immediately, and only the digit that just scored should briefly grow and flare (~200ms) while the other digit stays still. Play to 7 and confirm PONG-1/PONG-2 behavior (paddle control, CPU, bounce/english, scoring, serve beat, win screen, Enter restart) all still feel exactly the same. Watch DevTools during a fast rally for a steady 60fps and zero console errors."
+        },
+        {
+          "at": "2026-08-13T20:35:53.361Z",
+          "by": "Elena",
+          "text": "Review verdict: APPROVED, merged to main 223fc57 (--no-ff). Read the full diff and both files; change is disciplined - 2 files inside pong/, every physics/scoring line untouched (verified against main, not just the dev's claim), all new tunables in CONFIG, juice capped at exactly the three sanctioned effects, and glow is layered strokes/fills under 'lighter' rather than shadowBlur, which is the acceptance's own preferred fallback for holding 60fps. file:// is still inert in the review sandbox (and the board server 404s outside its own UI), so as with PONG-1/2 I drove the real unmodified game.js headlessly under Node with my own harness - 60,000 frames, an edge-english aiming bot alternating with a random walker so BOTH scoring branches ran: 153 points (9 player / 144 cpu), 20 full matches, 20 Enter-restarts. All invariants pass: trail capped at exactly 8 samples and actually hit the cap, 0 trail arcs on every scoring frame / through every ~1s serve beat / behind every win screen / on every restart frame; 649 distinct hit flashes each drawn <=6 frames (<=90ms, under the ~100ms cap) and only at real contact points; scoring digit at exactly 1.4x peak on the scoring frame with the other digit at exactly 1.0, pop fully decayed within 0.25s, zero spurious pops across all 20 restarts; ctx save/restore balanced to depth 0 every frame with composite op and line dash never leaking; ball core the only opaque #ffffff fill, 4 ball arcs/frame; PONG-2 regression green (only legal +1 deltas, halt exactly at 7, overlay names the correct winner, Enter mid-rally a no-op). Perf: max 102 canvas ops/frame - trivially cheap, no shadowBlur anywhere. I also rasterized two captured frames (hot rally with full trail + live flash; score-pop peak) via GDI+ to eyeball composition: dark court, neon paddles, dim secondary center line, styled score, ball unmistakably the brightest object, trail visibly absent on the serve frame. Fixups by me on the branch (abbd1e2, comment/whitespace only): CONFIG comment spacing + corrected the drawBall comment's 'only pure-white fill' claim to 'only opaque pure-white' since flashes fill translucent white. QA: do the human pass per the dev's how-to-test note - the 10-second look, feel of trail/flash/pop at full rally speed, and real-hardware 60fps in DevTools (same PONG-1 baseline measurement), since additive-blend look and fps-on-hardware are the two things headless can't fully prove."
+        },
+        {
+          "at": "2026-08-13T21:55:05.207Z",
+          "by": "Quinn",
+          "text": "QA PASS - live playtest at localhost:4545, same session as PONG-1/2. All 4 AC checked: (1) confirmed visually across many live screenshots: dark near-black court, glowing cyan paddles with visible bloom, a white-hot ball with a cyan halo that is unmistakably the single brightest thing on screen every time, a dim dashed center line, glowing cyan score digits with YOU/CPU labels - reads as polished neon arcade. Trail is short (a handful of fading dots), clearly fast-decaying, and measured at exactly 0 arcs immediately after every restart/serve (fully cleared, no smear). (2) trail confirmed tied to actual ball motion (empty whenever parked); flash timing/contact-point behavior verified via source (FLASH_DURATION 0.09s, under the 100ms cap) plus Elena's exact headless frame counts, and I saw no stray/lingering visual artifacts across ~20+ live screenshots; score pop directly caught live - a screenshot mid-scoring-event shows the just-scored CPU digit visibly larger/flared while the untouched digit stayed static, exactly one-to-one with the score event. (3) zero uses of ctx.shadowBlur anywhere in game.js (confirmed by reading the file) - glow is layered rgba fills under lighter composite as the fallback describes; my sustained ~120fps/20s live measurement (see PONG-1 comment) was taken against this same integrated build with trail+flash+pop all live, not a stripped version, so that fps evidence already reflects all-effects-active conditions. All PONG-1/PONG-2 mechanics (paddle, CPU, bounce/english, scoring, serve beat, win screen, restart) were exercised and passed in this same session on this same build. (4) confirmed only index.html, css/style.css, js/game.js (+ README.md) exist under pong/; index.html references only local relative paths, no CDNs/externals; zero new console errors and zero external requests observed throughout."
+        }
+      ],
+      "history": [
+        {
+          "at": "2026-08-13T19:02:54.429Z",
+          "from": null,
+          "to": "todo",
+          "by": "Sam"
+        },
+        {
+          "at": "2026-08-13T20:06:01.800Z",
+          "from": "todo",
+          "to": "in-progress",
+          "by": "Devon"
+        },
+        {
+          "at": "2026-08-13T20:24:06.546Z",
+          "from": "in-progress",
+          "to": "in-review",
+          "by": "Devon"
+        },
+        {
+          "at": "2026-08-13T20:35:37.293Z",
+          "from": "in-review",
+          "to": "qa",
+          "by": "Elena"
+        },
+        {
+          "at": "2026-08-13T21:55:07.666Z",
+          "from": "qa",
+          "to": "done",
+          "by": "Quinn"
+        }
+      ],
+      "created": "2026-08-13T19:02:54.430Z",
+      "updated": "2026-08-13T21:55:07.666Z"
+    }
+  ],
+  "sprints": [
+    {
+      "project": "PONG",
+      "number": 1,
+      "goal": "Ship a polished, double-click-to-play browser Pong — a fair, responsive rally against a beatable CPU, a complete first-to-7 match loop with instant restart, and a neon presentation where every effect answers \"what just happened?\"",
+      "started": "2026-08-13T19:02:25.887Z",
+      "closed": "2026-08-13T21:58:37.281Z"
+    }
+  ]
+}

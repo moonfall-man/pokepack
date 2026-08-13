@@ -47,3 +47,10 @@ dist/
 
 # Local-only: which game folder and executable this machine uses.
 config.json
+
+# game-studio skill: per-project game repos are their own git repos, never
+# nested in this one. Board state, briefs and meeting minutes ARE committed.
+studio/projects/
+studio/.*.lock/
+studio/*.tmp
+studio/board-snapshot.html

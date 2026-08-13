@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "studio-board",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [".claude/skills/game-studio/board.mjs", "serve", "--port", "4545"],
+      "port": 4545
+    }
+  ]
+}

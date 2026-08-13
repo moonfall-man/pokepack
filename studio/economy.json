@@ -1,0 +1,27 @@
+{
+  "studio": "Moonfall Interactive",
+  "balance": 552808,
+  "log": [
+    {
+      "at": "2026-08-13T19:52:08.947Z",
+      "kind": "funding",
+      "amount": 500000,
+      "balance": 500000,
+      "note": "seed funding from the studio head"
+    },
+    {
+      "at": "2026-08-13T22:00:24.114Z",
+      "kind": "payroll",
+      "amount": -35192,
+      "balance": 464808,
+      "note": "payroll for 7 staff (sprint PONG#1)"
+    },
+    {
+      "at": "2026-08-13T22:00:29.043Z",
+      "kind": "revenue",
+      "amount": 88000,
+      "balance": 552808,
+      "note": "sprint PONG#1 shipped points"
+    }
+  ]
+}

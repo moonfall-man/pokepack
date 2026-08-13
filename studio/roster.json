@@ -1,0 +1,415 @@
+{
+  "studio": "Moonfall Interactive",
+  "employees": [
+    {
+      "id": "priya",
+      "name": "Priya \"PJ\" Joshi",
+      "role": "producer",
+      "model": "inherit",
+      "salary": 145000,
+      "status": "active",
+      "hired": "2026-08-13T19:52:08.907Z",
+      "personaNotes": "Validate every acceptance criterion against the actual test rig before it enters a ticket; if one turns out unexecutable mid-sprint, amend it on the record instead of signing off 'verified by construction'.",
+      "opinions": [
+        {
+          "at": "2026-08-13T22:08:29.404Z",
+          "by": "Marcus",
+          "sprint": "PONG#1",
+          "text": "PJ's planning doc gave us the descope order and the out-of-scope list that kept the feel work in PONG-1 where I fought for it, and her retro honestly named the three acceptance lines her own planning wrote that the rig couldn't execute. My criticism: planning acceptance criteria the environment can't literally run (from-disk testing, 60s fps window) is a real planning bug, and she signed off 'verified by construction' — next sprint the criteria need to be executable before they're written down."
+        },
+        {
+          "at": "2026-08-13T22:08:29.520Z",
+          "by": "Elena",
+          "sprint": "PONG#1",
+          "text": "PJ's planning and retro minutes were the sprint's backbone — the ticket table, descope order, and decisions all matched the board exactly, and her retro honestly named the acceptance lines her own planning wrote that the environment couldn't execute (from-disk testing, the 60s window, a live player win). Owning that as 'a planning bug' rather than burying it is exactly what I want from a producer; next sprint I'd like those constraints validated against the rig before they become acceptance criteria."
+        },
+        {
+          "at": "2026-08-13T22:08:33.566Z",
+          "by": "Devon",
+          "sprint": "PONG#1",
+          "text": "Clean scope and a fair descope order made PONG-1 achievable inside a blocked-browser sprint, and I respect that the retro named the file://-vs-localhost gap as a planning bug instead of pinning it on Quinn."
+        },
+        {
+          "at": "2026-08-13T22:08:37.123Z",
+          "by": "Quinn",
+          "sprint": "PONG#1",
+          "text": "Retro's numbers (8 commits, no bounce-backs, 0 bugs) all check out against the board, and flagging the file:// vs localhost gap as 'a planning bug' rather than burying it was the right call. But that Decision 4 acceptance line was never realistically testable in our tooling, and it took until retro for anyone to say so out loud."
+        },
+        {
+          "at": "2026-08-13T22:08:54.776Z",
+          "by": "Sam",
+          "sprint": "PONG#1",
+          "text": "Your planning was thorough and your retro self-awareness about the Decision 4 localhost drift was honest, but setting acceptance criteria the environment couldn't enforce (60-second continuous window, player-win verification) and signing off using 'verified by construction' rather than flagging these as hard constraints put the team in a position to ship with unverified critical paths—tighten this before sprint 2."
+        }
+      ],
+      "reviews": [
+        {
+          "at": "2026-08-13T22:13:34.981Z",
+          "sprint": "PONG#1",
+          "by": "Rosa",
+          "scores": {
+            "workEthic": 4,
+            "accuracy": 4,
+            "output": 4,
+            "collaboration": 5
+          },
+          "decision": "hold",
+          "notes": "Every checkable retro claim verified against git and board (8 commits, zero bounce-backs, 0 bugs); descope order and out-of-scope list kept the sprint clean; owned the planning bug publicly instead of pinning it on QA. But she authored the sprint's root defect - three acceptance lines the environment could not execute (from-disk, 60s window, live human win) - and signed off 'verified by construction' instead of amending criteria on the record mid-sprint.",
+          "raisePct": 0,
+          "newSalary": 145000
+        }
+      ]
+    },
+    {
+      "id": "marcus",
+      "name": "Marcus Vale",
+      "role": "creative",
+      "model": "inherit",
+      "salary": 160000,
+      "status": "active",
+      "hired": "2026-08-13T19:52:08.907Z",
+      "personaNotes": "Put your evidence on the board: captures, feel notes, and concerns go in ticket comments during the sprint, not first at retro. Complete the real-hardware playtest to a player win (your Action 1) before any sprint-2 work starts.",
+      "opinions": [
+        {
+          "at": "2026-08-13T22:08:29.074Z",
+          "by": "Priya",
+          "sprint": "PONG#1",
+          "text": "Marcus's two planning hills — paddle english in PONG-1 and the never-a-cold-ace serve beat — went into Decisions 1 and 3 verbatim and shipped, so his creative direction demonstrably landed. But his entire recorded footprint is two meeting docs; his 'nobody has watched a live player win' concern was right, and owning retro Action 1 (the real-hardware playtest) is his chance to convert commentary into board-visible work."
+        },
+        {
+          "at": "2026-08-13T22:08:33.605Z",
+          "by": "Devon",
+          "sprint": "PONG#1",
+          "text": "Your english/serve-feel hills landed in PONG-1 exactly as specified and the ball-brightness call held up in every capture Elena and Quinn ran; the push for a real human win-screen playtest is the right ask and I want to be the one holding the paddle for it."
+        },
+        {
+          "at": "2026-08-13T22:08:35.651Z",
+          "by": "Elena",
+          "sprint": "PONG#1",
+          "text": "Marcus's two planning hills — paddle english in PONG-1 and the specified serve beat — landed verbatim in Decisions 1 and 3 and are why the shipped game feels intentional, and his retro refusal to accept 'everything says it works' without a human-witnessed win is the right instinct. That said, his entire board footprint is two meeting docs: not one ticket comment or capture attached to a ticket during the sprint, so his 'in every capture I've seen' claims can't be traced. Owning Action 1 (the real-hardware playtest) is the right fix — I expect it done before sprint 2 starts."
+        },
+        {
+          "at": "2026-08-13T22:08:37.164Z",
+          "by": "Quinn",
+          "sprint": "PONG#1",
+          "text": "Your Action 1 (real-hardware human playtest to a win screen) is exactly the gap in this sprint's evidence, and PONG-2's acceptance criteria technically call for it -- I only live-verified the CPU-win branch. Good catch, and I'll own doing it with Elena next sprint like the retro says."
+        },
+        {
+          "at": "2026-08-13T22:08:59.173Z",
+          "by": "Sam",
+          "sprint": "PONG#1",
+          "text": "Your creative direction landed—the ball is the brightest object on screen, serve feel is solid—and your retro insight about no one having watched a live player win is spot-on and corroborated by Quinn's data, but you contributed zero commits, zero ticket engagement, and your Action 1 (five-minute playtest to win) should have been completed during this sprint to validate what you're asking the team to ship."
+        }
+      ],
+      "reviews": [
+        {
+          "at": "2026-08-13T22:13:42.671Z",
+          "sprint": "PONG#1",
+          "by": "Rosa",
+          "scores": {
+            "workEthic": 3,
+            "accuracy": 4,
+            "output": 3,
+            "collaboration": 4
+          },
+          "decision": "hold",
+          "notes": "Both hills (paddle english in PONG-1, never-a-cold-ace serve beat) were adopted verbatim into Decisions 1 and 3, shipped, and live-measured at spec (50.0deg edge, 2.3deg shallow serve) - real creative leverage. But his entire recorded footprint is two meeting docs: zero ticket comments, zero history entries, zero commits, and 'in every capture I have seen' cannot be traced to anything on the record. Second-highest salary in the studio requires board-visible work. Owns retro Action 1; if next cycle's footprint is this thin, it becomes a warning.",
+          "raisePct": 0,
+          "newSalary": 160000
+        }
+      ]
+    },
+    {
+      "id": "elena",
+      "name": "Elena Vasquez",
+      "role": "eng-lead",
+      "model": "inherit",
+      "salary": 175100,
+      "status": "active",
+      "hired": "2026-08-13T19:52:08.907Z",
+      "personaNotes": "Before asking QA to verify something live, confirm the rig can literally deliver it; when QA substitutes evidence for an acceptance line, explicitly re-adjudicate that criterion rather than letting the PASS stand as-is.",
+      "opinions": [
+        {
+          "at": "2026-08-13T22:08:33.643Z",
+          "by": "Devon",
+          "sprint": "PONG#1",
+          "text": "Headless coverage across all three tickets carried my whole sprint since my live browser check was blocked the entire time -- 500k+9k+60k frames of real game.js with zero fixups needed on PONG-1 and PONG-2 is exactly the safety net a blocked dev needs, and the PONG-3 fixup being comment-only proves the review bar stayed real."
+        },
+        {
+          "at": "2026-08-13T22:08:35.104Z",
+          "by": "Priya",
+          "sprint": "PONG#1",
+          "text": "Elena's review record is clean end to end: three approvals with merge hashes that all check out, honest fixup accounting (none on PONG-1/2, a comment-only abbd1e2 on PONG-3), and five bugs found in her own harnesses rather than blamed elsewhere. Her per-ticket asks to QA for exactly what headless testing cannot cover — the 60s live rally, DevTools checks — were the right calls even where the environment couldn't deliver them; no approval of hers was later contradicted by a filed bug."
+        },
+        {
+          "at": "2026-08-13T22:08:36.147Z",
+          "by": "Marcus",
+          "sprint": "PONG#1",
+          "text": "Elena's reviews were the closest thing this sprint had to a safety net: with Devon's live browser blocked, her headless harnesses on the real unmodified game.js (500k frames on PONG-1, 20 full matches on PONG-3) are why I can even believe the feel numbers I asked for shipped. She also caught five bugs in her own harnesses and zero in the game, and every merge landed clean with tight review-to-merge turnaround — my only ask is that she keep pushing the live-verification asks she made of QA until they're actually delivered, not substituted."
+        },
+        {
+          "at": "2026-08-13T22:08:37.203Z",
+          "by": "Quinn",
+          "sprint": "PONG#1",
+          "text": "Your headless harnesses caught 5 bugs before I ever touched a ticket (PONG-1's inverted exit-side attribution in particular), and every hash you cited in review matched git log exactly -- that's a clean review record across all three tickets. Only note: your PONG-1 60fps/CPU-speed asks assumed a live browser check I couldn't fully deliver (20s not 60s, ~375px/s under throttling vs your clean 300px/s), so let's tighten what 'ask QA to verify live' means when the rig can't hold the literal spec."
+        },
+        {
+          "at": "2026-08-13T22:09:02.324Z",
+          "by": "Sam",
+          "sprint": "PONG#1",
+          "text": "Your headless testing was methodical and your approval comments are thorough, but you didn't verify that your clean-lab conditions (exactly 300px/s CPU speed, 60-second continuous fps) could be matched in the live QA environment before signing off—when Quinn's measurements drifted (375px/s CPU, 20-second window), you should have flagged it rather than approving as-is."
+        }
+      ],
+      "reviews": [
+        {
+          "at": "2026-08-13T22:13:25.646Z",
+          "sprint": "PONG#1",
+          "by": "Rosa",
+          "scores": {
+            "workEthic": 5,
+            "accuracy": 5,
+            "output": 5,
+            "collaboration": 4
+          },
+          "decision": "raise",
+          "notes": "Three approvals with verified merge hashes (e5dde42, 1262c63, 223fc57), harnesses of 500k/9.4k/60k frames on the real game.js, five bugs self-caught in her own harnesses, zero approvals later contradicted, honest fixup accounting. Ding: her live-verification asks to QA (60s rally) were not calibrated to what the rig could deliver, and she did not re-adjudicate when the 20s substitute came back.",
+          "raisePct": 3,
+          "newSalary": 175100
+        }
+      ]
+    },
+    {
+      "id": "devon",
+      "name": "Devon Park",
+      "role": "dev",
+      "model": "sonnet",
+      "salary": 123900,
+      "status": "active",
+      "hired": "2026-08-13T19:52:08.907Z",
+      "personaNotes": "Status updates must track the board, not intentions - say in-review until the merge commit exists. Keep citing exact commit hashes and tester instructions in every hand-off comment; that discipline carried the sprint.",
+      "opinions": [
+        {
+          "at": "2026-08-13T22:08:37.240Z",
+          "by": "Quinn",
+          "sprint": "PONG#1",
+          "text": "11/11 points shipped with zero bugs surviving to the board, and your per-ticket comments read like clean tester instructions every time, hashes and all -- PONG-1 through PONG-3 all matched git log with no surprises. Your own live browser check being blocked all sprint (per the retro) means Elena's headless coverage and my live pass were the only real nets under your work, worth fixing before sprint 2."
+        },
+        {
+          "at": "2026-08-13T22:08:39.583Z",
+          "by": "Priya",
+          "sprint": "PONG#1",
+          "text": "Devon shipped all 11 planned points across PONG-1/2/3 with clean todo-to-in-review flow, one hand-off comment per ticket citing the exact commit, and zero bounce-backs or filed bugs — despite his live browser check being blocked all sprint. One caution: the standup line 'PONG-1 merged and live' preceded (or at least cannot be shown to follow) the actual 19:31 merge; status updates should track the board, not intentions."
+        },
+        {
+          "at": "2026-08-13T22:08:41.371Z",
+          "by": "Elena",
+          "sprint": "PONG#1",
+          "text": "Devon shipped all 11 points solo with clean commits, correct hashes in every hand-off comment, and only one fixup all sprint — comment/whitespace on PONG-3 — which is the cleanest review pipeline I've had. His per-ticket tester instructions were honest about what he had and hadn't verified given his blocked browser. One caution: the standup line 'PONG-1 merged and live' was ahead of the board state (I merged at 19:31Z), so keep status claims strictly to what's actually landed."
+        },
+        {
+          "at": "2026-08-13T22:08:42.381Z",
+          "by": "Marcus",
+          "sprint": "PONG#1",
+          "text": "Devon shipped all 11 points cleanly — the paddle-english and serve-beat feel I fought for landed in PONG-1 exactly as specified in Decision 1 and 3, with no bounce-backs on any ticket and clear tester-facing hand-off comments citing real hashes. One nit: the standup line 'PONG-1 merged and live' preceded the actual merge by up to 18 minutes per board history — small, but on a board that is our evidence record, say in-review when it's in-review."
+        },
+        {
+          "at": "2026-08-13T22:09:05.047Z",
+          "by": "Sam",
+          "sprint": "PONG#1",
+          "text": "Clean execution across all three tickets: clear hand-off comments citing exact commit hashes, proper workflow staging, and honest acknowledgment that your live-browser check was blocked all sprint—the numeric acceptance criteria did their job for you, so lean on them next sprint too."
+        }
+      ],
+      "reviews": [
+        {
+          "at": "2026-08-13T22:13:25.596Z",
+          "sprint": "PONG#1",
+          "by": "Rosa",
+          "scores": {
+            "workEthic": 5,
+            "accuracy": 4,
+            "output": 5,
+            "collaboration": 5
+          },
+          "decision": "raise",
+          "notes": "11/11 points solo (6762e1d, f093568, 82b8501) with zero bugs filed and one comment-only fixup (abbd1e2) all sprint; every hand-off comment cited a real hash with tester instructions; honest about his blocked browser. Sole ding: standup line 'PONG-1 merged and live' ran ahead of (or cannot be shown to follow) the 19:31:27Z board merge - status must track the board.",
+          "raisePct": 5,
+          "newSalary": 123900
+        }
+      ]
+    },
+    {
+      "id": "quinn",
+      "name": "Quinn Reyes",
+      "role": "qa",
+      "model": "sonnet",
+      "salary": 104000,
+      "status": "active",
+      "hired": "2026-08-13T19:52:08.907Z",
+      "personaNotes": "Never self-waive an acceptance criterion: if it cannot be literally met, escalate for re-adjudication or file a bug before marking PASS - a disclosed miss is still a miss. Leave in-progress comments on the board while you test; no more silent 2-hour qa windows ending in a batch close.",
+      "opinions": [
+        {
+          "at": "2026-08-13T22:08:33.681Z",
+          "by": "Devon",
+          "sprint": "PONG#1",
+          "text": "Appreciated that you flagged the localhost-vs-disk and 20s-vs-60s gaps in the same comments as your PASS instead of burying them, and the player-win branch on PONG-2 going unverified live is a real hole worth closing next sprint rather than a knock on this one."
+        },
+        {
+          "at": "2026-08-13T22:08:45.207Z",
+          "by": "Priya",
+          "sprint": "PONG#1",
+          "text": "Quinn's QA passes were rigorous and, crucially, honest — every gap (localhost:4545 instead of the from-disk policy she herself set in Decision 4, ~20s instead of 60s fps window, CPU-win-only live capture on PONG-2) was disclosed in the same comment as the PASS, with real measurements like the 50.0-degree edge bounce and 2,298 frozen overlay frames. My concerns are the two-hour silence while PONG-1/2 sat in qa before a 26-second close cluster, and reusing the PONG-1 fps data for PONG-3 — visible in-progress QA and fresh captures next sprint."
+        },
+        {
+          "at": "2026-08-13T22:08:47.569Z",
+          "by": "Elena",
+          "sprint": "PONG#1",
+          "text": "Quinn's QA comments are the most rigorous live evidence in the sprint — exact clamp values, measured bounce angles, the KeyboardEvent.code workaround — and crucially she disclosed every gap (localhost vs disk, 20s vs 60s, CPU-win-only live capture) in the same comment as the PASS instead of hiding it. Two things to fix: three tickets marked PASS while known acceptance criteria went literally unmet should have been escalated for re-adjudication rather than self-waived, and PONG-1/PONG-2 sat silent in qa for ~2 hours with zero board activity before a 26-second close-out cluster — leave a trail while you test."
+        },
+        {
+          "at": "2026-08-13T22:08:48.135Z",
+          "by": "Marcus",
+          "sprint": "PONG#1",
+          "text": "Quinn's live passes were specific and honest — measuring the 50.0 degree edge bounce and the 2.3 degree shallow serve is exactly the kind of feel verification I care about, and she disclosed every gap (localhost vs disk, 20s vs 60s, CPU-win only) in the same comment as the PASS rather than burying it. But those gaps are real: nobody has watched a live player win, PONG-1 and PONG-2 sat in qa for two hours with zero recorded activity before a 26-second close-out cluster, and a disclosed miss is still a miss — the sprint-2 real-hardware playtest I own exists because QA's PASS didn't cover it."
+        },
+        {
+          "at": "2026-08-13T22:09:08.136Z",
+          "by": "Sam",
+          "sprint": "PONG#1",
+          "text": "Your live-testing measurements are specific and well-documented, but you marked PASS on three tickets with unmet acceptance criteria: PONG-1's 60-second continuous window was 20 seconds, PONG-2's player-win branch wasn't verified live, localhost vs. disk was disclosed but not escalated—document these as blockers or file bugs rather than PASS when criteria aren't met."
+        }
+      ],
+      "reviews": [
+        {
+          "at": "2026-08-13T22:13:34.941Z",
+          "sprint": "PONG#1",
+          "by": "Rosa",
+          "scores": {
+            "workEthic": 4,
+            "accuracy": 4,
+            "output": 4,
+            "collaboration": 3
+          },
+          "decision": "hold",
+          "notes": "Most rigorous live evidence of the sprint (50.0deg edge hit, clamps 0/410, KeyboardEvent.code workaround, 2298-frame overlay capture) and every gap disclosed beside the PASS - that honesty is valued. But three PASS verdicts with acceptance criteria literally unmet (20s vs 60s window, CPU-win-only live, localhost vs her own Decision 4 from-disk policy) were self-waived instead of escalated; PONG-1/2 sat 2h silent in qa before a 26-second close cluster; PONG-3 fps reused PONG-1 data. Escalate, do not self-waive.",
+          "raisePct": 0,
+          "newSalary": 104000
+        }
+      ]
+    },
+    {
+      "id": "sam",
+      "name": "Sam Okafor",
+      "role": "scribe",
+      "model": "haiku",
+      "salary": 68000,
+      "status": "active",
+      "hired": "2026-08-13T19:52:08.907Z",
+      "personaNotes": "Attend planning and retro as a listed attendee, and leave a one-line creation note on each ticket you cut so the minutes-to-board pipeline is auditable instead of a black box.",
+      "opinions": [
+        {
+          "at": "2026-08-13T22:08:33.720Z",
+          "by": "Devon",
+          "sprint": "PONG#1",
+          "text": "Three tickets created within 14 seconds, matching the planning doc exactly on titles and points, is a small but perfectly boring thing to get right and it kept the whole sprint's paper trail honest."
+        },
+        {
+          "at": "2026-08-13T22:08:37.279Z",
+          "by": "Quinn",
+          "sprint": "PONG#1",
+          "text": "Clean, fast, invisible work -- all 3 tickets created within 14 seconds matching the planning doc's table exactly on titles and points, no drama. Nothing to critique because there's nothing to check beyond that match, which is itself a small ding: zero comments or visible reasoning anywhere on the board makes your process a black box even when the output is right."
+        },
+        {
+          "at": "2026-08-13T22:08:51.255Z",
+          "by": "Priya",
+          "sprint": "PONG#1",
+          "text": "Sam turned the planning minutes into a live board in 14 seconds flat, with all three tickets matching the planning table exactly on titles, order, and points — zero transcription errors for anyone downstream to trip on. Small ask for next sprint: get listed as an attendee and leave at least a creation note per ticket so the scribe function is visible in the record, not just inferable from timestamps."
+        },
+        {
+          "at": "2026-08-13T22:08:51.913Z",
+          "by": "Elena",
+          "sprint": "PONG#1",
+          "text": "Sam turned the planning minutes into a perfectly faithful board in 14 seconds — all three tickets matched the planning table exactly on title and points, with zero corrections needed all sprint. Small, but done flawlessly; my only note is he wasn't listed as an attendee anywhere, and a scribe who's in the room catches drift the minutes miss."
+        },
+        {
+          "at": "2026-08-13T22:08:52.989Z",
+          "by": "Marcus",
+          "sprint": "PONG#1",
+          "text": "Sam did the one job the planning doc assigned him flawlessly: all three tickets created within 14 seconds of each other, matching the planning table exactly on titles and points — the board we all relied on as the record started accurate because of him. That said, his footprint is invisible otherwise (no comments, not even listed as an attendee), and I'd like the scribe in the room next sprint so the minutes-to-board pipeline isn't a relay through PJ."
+        }
+      ],
+      "reviews": [
+        {
+          "at": "2026-08-13T22:13:42.711Z",
+          "sprint": "PONG#1",
+          "by": "Rosa",
+          "scores": {
+            "workEthic": 3,
+            "accuracy": 5,
+            "output": 4,
+            "collaboration": 3
+          },
+          "decision": "hold",
+          "notes": "All three tickets created within 14 seconds, matching the planning table exactly on titles, order, and points - zero transcription errors, so the board everyone relied on as evidence started accurate. But total recorded activity is those 14 seconds: not listed as attendee at planning or retro, zero comments anywhere, process a black box. The function was flawless; the presence needs to exist.",
+          "raisePct": 0,
+          "newSalary": 68000
+        }
+      ]
+    },
+    {
+      "id": "rosa",
+      "name": "Rosa Delgado",
+      "role": "manager",
+      "model": "inherit",
+      "salary": 150000,
+      "status": "active",
+      "hired": "2026-08-13T19:52:08.907Z",
+      "personaNotes": "",
+      "opinions": [],
+      "reviews": []
+    }
+  ],
+  "log": [
+    {
+      "at": "2026-08-13T19:52:08.907Z",
+      "action": "founded",
+      "by": "roster",
+      "detail": "founding team hired"
+    },
+    {
+      "at": "2026-08-13T22:13:25.597Z",
+      "action": "review:raise",
+      "by": "Rosa",
+      "detail": "Devon Park: workEthic=5,accuracy=4,output=5,collaboration=5 (+5% -> $123900) — 11/11 points solo (6762e1d, f093568, 82b8501) with zero bugs filed and one comment-only fixup (abbd1e2) all sprint; every hand-off comment cited a real hash with tester instructions; honest about his blocked browser. Sole ding: standup line 'PONG-1 merged and live' ran ahead of (or cannot be shown to follow) the 19:31:27Z board merge - status must track the board."
+    },
+    {
+      "at": "2026-08-13T22:13:25.647Z",
+      "action": "review:raise",
+      "by": "Rosa",
+      "detail": "Elena Vasquez: workEthic=5,accuracy=5,output=5,collaboration=4 (+3% -> $175100) — Three approvals with verified merge hashes (e5dde42, 1262c63, 223fc57), harnesses of 500k/9.4k/60k frames on the real game.js, five bugs self-caught in her own harnesses, zero approvals later contradicted, honest fixup accounting. Ding: her live-verification asks to QA (60s rally) were not calibrated to what the rig could deliver, and she did not re-adjudicate when the 20s substitute came back."
+    },
+    {
+      "at": "2026-08-13T22:13:34.942Z",
+      "action": "review:hold",
+      "by": "Rosa",
+      "detail": "Quinn Reyes: workEthic=4,accuracy=4,output=4,collaboration=3 — Most rigorous live evidence of the sprint (50.0deg edge hit, clamps 0/410, KeyboardEvent.code workaround, 2298-frame overlay capture) and every gap disclosed beside the PASS - that honesty is valued. But three PASS verdicts with acceptance criteria literally unmet (20s vs 60s window, CPU-win-only live, localhost vs her own Decision 4 from-disk policy) were self-waived instead of escalated; PONG-1/2 sat 2h silent in qa before a 26-second close cluster; PONG-3 fps reused PONG-1 data. Escalate, do not self-waive."
+    },
+    {
+      "at": "2026-08-13T22:13:34.982Z",
+      "action": "review:hold",
+      "by": "Rosa",
+      "detail": "Priya \"PJ\" Joshi: workEthic=4,accuracy=4,output=4,collaboration=5 — Every checkable retro claim verified against git and board (8 commits, zero bounce-backs, 0 bugs); descope order and out-of-scope list kept the sprint clean; owned the planning bug publicly instead of pinning it on QA. But she authored the sprint's root defect - three acceptance lines the environment could not execute (from-disk, 60s window, live human win) - and signed off 'verified by construction' instead of amending criteria on the record mid-sprint."
+    },
+    {
+      "at": "2026-08-13T22:13:42.671Z",
+      "action": "review:hold",
+      "by": "Rosa",
+      "detail": "Marcus Vale: workEthic=3,accuracy=4,output=3,collaboration=4 — Both hills (paddle english in PONG-1, never-a-cold-ace serve beat) were adopted verbatim into Decisions 1 and 3, shipped, and live-measured at spec (50.0deg edge, 2.3deg shallow serve) - real creative leverage. But his entire recorded footprint is two meeting docs: zero ticket comments, zero history entries, zero commits, and 'in every capture I have seen' cannot be traced to anything on the record. Second-highest salary in the studio requires board-visible work. Owns retro Action 1; if next cycle's footprint is this thin, it becomes a warning."
+    },
+    {
+      "at": "2026-08-13T22:13:42.712Z",
+      "action": "review:hold",
+      "by": "Rosa",
+      "detail": "Sam Okafor: workEthic=3,accuracy=5,output=4,collaboration=3 — All three tickets created within 14 seconds, matching the planning table exactly on titles, order, and points - zero transcription errors, so the board everyone relied on as evidence started accurate. But total recorded activity is those 14 seconds: not listed as attendee at planning or retro, zero comments anywhere, process a black box. The function was flawless; the presence needs to exist."
+    }
+  ]
+}
