@@ -1,0 +1,14 @@
+# Line endings for the two start scripts, pinned rather than left to whatever
+# core.autocrlf each contributor happens to have set.
+#
+# This is not tidiness.  A shell script checked out with CRLF endings has a
+# carriage return stuck on the end of its shebang, so the kernel looks for an
+# interpreter called "/bin/sh\r", does not find one, and reports the confusing
+# "bad interpreter: No such file or directory".  On a Windows clone with
+# autocrlf=true that is exactly what would happen to start-pokepack.sh.
+*.sh text eol=lf
+
+# Batch files are the mirror image: cmd.exe is happiest with CRLF, and can
+# mis-read labels and goto targets without it.
+*.cmd text eol=crlf
+*.bat text eol=crlf
