@@ -39,6 +39,7 @@ import * as catalogue from './catalogue.js';
 import * as deps from './deps.js';
 import { resolveDownload } from './github.js';
 import * as update from './update.js';
+import * as logs from './logs.js';
 import * as gallery from './packfeed.js';
 import * as config from './config.js';
 import { page } from './ui-page.js';
@@ -291,6 +292,25 @@ export function serve({ packsDir, saveDir, indexFile, port = 7666, host = '127.0
       }
       const out = await update.check({ force: url.searchParams.get('refresh') === '1' });
       return json(res, 200, { ...out, checkout: update.status() });
+    }
+
+    // What the game said last time it ran, for whichever pack you name.
+    if (url.pathname === '/api/logs') {
+      const wanted = url.searchParams.get('identity');
+      const found = wanted
+        ? findSaveDirs().find((i) => i.identity === wanted)
+        : activeInstance();
+      if (!found) return json(res, 404, { error: `no pack called ${wanted}` });
+      const out = logs.readLogs(found.path);
+      return json(res, 200, {
+        identity: found.identity,
+        path: found.path,
+        ...out,
+        // Pulled out so the screen can lead with what went wrong rather than
+        // making somebody read a thousand lines of startup chatter.
+        notable: out.sources.flatMap((s) => logs.interesting(s.text)
+          .map((n) => ({ ...n, from: s.label }))).slice(-40),
+      });
     }
 
     if (url.pathname === '/api/activate' && req.method === 'POST') {
@@ -872,7 +892,10 @@ export function serve({ packsDir, saveDir, indexFile, port = 7666, host = '127.0
       const version = have.includes(preferred) ? preferred : (have[0] ?? null);
 
       try {
-        const out = launchGame({ exePath, identity: act.identity, version });
+        // saveDir is what turns stdout into a file you can read afterwards.
+        const out = launchGame({
+          exePath, identity: act.identity, version, saveDir: act.path,
+        });
         return json(res, 200, {
           ...out,
           // 'rom' means the game still has a one-time import to do, and saying

@@ -1,4 +1,4 @@
-// Offline test suite.  Nothing here touches the network; the one module that
+﻿// Offline test suite.  Nothing here touches the network; the one module that
 // does is handed a fake.
 
 import { readFileSync, writeFileSync, existsSync, mkdirSync, rmSync } from 'node:fs';
@@ -16,6 +16,7 @@ import * as deps from '../src/deps.js';
 import * as gh from '../src/github.js';
 import * as net from '../src/net.js';
 import * as update from '../src/update.js';
+import * as logs from '../src/logs.js';
 import * as packfeed from '../src/packfeed.js';
 import { applyToOptions, setModEnabled } from '../src/liveapply.js';
 import { uninstall, planUninstall } from '../src/uninstall.js';
@@ -1191,6 +1192,61 @@ it('says when a pack is too big to send as a link rather than truncating it', ()
   // A silently cut-off file is a corrupt pack somebody then submits.
   const { tooLong } = submitUrl({ repo: 'a/b', pack: twoMods, text: 'x'.repeat(9000) });
   eq(tooLong, true);
+});
+
+// ------- logs
+
+describe('logs');
+
+it('reads the end of a long log, not the whole thing', () => {
+  // A long session prints megabytes and the interesting part is always the
+  // last thing that happened.
+  const root = join(HERE, '..', '.test-tmp-logs');
+  rmSync(root, { recursive: true, force: true });
+  mkdirSync(root, { recursive: true });
+  const path = join(root, 'big.log');
+  writeFileSync(path, `${'filler line\n'.repeat(2000)}the last thing\n`);
+
+  const got = logs.tail(path, 200);
+  ok(got.endsWith('the last thing\n'), 'the end must be there');
+  ok(got.length <= 200, `expected a tail, got ${got.length} bytes`);
+  ok(!got.startsWith('ler'), 'a tail starting mid-line reads as corruption');
+
+  eq(logs.tail(path, 1024 * 1024).endsWith('the last thing\n'), true, 'a short file comes back whole');
+  rmSync(root, { recursive: true, force: true });
+});
+
+it('collects every log a pack has, and shrugs at the ones it has not', () => {
+  const root = join(HERE, '..', '.test-tmp-logs2');
+  rmSync(root, { recursive: true, force: true });
+  mkdirSync(root, { recursive: true });
+
+  eq(logs.readLogs(root).any, false, 'a pack that has never crashed has no logs');
+  eq(logs.readLogs(null).sources, [], 'and no pack at all is not an error');
+
+  writeFileSync(join(root, 'pokepack-run.log'), '[info] game loaded\n');
+  writeFileSync(join(root, 'lua-error.log'), '[2026-08-12] boom\n');
+  const out = logs.readLogs(root);
+  eq(out.any, true);
+  eq(out.sources.map((s) => s.kind), ['run', 'error']);
+  ok(out.sources[0].text.includes('game loaded'));
+
+  rmSync(root, { recursive: true, force: true });
+});
+
+it('picks out the lines worth showing first', () => {
+  const found = logs.interesting([
+    '[info] generated data loaded',
+    '[warn] mod VOXEL_DEX ignored: missing dependency',
+    '[info] display: 1024x768',
+    '[error] shader failed to compile',
+    'stack traceback:',
+    '',
+  ].join('\n'));
+  eq(found.map((f) => f.level), ['warn', 'error', 'error']);
+  ok(found[0].line.includes('VOXEL_DEX'));
+  eq(logs.interesting('').length, 0);
+  eq(logs.interesting(null).length, 0);
 });
 
 // ------- deps
