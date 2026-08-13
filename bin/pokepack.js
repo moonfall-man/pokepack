@@ -435,10 +435,14 @@ async function cmdGallery({ positional, flags }) {
 
 async function cmdUi({ flags }) {
   const { serve } = await import('../src/ui.js');
+  const { defaultPacksDir } = await import('../src/packaged.js');
   let started;
   try {
     started = await serve({
-      packsDir: resolvePath(flags.packs ?? 'packs'),
+      // A checkout resolves this against the working directory; the exe
+      // resolves it against itself, because a double-clicked program has no
+      // working directory anybody chose.
+      packsDir: resolvePath(flags.packs ?? defaultPacksDir()),
       saveDir: flags.save ? resolvePath(flags.save) : null,
       indexFile: flags.index ? resolvePath(flags.index) : null,
       port: Number(flags.port ?? 7666),
@@ -587,10 +591,22 @@ const commands = {
   instance: cmdInstance, gallery: cmdGallery, android: cmdAndroid,
 };
 
-try {
-  if (!cmd || cmd === 'help' || cmd === '--help' || cmd === '-h') cmdHelp();
-  else if (commands[cmd]) await commands[cmd](args);
-  else die(`unknown command ${cmd}. try: pokepack help`);
-} catch (e) {
-  die(e.message);
+// Wrapped in a function rather than run at the top level, because a top-level
+// await cannot be bundled into the single executable (build/exe.mjs), and the
+// exe is how most people will meet this.  Identical behaviour either way.
+async function main() {
+  try {
+    if (!cmd || cmd === 'help' || cmd === '--help' || cmd === '-h') cmdHelp();
+    else if (cmd === 'version' || cmd === '--version' || cmd === '-v') {
+      // Matters more for the exe than the checkout: a file somebody was handed
+      // months ago cannot be identified by looking at the folder it came in.
+      const { currentVersion } = await import('../src/update.js');
+      say(currentVersion() ?? 'unknown');
+    } else if (commands[cmd]) await commands[cmd](args);
+    else die(`unknown command ${cmd}. try: pokepack help`);
+  } catch (e) {
+    die(e.message);
+  }
 }
+
+main();

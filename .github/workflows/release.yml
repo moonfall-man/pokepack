@@ -1,0 +1,77 @@
+name: release binaries
+
+# Build the single-file pokepack for each desktop platform and attach it to the
+# release, so somebody can be handed one file instead of a checkout and an
+# argument about installing Node.
+#
+# Each binary is a copy of that platform's own Node with pokepack injected into
+# it, which is why this cannot be one job: the runner *is* the toolchain, and a
+# Linux runner can only produce a Linux binary. Three runners, three artefacts.
+#
+# Unsigned, deliberately. Signing needs a certificate this project does not have
+# and does not need; what it does mean is that Windows will warn the first time,
+# and the checksums published alongside are how somebody verifies they got what
+# was built here.
+
+on:
+  release:
+    types: [published]
+  # So the build can be proven before a release depends on it.
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      # One platform failing should not delete the other two artefacts; a
+      # release with two of three binaries beats a release with none.
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            asset: pokepack-windows-x64.exe
+            built: dist/pokepack.exe
+          - os: macos-latest
+            asset: pokepack-macos-arm64
+            built: dist/pokepack
+          - os: ubuntu-latest
+            asset: pokepack-linux-x64
+            built: dist/pokepack
+
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '22' }
+
+      # The tests gate the binary. Shipping a build of code that does not pass
+      # is worse than shipping no build, because the exe is the copy nobody can
+      # inspect before running.
+      - run: node test/run.js
+
+      - run: npm install
+      - run: npm run build:exe
+
+      - name: Name it for the platform it came from
+        shell: bash
+        run: |
+          mkdir -p out
+          cp "${{ matrix.built }}" "out/${{ matrix.asset }}"
+          cd out
+          # shasum is on all three runners; sha256sum is not on macOS.
+          shasum -a 256 "${{ matrix.asset }}" > "${{ matrix.asset }}.sha256"
+          cat "${{ matrix.asset }}.sha256"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.asset }}
+          path: out/*
+
+      - name: Attach to the release
+        if: github.event_name == 'release'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: gh release upload "${{ github.event.release.tag_name }}" out/* --clobber

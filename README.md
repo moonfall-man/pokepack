@@ -8,10 +8,17 @@ one to the exact bytes that were tested, and carries the settings those mods
 were tested at. Same reason the game ships no ROM: this distributes
 instructions, not other people's work.
 
-**Start it** by double-clicking `start-pokepack.cmd` on Windows, or running
-`./start-pokepack.sh` on macOS and Linux. All you need installed is
-[Node.js](https://nodejs.org) 18 or newer — pokepack has no dependencies, so
-there is no install step and nothing to build.
+**Get it** either way:
+
+- **One file.** Download `pokepack-windows-x64.exe` from
+  [Releases](https://github.com/moonfall-man/pokepack/releases) and double-click
+  it. Nothing to install — the runtime is inside. It keeps its packs in a
+  `packs` folder beside itself, so the whole thing moves as a unit. Unsigned, so
+  Windows warns the first time; there is a `.sha256` published next to it.
+- **From source.** Double-click `start-pokepack.cmd` on Windows, or run
+  `./start-pokepack.sh` on macOS and Linux. Needs [Node.js](https://nodejs.org)
+  18 or newer and nothing else — pokepack has no runtime dependencies, so there
+  is no install step.
 
 ```bash
 node bin/pokepack.js ui   # the same thing, if you would rather type it
@@ -469,8 +476,27 @@ rather than a broken boot.
 node test/run.js
 ```
 
-147 tests, no network, no dependencies. `fixtures/index.json` is a real published
+158 tests, no network, no dependencies. `fixtures/index.json` is a real published
 feed; `fixtures/save/` is a save directory shaped like a real one.
+
+### Building the single file
+
+```bash
+npm install && npm run build:exe
+```
+
+`esbuild` and `postject` are the only dependencies in the project and they are
+build-time only — a checkout runs with neither installed. Node's own
+single-executable support does the work: the ES modules are bundled into one
+CommonJS file, turned into a blob, and injected into a copy of `node` itself.
+About 90MB out, nearly all of it the runtime.
+
+Three things in the source exist because of this and look arbitrary otherwise:
+`bin/pokepack.js` ends in `main()` rather than a top-level `await`, which
+CommonJS cannot express; `src/packaged.js` answers the questions
+`import.meta.url` used to, because that does not survive the bundle; and the
+build refuses to finish unless the binary it just made reports the right
+version when run.
 
 `engine-src/` (gitignored) is the game's Lua source, unpacked from the shipped
 `gen1recomp.exe`, kept locally for reference. Re-extract it with:

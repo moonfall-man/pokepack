@@ -36,6 +36,11 @@ android/
 # staging everything, and drafts you are still working on stay out on their own.
 
 node_modules/
+
+# The packaged build. ~90MB of Node runtime with pokepack injected into it --
+# a release artefact, built by CI, never a thing in the tree.
+dist/
+
 *.log
 .cache/
 .test-tmp*/

@@ -18,6 +18,7 @@ import * as net from '../src/net.js';
 import * as update from '../src/update.js';
 import * as logs from '../src/logs.js';
 import * as android from '../src/android.js';
+import * as packaged from '../src/packaged.js';
 import * as packfeed from '../src/packfeed.js';
 import { applyToOptions, setModEnabled } from '../src/liveapply.js';
 import { uninstall, planUninstall } from '../src/uninstall.js';
@@ -1776,6 +1777,46 @@ it('computes the CRC every unzipper will check', () => {
   // The check value from the zip spec's own test vector.
   eq(zip.crc32(Buffer.from('123456789')), 0xcbf43926);
   eq(zip.crc32(Buffer.alloc(0)), 0);
+});
+
+// ------- checkout or exe
+
+describe('packaged builds');
+
+it('is a checkout unless the build said otherwise', () => {
+  eq(packaged.isPackaged(), false);
+  eq(packaged.packagedVersion(), null);
+  eq(packaged.defaultPacksDir(), 'packs', 'relative to the working directory');
+  ok(update.repoRoot() !== null, 'and there is a checkout to point at');
+});
+
+it('reads its version from the build, not a package.json it does not have', () => {
+  // What build/exe.mjs injects with --define.  Set here rather than mocked,
+  // because the whole mechanism is "is this global set", and a mock of that
+  // would test nothing.
+  globalThis.__POKEPACK_EXE__ = true;
+  globalThis.__POKEPACK_VERSION__ = '9.9.9';
+  try {
+    eq(packaged.isPackaged(), true);
+    eq(update.currentVersion(), '9.9.9');
+    eq(update.repoRoot(), null, 'nothing to read package.json out of');
+    eq(packaged.defaultPacksDir(), join(dirname(process.execPath), 'packs'),
+      'beside the exe, because a double-clicked program has no cwd anyone chose');
+
+    // The update offer has to degrade rather than break: an exe cannot pull.
+    const st = update.status();
+    eq(st.git, false);
+    eq(st.packaged, true);
+    ok(st.reason.includes('releases page'), st.reason);
+  } finally {
+    delete globalThis.__POKEPACK_EXE__;
+    delete globalThis.__POKEPACK_VERSION__;
+  }
+});
+
+it('leaves the checkout path alone once the flags are gone', () => {
+  eq(packaged.isPackaged(), false, 'no state left behind by the test above');
+  eq(packaged.defaultPacksDir(), 'packs');
 });
 
 // ------- report

@@ -16,16 +16,22 @@ import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { fetchJson } from './net.js';
 import { compareVersions } from './deps.js';
+import { isPackaged, packagedVersion, UPDATE_BY_HAND } from './packaged.js';
 
 // Published by the gallery workflow from package.json, next to packs.json.
 export const OFFICIAL_UPDATE = 'https://moonfall-man.github.io/pokepack/data/pokepack.json';
 export const CACHE_TTL_MS = 6 * 60 * 60 * 1000;
 
+// null in a packaged build, which has no checkout to point at.  Guarded rather
+// than left to fail: the bundler rewrites import.meta.url to an empty string,
+// and fileURLToPath('') throws rather than returning something harmless.
 export function repoRoot() {
+  if (isPackaged()) return null;
   return join(dirname(fileURLToPath(import.meta.url)), '..');
 }
 
 export function currentVersion() {
+  if (isPackaged()) return packagedVersion();
   try {
     return JSON.parse(readFileSync(join(repoRoot(), 'package.json'), 'utf8')).version ?? null;
   } catch {
@@ -73,6 +79,10 @@ function git(args, cwd) {
  * working tree both mean "tell them the command, do not run it".
  */
 export function status(cwd = repoRoot()) {
+  // Checked before the path is touched: repoRoot() is null here, and the
+  // honest answer is not "no .git found" but "this kind of copy updates
+  // differently".
+  if (isPackaged()) return { git: false, clean: false, packaged: true, reason: UPDATE_BY_HAND };
   if (!existsSync(join(cwd, '.git'))) {
     return { git: false, clean: false, reason: 'this copy is not a git checkout, so there is nothing to pull' };
   }
