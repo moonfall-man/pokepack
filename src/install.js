@@ -1,4 +1,4 @@
-// Putting a mod on disk, and leaving the launcher a profile to import.
+﻿// Putting a mod on disk, and leaving the launcher a profile to import.
 //
 // The rules here are copied from LauncherMods._installZipInner rather than
 // invented: find the folder holding manifest.json, refuse a zip whose id is not
@@ -11,13 +11,51 @@
 // player's install is not ours to throw away, and "it is easy to redownload"
 // is not the same as "it is fine to remove".
 
-import { readFileSync, writeFileSync, existsSync, mkdirSync, renameSync, readdirSync } from 'node:fs';
+import { readFileSync, writeFileSync, existsSync, mkdirSync, renameSync, readdirSync, rmdirSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import * as zip from './zip.js';
 import { encodeModList, fileNameFor } from './luawrite.js';
 import { LOCK_FILE } from './state.js';
 
 export const BACKUP_DIR = '.pokepack-backup';
+
+/**
+ * backupRoot(saveDir) -> path
+ *
+ * Beside mods/, not inside it.
+ *
+ * The engine reads every directory in mods/ and warns about anything without a
+ * manifest.json, so our own bookkeeping folder produced this on every launch:
+ *
+ *   [warn] mod mods/.pokepack-backup ignored: Could not open file
+ *          mods/.pokepack-backup/manifest.json. Does not exist.
+ *
+ * Noise we generated, in the log somebody reads to find out why their game
+ * broke -- and it sorts to the top, because it is a warning.
+ *
+ * A copy left in the old place is moved up rather than left there warning for
+ * ever.  Contents move first and only the empty directory goes.
+ */
+export function backupRoot(saveDir) {
+  const target = join(saveDir, BACKUP_DIR);
+  mkdirSync(target, { recursive: true });
+
+  const legacy = join(saveDir, 'mods', BACKUP_DIR);
+  if (existsSync(legacy)) {
+    try {
+      for (const name of readdirSync(legacy)) {
+        let dest = join(target, name);
+        for (let n = 2; existsSync(dest); n++) dest = join(target, `${name}-${n}`);
+        renameSync(join(legacy, name), dest);
+      }
+      rmdirSync(legacy);
+    } catch {
+      // Leaving it costs a warning line and nothing else; failing an install
+      // over housekeeping would cost more.
+    }
+  }
+  return target;
+}
 
 function readManifest(entries, root) {
   const entry = entries.find((e) => e.name.replace(/\\/g, '/') === `${root}manifest.json`);
@@ -63,10 +101,9 @@ export function installMod(buffer, {
       throw new Error(`a mod named '${manifest.id}' is already installed`);
     }
     const stamp = `${manifest.id}-${readInstalledVersion(dest) ?? 'unknown'}`;
-    const backupRoot = join(saveDir, 'mods', BACKUP_DIR);
-    mkdirSync(backupRoot, { recursive: true });
-    let target = join(backupRoot, stamp);
-    for (let n = 2; existsSync(target); n++) target = join(backupRoot, `${stamp}-${n}`);
+    const root = backupRoot(saveDir);
+    let target = join(root, stamp);
+    for (let n = 2; existsSync(target); n++) target = join(root, `${stamp}-${n}`);
     renameSync(dest, target);
     backedUp = target;
   }
@@ -159,8 +196,13 @@ export function writeProfile(saveDir, pack, { installedIds = null } = {}) {
   return { path, name };
 }
 
+// Both places: an install that has not been touched since the move still has
+// its backups in the old one, and they are still somebody's mods.
 export function listBackups(saveDir) {
-  const dir = join(saveDir, 'mods', BACKUP_DIR);
-  if (!existsSync(dir)) return [];
-  return readdirSync(dir).map((n) => join(dir, n));
+  const out = [];
+  for (const dir of [join(saveDir, BACKUP_DIR), join(saveDir, 'mods', BACKUP_DIR)]) {
+    if (!existsSync(dir)) continue;
+    for (const n of readdirSync(dir)) out.push(join(dir, n));
+  }
+  return out;
 }

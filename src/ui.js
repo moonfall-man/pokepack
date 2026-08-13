@@ -1,4 +1,4 @@
-// The local hub.
+﻿// The local hub.
 //
 // One idea runs through all of it: there is an **active instance**, and
 // everything is scoped to it.  You pick a setup in My packs, the Mods tab shows
@@ -23,7 +23,7 @@ import { loadPacks, buildFeed, submitUrl } from './feed.js';
 import { encode, decode, unpinned, EXT } from './packformat.js';
 import { apply } from './apply.js';
 import { removeMod } from './uninstall.js';
-import { installMod } from './install.js';
+import { installMod, backupRoot } from './install.js';
 import { setModEnabled } from './liveapply.js';
 import { build, pin, slugify, gatherReleases } from './build.js';
 import { fetchReleases, hashUrl, downloadToBuffer } from './net.js';
@@ -883,6 +883,14 @@ export function serve({ packsDir, saveDir, indexFile, port = 7666, host = '127.0
           });
         }
       }
+
+      // Our own backup folder used to sit inside mods/, where the engine reads
+      // every directory and warns about anything without a manifest.  Moving it
+      // here rather than on the next install means the warning stops on the
+      // very next Play, which is when somebody is looking at the log.
+      try {
+        backupRoot(act.path);
+      } catch { /* housekeeping must never stop the game starting */ }
 
       // Which game to boot straight into.  Only a version this instance has
       // actually unpacked -- asking for one it has not would land you on the
