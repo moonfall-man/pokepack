@@ -310,6 +310,10 @@ export function serve({ packsDir, saveDir, indexFile, port = 7666, host = '127.0
         // making somebody read a thousand lines of startup chatter.
         notable: out.sources.flatMap((s) => logs.interesting(s.text)
           .map((n) => ({ ...n, from: s.label }))).slice(-40),
+        // From the most recent run that recorded any: what loaded, in the order
+        // it loaded.  When two mods fight over the same thing, which one ran
+        // second is usually the answer.
+        loadOrder: out.sources.map((s) => logs.loadOrder(s.text)).find((o) => o.length) ?? [],
       });
     }
 

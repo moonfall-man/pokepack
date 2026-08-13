@@ -87,6 +87,30 @@ export function readLogs(saveDir, { bytes = DEFAULT_TAIL } = {}) {
 }
 
 /**
+ * loadOrder(text) -> [{ id, version }]
+ *
+ * The order the engine actually loaded mods in, read back out of the run log.
+ *
+ * Worth reading rather than predicting.  The order is decided entirely by the
+ * manifests -- priority ascending, ties by id, then a topological sort so
+ * dependencies come first -- so it is the same on every machine and pinning a
+ * pack's bytes pins its order too.  But when two mods are fighting over the
+ * same thing, which one ran second is the answer, and this is what happened
+ * rather than what should have.
+ */
+export function loadOrder(text) {
+  const out = [];
+  const seen = new Set();
+  for (const line of String(text ?? '').split(/\r?\n/)) {
+    const m = /loaded mod\s+(\S+)\s*(\S+)?/i.exec(line);
+    if (!m || seen.has(m[1])) continue;
+    seen.add(m[1]);
+    out.push({ id: m[1], version: m[2] ?? null });
+  }
+  return out;
+}
+
+/**
  * interesting(text) -> [{ line, level }]
  *
  * The lines worth putting in front of somebody.  The engine tags its own output

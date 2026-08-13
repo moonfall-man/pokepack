@@ -1234,6 +1234,23 @@ it('collects every log a pack has, and shrugs at the ones it has not', () => {
   rmSync(root, { recursive: true, force: true });
 });
 
+it('reads back the order mods actually loaded in', () => {
+  // Not predicted -- the engine decides order from the manifests (priority,
+  // then dependencies first) so it is the same everywhere, but when two mods
+  // fight over the same thing, which one ran second is the answer.
+  const order = logs.loadOrder([
+    '[info] generated data loaded (222 maps, 151 species, 165 moves)',
+    '[info] loaded mod unique_menu_icons 1.4.0',
+    '[info] loaded mod rby_mmo 1.0.3',
+    '[info] loaded mod unique_menu_icons 1.4.0',
+    '[info] game loaded',
+  ].join('\n'));
+  eq(order.map((m) => m.id), ['unique_menu_icons', 'rby_mmo'], 'in order, and only once each');
+  eq(order[1].version, '1.0.3');
+  eq(logs.loadOrder('nothing here').length, 0);
+  eq(logs.loadOrder(null).length, 0);
+});
+
 it('picks out the lines worth showing first', () => {
   const found = logs.interesting([
     '[info] generated data loaded',

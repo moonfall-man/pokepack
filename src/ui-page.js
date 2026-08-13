@@ -550,8 +550,21 @@ async function loadLogs() {
     + 'buffer until it exits, so <b>close the game to see the full log</b>. A crash that takes '
     + 'the graphics driver down can lose the last few lines \\u2014 Lua errors are written '
     + 'separately and survive that.</div>'
+    + (d.loadOrder.length
+        ? '<div class="eyebrow" style="margin-bottom:6px">Load order, last run</div>'
+          + '<div class="rows" style="margin-bottom:16px">'
+          + d.loadOrder.map((m, i) =>
+            '<div class="row"><span style="flex:1"><span class="why num">'
+            + String(i + 1).padStart(2, '0') + '</span>  <b>' + esc(m.id) + '</b></span>'
+            + (m.version ? '<span class="ver">' + esc(m.version) + '</span>' : '') + '</div>').join('')
+          + '</div>'
+          + '<div class="why" style="margin:-8px 0 16px">Decided by the mods themselves \\u2014 '
+          + 'priority, then dependencies first \\u2014 so it is the same on any machine running '
+          + 'this pack. When two mods fight over the same thing, the later one usually wins.</div>'
+        : '')
     + (d.notable.length
-        ? '<div class="rows" style="margin-bottom:16px">'
+        ? '<div class="eyebrow" style="margin-bottom:6px">Worth a look</div>'
+          + '<div class="rows" style="margin-bottom:16px">'
           + d.notable.map(n =>
             '<div class="row"><span style="flex:1"><span class="tag '
             + (n.level === 'error' ? 'bad' : 'warn') + '">' + n.level + '</span> '
