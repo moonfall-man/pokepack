@@ -348,6 +348,10 @@ export function serve({ packsDir, saveDir, indexFile, port = 7666, host = '127.0
       // the installed manifests rather than the index -- these are the files it
       // will actually read.
       const health = deps.check(installed);
+      // Worked out the way the engine does, so it can be shown before you play
+      // rather than only read back from a log afterwards.
+      const { order, brokenLoop } = deps.loadOrder(installed);
+      const orderIndex = new Map(order.map((m, i) => [m.id, i + 1]));
 
       let mods = catalogue.search(cat.mods, q).map((m) => {
         const src = catalogue.installableFrom(m);
@@ -403,7 +407,9 @@ export function serve({ packsDir, saveDir, indexFile, port = 7666, host = '127.0
         installedCount: Object.keys(installed).length,
         categories,
         selected: wanted,
-        mods,
+        loadOrder: order,
+        brokenLoop,
+        mods: mods.map((m) => ({ ...m, loadsAt: orderIndex.get(m.id) ?? null })),
       });
     }
 

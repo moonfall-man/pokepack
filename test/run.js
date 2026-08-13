@@ -1315,6 +1315,59 @@ it('spots a missing dependency, a wrong version and a clash', () => {
   eq(tooOld.A.wrongVersion[0].have, '1.0.0');
 });
 
+it('orders mods the way the engine does: priority, then id', () => {
+  // Mirrors Loader:_order.  The id tiebreak matters -- without it the order
+  // would depend on whatever order a directory happened to be read in, and two
+  // machines running the same pack could load them differently.
+  const { order } = deps.loadOrder({
+    zeta: { priority: 10 }, alpha: { priority: 10 }, first: { priority: 1 },
+  });
+  eq(order.map((m) => m.id), ['first', 'alpha', 'zeta']);
+
+  // A mod that declares no priority is 0, matching the engine's manifest
+  // reader -- it must not sort after one that explicitly asked for 0.
+  const { order: defaulted } = deps.loadOrder({ declared: { priority: 5 }, silent: {} });
+  eq(defaulted.map((m) => m.id), ['silent', 'declared']);
+});
+
+it('loads dependencies first, even against priority', () => {
+  const { order } = deps.loadOrder({
+    // needs would sort first on priority alone; the dependency overrides that.
+    needy: { priority: 1, dependencies: ['base@>=1.0.0'] },
+    base: { priority: 99 },
+  });
+  eq(order.map((m) => m.id), ['base', 'needy']);
+
+  // An optional dependency orders without requiring anything.
+  const { order: opt } = deps.loadOrder({
+    late: { priority: 1, optional_dependencies: ['early'] },
+    early: { priority: 50 },
+  });
+  eq(opt.map((m) => m.id), ['early', 'late']);
+
+  // ...and one that is not installed simply does not constrain anything.
+  const { order: absent } = deps.loadOrder({ solo: { optional_dependencies: ['nobody'] } });
+  eq(absent.map((m) => m.id), ['solo']);
+});
+
+it('breaks an optional-dependency loop rather than dropping the mods', () => {
+  // Hard-dependency cycles are refused elsewhere; optional ones can still close
+  // a loop, and silently losing both mods would be the worst outcome.
+  const { order, brokenLoop } = deps.loadOrder({
+    b: { optional_dependencies: ['a'] },
+    a: { optional_dependencies: ['b'] },
+  });
+  eq(order.map((m) => m.id).sort(), ['a', 'b'], 'both still load');
+  eq(brokenLoop, 'a', 'and it says where it cut the loop');
+});
+
+it('leaves a disabled mod out of the order entirely', () => {
+  const { order } = deps.loadOrder({
+    on: { priority: 1 }, off: { priority: 0, enabled: false },
+  });
+  eq(order.map((m) => m.id), ['on']);
+});
+
 it('reports a conflict to both sides, whichever one declared it', () => {
   // Only one manifest has to say it, and which one is not the player's problem.
   const report = deps.check({

@@ -488,6 +488,8 @@ async function loadMods(force) {
       + (m.author ? '<div class="by">by ' + esc(m.author) + '</div>' : '')
       + '<div class="sum">' + esc(m.summary || '\\u2014') + '</div>'
       + '<div class="tags">'
+      + (m.loadsAt ? '<span class="tag num" title="loads ' + m.loadsAt
+          + (CAT.loadOrder ? ' of ' + CAT.loadOrder.length : '') + '">#' + m.loadsAt + '</span>' : '')
       + (m.installedVersion
           ? '<span class="tag gold num">' + esc(m.installedVersion) + '</span>'
           : m.latestVersion ? '<span class="tag num">' + esc(m.latestVersion) + '</span>' : '')
