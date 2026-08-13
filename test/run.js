@@ -1665,6 +1665,8 @@ function tmpAndroidSave(name) {
   writeFileSync(join(root, 'mods', 'VOXEL', 'manifest.json'), '{"id":"VOXEL"}');
   writeFileSync(join(root, 'mods', 'VOXEL', 'main.lua'), '-- mod\n'.repeat(200));
   writeFileSync(join(root, 'mods', '.pokepack-backup', 'old.lua'), 'stale');
+  mkdirSync(join(root, 'profiles'), { recursive: true });
+  writeFileSync(join(root, 'profiles', 'VOXEL-MMO.g1rmodlist'), 'return { name = "VOXEL-MMO" }');
   writeFileSync(join(root, 'options.lua'), 'return { mods = {} }');
   writeFileSync(join(root, 'pokepack-installed.json'), '{"mods":{}}');
   writeFileSync(join(root, 'red', 'rom-cache.complete'), 'rom-cache-v9:abc');
@@ -1677,8 +1679,11 @@ it('sends the mods and the settings, and leaves ROM data behind', () => {
   const { files, left } = android.plan(root);
   const names = files.map((f) => f.name).sort();
 
+  // profiles/ is what makes a handheld able to hold more than one pack: the
+  // device has a single save folder, so switching between packs is the game
+  // importing a .g1rmodlist rather than anything overwriting anything.
   eq(names, ['mods/VOXEL/main.lua', 'mods/VOXEL/manifest.json', 'options.lua',
-    'pokepack-installed.json']);
+    'pokepack-installed.json', 'profiles/VOXEL-MMO.g1rmodlist']);
   // The thing that must never travel.  A ROM is the player's own, and this
   // repo's whole argument is that it distributes instructions, not other
   // people's work -- an archive that quietly carried game data would be the
@@ -1715,7 +1720,7 @@ it('packs paths relative to the save folder, so it extracts straight into it', (
   const names = entries.map((e) => e.name).sort();
 
   eq(names, [android.NOTES, 'mods/VOXEL/main.lua', 'mods/VOXEL/manifest.json',
-    'options.lua', 'pokepack-installed.json']);
+    'options.lua', 'pokepack-installed.json', 'profiles/VOXEL-MMO.g1rmodlist']);
   ok(!names.some((n) => n.startsWith('/') || /^[A-Za-z]:/.test(n) || n.includes('..')),
     'nothing absolute and nothing that climbs out');
 
@@ -1726,6 +1731,8 @@ it('packs paths relative to the save folder, so it extracts straight into it', (
   ok(readme.includes('Voxel MMO'), 'the notes name the pack');
   ok(readme.includes(android.ANDROID_IDENTITY), 'and the folder it goes in');
   ok(readme.includes('saves'), 'and promise the saves are untouched');
+  ok(readme.includes('import'), 'and say how to switch to it on the device');
+  ok(readme.includes('adds another profile'), 'without implying it wipes the last one');
 
   rmSync(root, { recursive: true, force: true });
 });

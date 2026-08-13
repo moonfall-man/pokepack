@@ -396,9 +396,18 @@ this repo does not mirror it, for the same reason it ships no ROM.
 
 What could not travel is a pack, because the two things pokepack leans on do
 not exist there. `POKEPORT_IDENTITY` is an environment variable and an app has
-no environment, so `conf.lua` always falls back to `pokemon-love2d` — one setup
-on the device, no per-pack isolation. And the hub is a Node program serving a
-local page; there is no version of that which is an APK.
+no environment, so `conf.lua` always falls back to `pokemon-love2d` — one save
+folder, where a desktop gets one per pack. And the hub is a Node program
+serving a local page; there is no version of that which is an APK.
+
+Switching between packs on the device goes through the engine's own profiles
+instead. A `.g1rmodlist` is a named snapshot — enabled mods, each mod's
+options, the save slot per game version — and the mod manager imports every one
+it finds in `profiles/`, an import built folder-based specifically so it works
+where there is no file picker. pokepack has always written that format
+(`writeProfile`), so a pack arrives as a profile you switch to in-game rather
+than a state you overwrite. What the shared folder still costs you: two packs
+pinning different versions of the same mod cannot both be right at once.
 
 So the transfer is a file copy, and it works because the layout is already the
 same everywhere: `Loader` reads `mods` relative to the save directory, and
@@ -419,8 +428,8 @@ The game shows you that exact path on its ROM import screen. It is the app's
 external-files folder — writable over USB with no permission granted, which
 `conf.lua` arranges on purpose so players can push a ROM in the same way.
 
-**What stays behind, and why.** The archive carries `mods/`, `options.lua` and
-`pokepack-installed.json`, and nothing else. Not your ROM data, which is yours
+**What stays behind, and why.** The archive carries `mods/`, `options.lua`,
+`profiles/` and `pokepack-installed.json`, and nothing else. Not your ROM data, which is yours
 and which the device imports for itself. Not your save files, which would
 overwrite the ones already on it. This is an allowlist rather than a skip-list
 so that a folder the engine grows later cannot join by default.

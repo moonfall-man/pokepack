@@ -38,6 +38,16 @@ export const NOTES = 'HOW-TO-INSTALL.txt';
 export const SHIP = {
   mods: 'the mods themselves',
   'options.lua': 'which mods are on, and every tested setting',
+  // The switch between packs on a device that only has one save directory.
+  //
+  // A .g1rmodlist is a named snapshot -- enabled set, each mod's own options, and
+  // which save slot each game version plays -- and the game's mod manager
+  // imports every one it finds sitting in this folder.  That import was built
+  // folder-based on purpose: ManagerState says so, "it works on the mobile
+  // builds where no picker exists".  So several packs can travel in one
+  // archive and be switched between in-game, with no cable and no second
+  // install.
+  profiles: 'a switchable profile per pack, which the game imports on the device',
   'pokepack-installed.json': 'what each mod was pinned to, so the device can be checked later',
 };
 
@@ -133,13 +143,23 @@ export function notes({ packName = null, files = [], left = [] } = {}) {
   }
 
   lines.push(
-    'ONE THING TO KNOW',
+    'SWITCHING BETWEEN PACKS ON THE DEVICE',
     '',
-    '  Android has no environment variables, so the game cannot be told to use',
-    '  a separate world per pack the way it is on desktop -- there is one setup',
-    '  on the device, and extracting this replaces the mods and settings in it.',
-    '  Your saves are untouched: they live in "saves", which this zip does not',
-    '  carry.',
+    '  Android has no environment variables, so the game cannot be given a',
+    '  separate folder per pack the way it is on a desktop. One folder, one',
+    '  set of mods, one set of saves.',
+    '',
+    '  Profiles are how you switch anyway. Open the mod manager in the game and',
+    '  import: it reads every profile in the "profiles" folder, and each one',
+    '  restores its pack\'s enabled mods, their options, and its save slots.',
+    '  Sending another pack adds another profile rather than replacing this one.',
+    '',
+    '  The catch is the shared mods folder: two packs that pin different',
+    '  versions of the same mod cannot both be right at once, and the last one',
+    '  copied wins.',
+    '',
+    '  Your saves are untouched either way -- they live in "saves", which this',
+    '  zip does not carry.',
     '',
   );
   return lines.join('\n');

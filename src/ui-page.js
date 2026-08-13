@@ -738,8 +738,9 @@ function sendToAndroid(identity) {
     sub: plural(on, 'mod') + ' and every tested setting, zipped for the device.',
     body: '<div class="why">Your ROM data and your save files stay here. The device '
       + 'imports its own ROM, and its saves are its own.</div>'
-      + '<div class="why" style="margin-top:8px">Android has no per-pack isolation, so '
-      + 'extracting this replaces the mods and settings on the device.</div>'
+      + '<div class="why" style="margin-top:8px">It travels as a profile, so the game\\u2019s '
+      + 'mod manager can switch to it on the device. Sending another pack adds another '
+      + 'profile rather than replacing this one.</div>'
       + '<div id="an-out"></div>',
     go: 'Build the zip',
     onGo: async () => {
