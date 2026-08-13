@@ -19,6 +19,7 @@ import * as update from '../src/update.js';
 import * as logs from '../src/logs.js';
 import * as android from '../src/android.js';
 import * as packaged from '../src/packaged.js';
+import * as gamedl from '../src/game.js';
 import * as packfeed from '../src/packfeed.js';
 import { applyToOptions, setModEnabled } from '../src/liveapply.js';
 import { uninstall, planUninstall } from '../src/uninstall.js';
@@ -1784,6 +1785,59 @@ it('computes the CRC every unzipper will check', () => {
   // The check value from the zip spec's own test vector.
   eq(zip.crc32(Buffer.from('123456789')), 0xcbf43926);
   eq(zip.crc32(Buffer.alloc(0)), 0);
+});
+
+// ------- fetching the game itself
+
+describe('game download');
+
+it('reads the checksum file the author publishes', () => {
+  const sums = gamedl.parseChecksums([
+    '83d413eb87e75ad31ad9a2665c66173a52282feccce4a66a743c6f0207940085  gen1recomp-0.1.81-windows.zip',
+    '25bfa307280e40512bb28dcccbb5822b587c5be4f48b0bc255a374b44a8caaa7  gen1recomp-0.1.81-android.apk',
+    '',
+    'not a checksum line at all',
+  ].join('\n'));
+  eq(sums['gen1recomp-0.1.81-windows.zip'],
+    '83d413eb87e75ad31ad9a2665c66173a52282feccce4a66a743c6f0207940085');
+  eq(Object.keys(sums).length, 2, 'the junk line is skipped, not guessed at');
+});
+
+it('picks the build for the machine asking, and admits when there is none', () => {
+  ok(gamedl.assetFor('win32').match.test('gen1recomp-0.1.81-windows.zip'));
+  ok(!gamedl.assetFor('win32').match.test('gen1recomp-0.1.81-linux.zip'), 'not another platform');
+  ok(gamedl.assetFor('darwin').match.test('gen1recomp-0.1.81-macos.zip'));
+  ok(gamedl.assetFor('linux', 'arm64').match.test('gen1recomp-0.1.81-linux-arm64.AppImage'));
+  ok(gamedl.assetFor('linux', 'x64').match.test('gen1recomp-0.1.81-linux.zip'));
+  eq(gamedl.assetFor('aix'), null, 'rather than handing over a build for something else');
+});
+
+it('refuses a download that names a path outside the folder', () => {
+  // This one arrives over the network, so the check is not about these authors
+  // -- it is that the alternative is trusting a download to behave.
+  const root = join(HERE, '..', '.test-tmp-game');
+  rmSync(root, { recursive: true, force: true });
+  mkdirSync(root, { recursive: true });
+  const nasty = zip.write([{ name: '../escaped.txt', data: Buffer.from('nope') }]);
+  throws(() => gamedl.unpack(nasty, root), 'unsafe path');
+  eq(existsSync(join(HERE, '..', '..', 'escaped.txt')), false, 'and nothing was written');
+  rmSync(root, { recursive: true, force: true });
+});
+
+it('unpacks a well-formed one and finds the executable in it', () => {
+  const root = join(HERE, '..', '.test-tmp-game2');
+  rmSync(root, { recursive: true, force: true });
+  mkdirSync(root, { recursive: true });
+  // The shape their release actually has: everything under one folder.
+  const buf = zip.write([
+    { name: 'gen1recomp-win64/gen1recomp.exe', data: Buffer.from('MZ fake') },
+    { name: 'gen1recomp-win64/love.dll', data: Buffer.from('dll') },
+  ]);
+  const { files, exePath } = gamedl.unpack(buf, root, { exeMatch: /gen1recomp\.exe$/i });
+  eq(files.length, 2);
+  eq(exePath, join(root, 'gen1recomp-win64', 'gen1recomp.exe'));
+  eq(readFileSync(exePath, 'utf8'), 'MZ fake');
+  rmSync(root, { recursive: true, force: true });
 });
 
 // ------- checkout or exe

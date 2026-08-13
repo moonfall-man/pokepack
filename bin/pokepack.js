@@ -541,6 +541,49 @@ async function cmdInstance({ positional, flags }) {
     : 'This instance has no game data, so the game will ask for your ROM the first time.');
 }
 
+async function cmdGame({ flags }) {
+  const game = await import('../src/game.js');
+  const cfg = await import('../src/config.js');
+  const { checkGameExe } = await import('../src/instance.js');
+  const { homeDir } = await import('../src/packaged.js');
+
+  const existing = cfg.read().gamePath;
+  if (existing && !flags.force) {
+    const check = checkGameExe(existing);
+    if (check.ok) {
+      say(`already set up: ${check.path}`);
+      say('pass --force to download the latest anyway.');
+      return;
+    }
+  }
+
+  const dir = resolvePath(flags.dir ?? join(homeDir(), 'game'));
+  const mb = (n) => `${(n / 1048576).toFixed(1)} MB`;
+
+  const out = await game.install({
+    dir,
+    onEvent: (ev) => {
+      if (ev.type === 'found') {
+        say(`gen1recomp ${ev.version} -- ${ev.name}${ev.size ? ` (${mb(ev.size)})` : ''}`);
+        say(ev.sha256 ? `  the author publishes a checksum for it, so it will be verified`
+          : `  no checksum published for this release -- it will install unverified`);
+        say('  downloading...');
+      } else if (ev.type === 'downloaded') say(`  got ${mb(ev.size)}, sha256 ${ev.sha256.slice(0, 12)}`);
+      else if (ev.type === 'installed') say(`  unpacked ${ev.files} files`);
+    },
+  });
+
+  const check = checkGameExe(out.exePath);
+  if (!check.ok) die(`downloaded, but it does not look right: ${check.reason}`);
+  cfg.write({ gamePath: check.path });
+
+  say('');
+  say(`${check.path}`);
+  say(out.verified ? 'verified against the published checksum.' : 'installed, but nothing to verify it against.');
+  say('');
+  say('It has no ROM yet -- start the hub and it will ask for yours.');
+}
+
 async function cmdAndroid({ positional, flags }) {
   const dir = positional[0];
   if (!dir) die('usage: pokepack android <saveDir> [--out FILE] [--name "Pack name"]');
@@ -586,6 +629,8 @@ function cmdHelp() {
   instance <name>      make an isolated copy of the game  --pack P --exe PATH
                        --seed-from ID  copy game data from that instance
                        --no-seed       start with no game data
+  game                 download gen1recomp itself, verified against its checksum
+                       --dir DIR       --force  replace what is configured
   android <saveDir>    zip a setup's mods and settings for an Android handheld
                        --out FILE      --name "Pack name"
   feed [packsDir]      generate packs.json for a gallery  --out FILE
@@ -603,7 +648,7 @@ const args = parseArgs(rest);
 const commands = {
   build: cmdBuild, resolve: cmdResolve, fetch: cmdFetch, install: cmdInstall,
   validate: cmdValidate, inspect: cmdInspect, hash: cmdHash, feed: cmdFeed, ui: cmdUi,
-  instance: cmdInstance, gallery: cmdGallery, android: cmdAndroid,
+  instance: cmdInstance, gallery: cmdGallery, android: cmdAndroid, game: cmdGame,
 };
 
 // Wrapped in a function rather than run at the top level, because a top-level

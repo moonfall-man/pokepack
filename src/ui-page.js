@@ -1115,7 +1115,10 @@ async function openSettings() {
     sub: 'Two paths, set once.',
     body: '<div><div class="why" style="margin-bottom:5px">gen1recomp.exe \\u2014 needed to Play</div>'
       + '<div style="display:flex;gap:8px"><input id="s-exe" value="' + esc(s.gamePath ?? '') + '">'
-      + '<button id="s-exe-b" style="flex:none">Browse\\u2026</button></div>'
+      + '<button id="s-exe-b" style="flex:none">Browse\\u2026</button>'
+      // "Where is your copy" is a fine question for somebody who has one.
+      // Everybody else was stuck on it.
+      + '<button id="s-exe-get" style="flex:none">Download\\u2026</button></div>'
       + '<div class="why" id="s-exe-msg"></div></div>'
       + '<div><div class="why" style="margin-bottom:5px">Your ROM (.gb) \\u2014 copied into each new setup</div>'
       + '<div style="display:flex;gap:8px"><input id="s-rom" value="' + esc(s.romPath ?? '') + '">'
@@ -1151,6 +1154,24 @@ async function openSettings() {
   };
   wire('s-exe-b', 'exe', 's-exe', 's-exe-msg');
   wire('s-rom-b', 'rom', 's-rom', 's-rom-msg');
+
+  document.getElementById('s-exe-get').onclick = async () => {
+    const b = document.getElementById('s-exe-get');
+    const m = document.getElementById('s-exe-msg');
+    const had = document.getElementById('s-exe').value;
+    if (had && !confirm('This downloads the latest gen1recomp and points pokepack at it, '
+      + 'instead of:\\n\\n' + had + '\\n\\nYour setups, mods and saves are not touched. Continue?')) return;
+    b.disabled = true; b.textContent = 'Downloading\\u2026';
+    m.style.color = ''; m.textContent = 'Fetching the release and checking it against the author\\u2019s checksum\\u2026';
+    const { ok, data } = await post('game/install', { force: Boolean(had) });
+    b.disabled = false; b.textContent = 'Download\\u2026';
+    if (!ok) { m.style.color = 'var(--bad)'; m.textContent = data.error; return; }
+    document.getElementById('s-exe').value = data.exePath;
+    m.style.color = 'var(--ok)';
+    m.textContent = 'gen1recomp ' + data.version + ' installed'
+      + (data.verified ? ', and it matched the published checksum.' : ' \\u2014 no checksum was published to check it against.');
+    load();
+  };
 }
 document.getElementById('settings').onclick = openSettings;
 

@@ -24,6 +24,26 @@ instructions, not other people's work.
 node bin/pokepack.js ui   # the same thing, if you would rather type it
 ```
 
+## Getting the game
+
+```bash
+node bin/pokepack.js game
+```
+
+or **Download…** beside the game path in Settings. It takes the latest release
+from [the author's own repo](https://github.com/bryanthaboi/gen1recomp), checks
+it against the `sha256sums.txt` they publish beside it, and points pokepack at
+the result. Nothing is hosted here — the game is one more pinned download, on
+the same terms as every mod.
+
+Latest rather than pinned, deliberately: a mod is pinned because a pack was
+tested against those exact bytes, while the engine is the thing packs are tested
+*on*, and an old one is a bug nobody else can reproduce. The hash still comes
+from the release being installed, so this is "whichever version, verified" and
+not "whatever arrives".
+
+You still supply your own ROM. That part is not automatable and should not be.
+
 ## Why not just a list of mods
 
 Installing mods was never the hard part. The hard parts are the two things a
@@ -485,7 +505,7 @@ rather than a broken boot.
 node test/run.js
 ```
 
-158 tests, no network, no dependencies. `fixtures/index.json` is a real published
+162 tests, no network, no dependencies. `fixtures/index.json` is a real published
 feed; `fixtures/save/` is a save directory shaped like a real one.
 
 ### Building the single file

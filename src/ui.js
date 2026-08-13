@@ -873,6 +873,37 @@ export function serve({ packsDir, saveDir, indexFile, port = 7666, host = '127.0
       });
     }
 
+    // ------- fetch the game itself
+    //
+    // The one question the hub could not answer for you.  Hosts nothing: it is
+    // the author's own release, checked against the checksum they publish
+    // beside it -- the same bargain a pack makes about a mod.
+    if (url.pathname === '/api/game/install' && req.method === 'POST') {
+      const opts = await readBody(req);
+      if (!opts) return json(res, 400, { error: 'bad request body' });
+
+      const game = await import('./game.js');
+      const { checkGameExe } = await import('./instance.js');
+      const { homeDir } = await import('./packaged.js');
+
+      const existing = config.read().gamePath;
+      if (existing && !opts.force && checkGameExe(existing).ok) {
+        return json(res, 200, { alreadySetUp: true, exePath: existing });
+      }
+
+      try {
+        const out = await game.install({ dir: join(homeDir(), 'game') });
+        const check = checkGameExe(out.exePath);
+        if (!check.ok) return json(res, 400, { error: `downloaded, but it does not look right: ${check.reason}` });
+        config.write({ gamePath: check.path });
+        return json(res, 200, {
+          exePath: check.path, version: out.version, verified: out.verified, files: out.files.length,
+        });
+      } catch (e) {
+        return json(res, 400, { error: e.message });
+      }
+    }
+
     // ------- send a setup to an Android handheld
     //
     // Written to disk rather than streamed to the browser: it is tens of
