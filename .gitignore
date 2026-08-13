@@ -15,6 +15,11 @@ status.json
 # commit.
 downloads/
 
+# Zips built by `pokepack android` to copy onto a handheld. Same reason as
+# downloads/, only more so: one of these holds every mod in a setup, already
+# unpacked. It is a transfer, not a release.
+android/
+
 # Deleted packs. The tool never erases anything -- it moves it here -- but a
 # thing you deleted is the last thing that should come back in a commit.
 .trash/

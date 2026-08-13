@@ -522,6 +522,29 @@ async function cmdInstance({ positional, flags }) {
     : 'This instance has no game data, so the game will ask for your ROM the first time.');
 }
 
+async function cmdAndroid({ positional, flags }) {
+  const dir = positional[0];
+  if (!dir) die('usage: pokepack android <saveDir> [--out FILE] [--name "Pack name"]');
+
+  const android = await import('../src/android.js');
+  const saveDir = resolvePath(dir);
+
+  const preview = android.plan(saveDir);
+  const mb = (n) => `${(n / 1048576).toFixed(1)} MB`;
+  say(`${preview.files.length} files, ${mb(preview.bytes)} before compression`);
+  for (const l of preview.left) say(`  leaving ${l.name} -- ${l.why}`);
+
+  const { buffer, files } = android.bundle(saveDir, { packName: flags.name ?? null });
+  const out = resolvePath(flags.out ?? `${dir.replace(/[\\/]+$/, '').split(/[\\/]/).pop()}-android.zip`);
+  mkdirSync(dirname(out), { recursive: true });
+  writeFileSync(out, buffer);
+
+  say('');
+  say(`wrote ${out}  (${files.length + 1} entries, ${mb(buffer.length)})`);
+  say(`extract it into the game's save folder on the device, so that mods/ and`);
+  say(`options.lua sit directly inside. ${android.NOTES} in the zip says where that is.`);
+}
+
 function cmdHelp() {
   say(`pokepack -- modpack recipes for gen1recomp
 
@@ -544,6 +567,8 @@ function cmdHelp() {
   instance <name>      make an isolated copy of the game  --pack P --exe PATH
                        --seed-from ID  copy game data from that instance
                        --no-seed       start with no game data
+  android <saveDir>    zip a setup's mods and settings for an Android handheld
+                       --out FILE      --name "Pack name"
   feed [packsDir]      generate packs.json for a gallery  --out FILE
   gallery [packsDir]   feed + open a thread per pack + fold in the vote counts
                        --repo owner/name  --out FILE  --token X  --dry-run
@@ -559,7 +584,7 @@ const args = parseArgs(rest);
 const commands = {
   build: cmdBuild, resolve: cmdResolve, fetch: cmdFetch, install: cmdInstall,
   validate: cmdValidate, inspect: cmdInspect, hash: cmdHash, feed: cmdFeed, ui: cmdUi,
-  instance: cmdInstance, gallery: cmdGallery,
+  instance: cmdInstance, gallery: cmdGallery, android: cmdAndroid,
 };
 
 try {

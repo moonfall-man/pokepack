@@ -17,6 +17,7 @@ import * as gh from '../src/github.js';
 import * as net from '../src/net.js';
 import * as update from '../src/update.js';
 import * as logs from '../src/logs.js';
+import * as android from '../src/android.js';
 import * as packfeed from '../src/packfeed.js';
 import { applyToOptions, setModEnabled } from '../src/liveapply.js';
 import { uninstall, planUninstall } from '../src/uninstall.js';
@@ -1647,6 +1648,134 @@ it('puts the token in the page and nowhere it can leak', () => {
   eq(html.includes('"SECRET-TOKEN"'), true, 'the page needs the token to call its own API');
   // One occurrence: assigned once to a const, then referenced by name.
   eq(html.split('SECRET-TOKEN').length - 1, 1);
+});
+
+// ------- sending a setup to an Android handheld
+
+describe('android');
+
+function tmpAndroidSave(name) {
+  const root = join(HERE, '..', name);
+  rmSync(root, { recursive: true, force: true });
+  mkdirSync(join(root, 'mods', 'VOXEL'), { recursive: true });
+  mkdirSync(join(root, 'mods', '.pokepack-backup'), { recursive: true });
+  mkdirSync(join(root, 'red'), { recursive: true });
+  mkdirSync(join(root, 'saves'), { recursive: true });
+  writeFileSync(join(root, 'mods', 'VOXEL', 'manifest.json'), '{"id":"VOXEL"}');
+  writeFileSync(join(root, 'mods', 'VOXEL', 'main.lua'), '-- mod\n'.repeat(200));
+  writeFileSync(join(root, 'mods', '.pokepack-backup', 'old.lua'), 'stale');
+  writeFileSync(join(root, 'options.lua'), 'return { mods = {} }');
+  writeFileSync(join(root, 'pokepack-installed.json'), '{"mods":{}}');
+  writeFileSync(join(root, 'red', 'rom-cache.complete'), 'rom-cache-v9:abc');
+  writeFileSync(join(root, 'saves', 'slot1.sav'), 'a save');
+  return root;
+}
+
+it('sends the mods and the settings, and leaves ROM data behind', () => {
+  const root = tmpAndroidSave('.test-tmp-android');
+  const { files, left } = android.plan(root);
+  const names = files.map((f) => f.name).sort();
+
+  eq(names, ['mods/VOXEL/main.lua', 'mods/VOXEL/manifest.json', 'options.lua',
+    'pokepack-installed.json']);
+  // The thing that must never travel.  A ROM is the player's own, and this
+  // repo's whole argument is that it distributes instructions, not other
+  // people's work -- an archive that quietly carried game data would be the
+  // one way pokepack could hand somebody a copyright problem.
+  ok(!names.some((n) => n.startsWith('red/')), 'no ROM data');
+  ok(!names.some((n) => n.startsWith('saves/')), 'no save files');
+  ok(!names.some((n) => n.includes('.pokepack-backup')), 'no backup folder');
+
+  const why = Object.fromEntries(left.map((l) => [l.name, l.why]));
+  ok(why.red.includes('ROM data'), 'and says why it stayed');
+  ok(why.saves.includes('overwrite'), why.saves);
+
+  rmSync(root, { recursive: true, force: true });
+});
+
+it('leaves a folder it has never heard of behind, rather than guessing', () => {
+  // The allowlist is the point: a future engine folder full of who-knows-what
+  // must not join the archive just because nobody updated a skip-list.
+  const root = tmpAndroidSave('.test-tmp-android2');
+  mkdirSync(join(root, 'brand-new-engine-folder'));
+  writeFileSync(join(root, 'brand-new-engine-folder', 'x.dat'), 'whatever');
+
+  const { files, left } = android.plan(root);
+  ok(!files.some((f) => f.name.includes('brand-new')), 'not shipped');
+  eq(left.find((l) => l.name === 'brand-new-engine-folder')?.why, 'not part of the pack');
+
+  rmSync(root, { recursive: true, force: true });
+});
+
+it('packs paths relative to the save folder, so it extracts straight into it', () => {
+  const root = tmpAndroidSave('.test-tmp-android3');
+  const { buffer } = android.bundle(root, { packName: 'Voxel MMO' });
+  const entries = zip.read(buffer);
+  const names = entries.map((e) => e.name).sort();
+
+  eq(names, [android.NOTES, 'mods/VOXEL/main.lua', 'mods/VOXEL/manifest.json',
+    'options.lua', 'pokepack-installed.json']);
+  ok(!names.some((n) => n.startsWith('/') || /^[A-Za-z]:/.test(n) || n.includes('..')),
+    'nothing absolute and nothing that climbs out');
+
+  const back = entries.find((e) => e.name === 'options.lua').data().toString('utf8');
+  eq(back, 'return { mods = {} }', 'and the contents survive the round trip');
+
+  const readme = entries.find((e) => e.name === android.NOTES).data().toString('utf8');
+  ok(readme.includes('Voxel MMO'), 'the notes name the pack');
+  ok(readme.includes(android.ANDROID_IDENTITY), 'and the folder it goes in');
+  ok(readme.includes('saves'), 'and promise the saves are untouched');
+
+  rmSync(root, { recursive: true, force: true });
+});
+
+it('refuses a setup with nothing in it rather than writing an empty zip', () => {
+  const root = join(HERE, '..', '.test-tmp-android4');
+  rmSync(root, { recursive: true, force: true });
+  mkdirSync(root, { recursive: true });
+  throws(() => android.bundle(root), 'no mods or settings to send');
+  throws(() => android.plan(join(root, 'nope')), 'no such setup');
+  rmSync(root, { recursive: true, force: true });
+});
+
+it('writes the same bytes for the same setup twice', () => {
+  // A pack is an argument about getting identical bytes every time; an archive
+  // of one that changed because the clock moved would undercut it.
+  const root = tmpAndroidSave('.test-tmp-android5');
+  const a = android.bundle(root).buffer;
+  const b = android.bundle(root).buffer;
+  ok(a.equals(b), 'two runs, one file');
+  rmSync(root, { recursive: true, force: true });
+});
+
+describe('zip writing');
+
+it('round-trips both stored and deflated entries', () => {
+  // Compressible text deflates; random bytes do not, and must be stored rather
+  // than written larger than they started.
+  const text = Buffer.from('the same line over and over\n'.repeat(500));
+  const noisy = Buffer.alloc(2048);
+  for (let i = 0; i < noisy.length; i++) noisy[i] = (i * 2654435761) & 0xff;
+
+  const buf = zip.write([{ name: 'a/text.txt', data: text }, { name: 'b/noise.bin', data: noisy }]);
+  const entries = zip.read(buf);
+  eq(entries.map((e) => e.name), ['a/text.txt', 'b/noise.bin']);
+  ok(entries[0].data().equals(text), 'text survives');
+  ok(entries[1].data().equals(noisy), 'noise survives');
+  ok(buf.length < text.length, 'and the compressible one actually compressed');
+});
+
+it('backslashes in a name become forward slashes', () => {
+  // Windows builds the file list; a zip stores posix separators, and a reader
+  // that saw "mods\\VOXEL" would make one flat file with a slash in its name.
+  const entries = zip.read(zip.write([{ name: 'mods\\VOXEL\\main.lua', data: Buffer.from('x') }]));
+  eq(entries[0].name, 'mods/VOXEL/main.lua');
+});
+
+it('computes the CRC every unzipper will check', () => {
+  // The check value from the zip spec's own test vector.
+  eq(zip.crc32(Buffer.from('123456789')), 0xcbf43926);
+  eq(zip.crc32(Buffer.alloc(0)), 0);
 });
 
 // ------- report

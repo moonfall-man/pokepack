@@ -1,7 +1,7 @@
 # pokepack
 
-Modpack recipes for [gen1recomp](https://github.com/) — a whole tested setup in
-one file, so nobody has to reassemble it by hand.
+Modpack recipes for [gen1recomp](https://github.com/bryanthaboi/gen1recomp) — a
+whole tested setup in one file, so nobody has to reassemble it by hand.
 
 A pack **hosts nothing**. It points at each author's own downloads, pins each
 one to the exact bytes that were tested, and carries the settings those mods
@@ -379,6 +379,44 @@ A pack is JSON on purpose. It diffs cleanly, so a change is legible in review:
 
 Submit a pack by PR to a gallery repo. You get versioning, history, review and
 attribution for free, and there is no backend to run.
+
+## On a handheld
+
+The game already runs on Android — touch controls, orientation lock, its own
+mod manager — so nothing needs porting. Get the APK from
+[the game's own releases](https://github.com/bryanthaboi/gen1recomp/releases/latest);
+this repo does not mirror it, for the same reason it ships no ROM.
+
+What could not travel is a pack, because the two things pokepack leans on do
+not exist there. `POKEPORT_IDENTITY` is an environment variable and an app has
+no environment, so `conf.lua` always falls back to `pokemon-love2d` — one setup
+on the device, no per-pack isolation. And the hub is a Node program serving a
+local page; there is no version of that which is an APK.
+
+So the transfer is a file copy, and it works because the layout is already the
+same everywhere: `Loader` reads `mods` relative to the save directory, and
+`options.lua` sits beside it. Neither holds an absolute path.
+
+```bash
+node bin/pokepack.js android <saveDir>
+```
+
+or **To Android** in the hub's top bar. Extract the zip into the game's save
+folder on the device so `mods/` and `options.lua` sit directly inside:
+
+```
+Android/data/<package>/files/save/pokemon-love2d/
+```
+
+The game shows you that exact path on its ROM import screen. It is the app's
+external-files folder — writable over USB with no permission granted, which
+`conf.lua` arranges on purpose so players can push a ROM in the same way.
+
+**What stays behind, and why.** The archive carries `mods/`, `options.lua` and
+`pokepack-installed.json`, and nothing else. Not your ROM data, which is yours
+and which the device imports for itself. Not your save files, which would
+overwrite the ones already on it. This is an allowlist rather than a skip-list
+so that a folder the engine grows later cannot join by default.
 
 ## Known limits
 

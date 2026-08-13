@@ -873,6 +873,42 @@ export function serve({ packsDir, saveDir, indexFile, port = 7666, host = '127.0
       });
     }
 
+    // ------- send a setup to an Android handheld
+    //
+    // Written to disk rather than streamed to the browser: it is tens of
+    // megabytes headed for a USB cable, and what you want next is the file in a
+    // folder you can drag from, not in Downloads.
+    if (url.pathname === '/api/instance/android' && req.method === 'POST') {
+      const opts = await readBody(req);
+      if (!opts) return json(res, 400, { error: 'bad request body' });
+      const act = opts.identity
+        ? findSaveDirs().find((i) => i.identity === opts.identity)
+        : activeInstance();
+      if (!act) return json(res, 400, { error: opts.identity ? `no setup called ${opts.identity}` : 'no active instance' });
+
+      const android = await import('./android.js');
+      let made;
+      try {
+        made = android.bundle(act.path, { packName: opts.name || act.identity });
+      } catch (e) {
+        return json(res, 400, { error: e.message });
+      }
+
+      const outDir = join(packsDir, '..', 'android');
+      const file = join(outDir, `${act.identity}-android.zip`);
+      mkdirSync(outDir, { recursive: true });
+      writeFileSync(file, made.buffer);
+
+      return json(res, 200, {
+        file,
+        entries: made.files.length + 1,
+        bytes: made.buffer.length,
+        raw: made.bytes,
+        left: made.left,
+        identity: android.ANDROID_IDENTITY,
+      });
+    }
+
     // ------- play the active instance
 
     if (url.pathname === '/api/play' && req.method === 'POST') {
