@@ -256,6 +256,8 @@ label input, label textarea { margin-top:5px; }
         <span class="count" id="c-mods"></span></button>
       <button id="tab-browse" role="tab" aria-selected="false">Community
         <span class="count" id="c-browse"></span></button>
+      <button id="tab-logs" role="tab" aria-selected="false">Logs
+        <span class="count" id="c-logs"></span></button>
     </nav>
 
     <div class="view" id="view-mods">
@@ -275,6 +277,7 @@ label input, label textarea { margin-top:5px; }
     </div>
 
     <div class="view" id="view-browse" hidden></div>
+    <div class="view" id="view-logs" hidden></div>
   </div>
 </div>
 
@@ -485,6 +488,9 @@ async function loadMods(force) {
       + (m.author ? '<div class="by">by ' + esc(m.author) + '</div>' : '')
       + '<div class="sum">' + esc(m.summary || '\\u2014') + '</div>'
       + '<div class="tags">'
+      + (m.loadsAt ? '<span class="tag num" title="loads ' + m.loadsAt
+          + (CAT.loadOrder ? ' of ' + CAT.loadOrder.length : '')
+          + (m.loadWhy ? ' \\u2014 ' + m.loadWhy : '') + '">#' + m.loadsAt + '</span>' : '')
       + (m.installedVersion
           ? '<span class="tag gold num">' + esc(m.installedVersion) + '</span>'
           : m.latestVersion ? '<span class="tag num">' + esc(m.latestVersion) + '</span>' : '')
@@ -514,12 +520,81 @@ async function loadMods(force) {
   }).join('') + '</div>';
 }
 
+// What the game said last time it ran.  Leads with the lines that look like
+// trouble, because the alternative is reading a thousand lines of startup
+// chatter to find the one that matters.
+async function loadLogs() {
+  const view = document.getElementById('view-logs');
+  view.innerHTML = '<div class="why">reading\\u2026</div>';
+  let d;
+  try {
+    d = await (await fetch(api('logs'))).json();
+  } catch (e) {
+    view.innerHTML = '<div class="note bad">could not read the logs: ' + esc(e.message) + '</div>';
+    return;
+  }
+  if (d.error) { view.innerHTML = '<div class="note bad">' + esc(d.error) + '</div>'; return; }
+
+  document.getElementById('c-logs').textContent = d.notable.length || '';
+
+  if (!d.any) {
+    view.innerHTML = '<div class="empty"><div class="ball"></div><b>No logs yet</b>'
+      + 'Press <b>Play</b>, then <b>close the game</b>, and what it printed shows up here.</div>';
+    return;
+  }
+
+  view.innerHTML =
+    '<div class="bar"><span class="why">' + esc(d.identity) + '</span>'
+    + '<span style="flex:1"></span>'
+    + '<button class="quiet" data-reload-logs="1">Reload</button></div>'
+    // Said plainly because an empty log after a crash looks like this screen is
+    // broken, when it is Windows holding the last few KB in a buffer.
+    + '<div class="note" style="margin-bottom:14px">Windows holds the game\\u2019s output in a '
+    + 'buffer until it exits, so <b>close the game to see the full log</b>. A crash that takes '
+    + 'the graphics driver down can lose the last few lines \\u2014 Lua errors are written '
+    + 'separately and survive that.</div>'
+    + (d.loadOrder.length
+        ? '<div class="eyebrow" style="margin-bottom:6px">Load order, last run</div>'
+          + '<div class="rows" style="margin-bottom:16px">'
+          + d.loadOrder.map((m, i) =>
+            '<div class="row"><span style="flex:1"><span class="why num">'
+            + String(i + 1).padStart(2, '0') + '</span>  <b>' + esc(m.id) + '</b></span>'
+            + (m.version ? '<span class="ver">' + esc(m.version) + '</span>' : '') + '</div>').join('')
+          + '</div>'
+          + '<div class="why" style="margin:-8px 0 16px">Decided by the mods themselves \\u2014 '
+          + 'priority, then dependencies first \\u2014 so it is the same on any machine running '
+          + 'this pack. When two mods fight over the same thing, the later one usually wins.</div>'
+        : '')
+    + (d.notable.length
+        ? '<div class="eyebrow" style="margin-bottom:6px">Worth a look</div>'
+          + '<div class="rows" style="margin-bottom:16px">'
+          + d.notable.map(n =>
+            '<div class="row"><span style="flex:1"><span class="tag '
+            + (n.level === 'error' ? 'bad' : 'warn') + '">' + n.level + '</span> '
+            + esc(n.line) + '</span><span class="why">' + esc(n.from) + '</span></div>').join('')
+          + '</div>'
+        : '<div class="note">Nothing in the logs looks like a warning or an error. '
+          + 'A crash that takes the graphics driver with it can leave no trace at all \\u2014 '
+          + 'the full output is below.</div>')
+    + d.sources.map(s =>
+        '<details style="margin-top:10px"><summary style="cursor:pointer;font-size:13px">'
+        + esc(s.label) + ' <span class="why">' + esc(s.file) + ' \\u00b7 '
+        + Math.max(1, Math.round(s.size / 1024)) + ' KB'
+        + (s.modified ? ' \\u00b7 ' + esc(s.modified.replace('T', ' ').slice(0, 19)) : '')
+        + (s.truncated ? ' \\u00b7 showing the end' : '') + '</span></summary>'
+        + '<pre class="log" style="max-height:340px;margin-top:8px">' + esc(s.text) + '</pre>'
+        + '</details>').join('');
+}
+
 function render() {
   document.getElementById('tab-mods').setAttribute('aria-selected', tab === 'mods');
   document.getElementById('tab-browse').setAttribute('aria-selected', tab === 'browse');
+  document.getElementById('tab-logs').setAttribute('aria-selected', tab === 'logs');
   document.getElementById('view-mods').hidden = tab !== 'mods';
   document.getElementById('view-browse').hidden = tab !== 'browse';
+  document.getElementById('view-logs').hidden = tab !== 'logs';
   if (tab === 'browse') renderCommunity();
+  if (tab === 'logs') loadLogs();
 }
 
 // ------- dialogs
@@ -1248,6 +1323,10 @@ document.getElementById('mods-cats').addEventListener('click', (e) => {
 
 document.getElementById('tab-mods').onclick = () => { tab = 'mods'; render(); loadMods(false); };
 document.getElementById('tab-browse').onclick = () => { tab = 'browse'; render(); };
+document.getElementById('tab-logs').onclick = () => { tab = 'logs'; render(); };
+document.getElementById('view-logs').addEventListener('click', (e) => {
+  if (e.target.closest('[data-reload-logs]')) loadLogs();
+});
 document.getElementById('d-close').onclick = () => dlg.close();
 
 checkForUpdate();

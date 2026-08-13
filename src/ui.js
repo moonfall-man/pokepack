@@ -1,4 +1,4 @@
-// The local hub.
+﻿// The local hub.
 //
 // One idea runs through all of it: there is an **active instance**, and
 // everything is scoped to it.  You pick a setup in My packs, the Mods tab shows
@@ -23,7 +23,7 @@ import { loadPacks, buildFeed, submitUrl } from './feed.js';
 import { encode, decode, unpinned, EXT } from './packformat.js';
 import { apply } from './apply.js';
 import { removeMod } from './uninstall.js';
-import { installMod } from './install.js';
+import { installMod, backupRoot } from './install.js';
 import { setModEnabled } from './liveapply.js';
 import { build, pin, slugify, gatherReleases } from './build.js';
 import { fetchReleases, hashUrl, downloadToBuffer } from './net.js';
@@ -39,6 +39,7 @@ import * as catalogue from './catalogue.js';
 import * as deps from './deps.js';
 import { resolveDownload } from './github.js';
 import * as update from './update.js';
+import * as logs from './logs.js';
 import * as gallery from './packfeed.js';
 import * as config from './config.js';
 import { page } from './ui-page.js';
@@ -293,6 +294,29 @@ export function serve({ packsDir, saveDir, indexFile, port = 7666, host = '127.0
       return json(res, 200, { ...out, checkout: update.status() });
     }
 
+    // What the game said last time it ran, for whichever pack you name.
+    if (url.pathname === '/api/logs') {
+      const wanted = url.searchParams.get('identity');
+      const found = wanted
+        ? findSaveDirs().find((i) => i.identity === wanted)
+        : activeInstance();
+      if (!found) return json(res, 404, { error: `no pack called ${wanted}` });
+      const out = logs.readLogs(found.path);
+      return json(res, 200, {
+        identity: found.identity,
+        path: found.path,
+        ...out,
+        // Pulled out so the screen can lead with what went wrong rather than
+        // making somebody read a thousand lines of startup chatter.
+        notable: out.sources.flatMap((s) => logs.interesting(s.text)
+          .map((n) => ({ ...n, from: s.label }))).slice(-40),
+        // From the most recent run that recorded any: what loaded, in the order
+        // it loaded.  When two mods fight over the same thing, which one ran
+        // second is usually the answer.
+        loadOrder: out.sources.map((s) => logs.loadOrder(s.text)).find((o) => o.length) ?? [],
+      });
+    }
+
     if (url.pathname === '/api/activate' && req.method === 'POST') {
       const opts = await readBody(req);
       if (!opts) return json(res, 400, { error: 'bad request body' });
@@ -324,6 +348,11 @@ export function serve({ packsDir, saveDir, indexFile, port = 7666, host = '127.0
       // the installed manifests rather than the index -- these are the files it
       // will actually read.
       const health = deps.check(installed);
+      // Worked out the way the engine does, so it can be shown before you play
+      // rather than only read back from a log afterwards.
+      const { order, brokenLoop } = deps.loadOrder(installed);
+      const orderIndex = new Map(order.map((m, i) => [m.id, i + 1]));
+      const orderWhy = new Map(order.map((m) => [m.id, m.why]));
 
       let mods = catalogue.search(cat.mods, q).map((m) => {
         const src = catalogue.installableFrom(m);
@@ -379,7 +408,13 @@ export function serve({ packsDir, saveDir, indexFile, port = 7666, host = '127.0
         installedCount: Object.keys(installed).length,
         categories,
         selected: wanted,
-        mods,
+        loadOrder: order,
+        brokenLoop,
+        mods: mods.map((m) => ({
+          ...m,
+          loadsAt: orderIndex.get(m.id) ?? null,
+          loadWhy: orderWhy.get(m.id) ?? null,
+        })),
       });
     }
 
@@ -864,6 +899,14 @@ export function serve({ packsDir, saveDir, indexFile, port = 7666, host = '127.0
         }
       }
 
+      // Our own backup folder used to sit inside mods/, where the engine reads
+      // every directory and warns about anything without a manifest.  Moving it
+      // here rather than on the next install means the warning stops on the
+      // very next Play, which is when somebody is looking at the log.
+      try {
+        backupRoot(act.path);
+      } catch { /* housekeeping must never stop the game starting */ }
+
       // Which game to boot straight into.  Only a version this instance has
       // actually unpacked -- asking for one it has not would land you on the
       // launcher anyway, which is the screen we are trying to skip.
@@ -872,7 +915,10 @@ export function serve({ packsDir, saveDir, indexFile, port = 7666, host = '127.0
       const version = have.includes(preferred) ? preferred : (have[0] ?? null);
 
       try {
-        const out = launchGame({ exePath, identity: act.identity, version });
+        // saveDir is what turns stdout into a file you can read afterwards.
+        const out = launchGame({
+          exePath, identity: act.identity, version, saveDir: act.path,
+        });
         return json(res, 200, {
           ...out,
           // 'rom' means the game still has a one-time import to do, and saying

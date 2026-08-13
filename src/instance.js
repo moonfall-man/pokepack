@@ -9,6 +9,7 @@
 
 import {
   existsSync, mkdirSync, writeFileSync, statSync, readdirSync, cpSync, renameSync,
+  openSync, closeSync,
 } from 'node:fs';
 import { spawn } from 'node:child_process';
 import { join, dirname, basename } from 'node:path';
@@ -296,7 +297,37 @@ function raiseWindow(pid) {
  * A local server that will start whatever binary a caller names is a different
  * and much worse thing than one that starts the game you already pointed it at.
  */
-export function launchGame({ exePath, identity, version = null }) {
+export const RUN_LOG = 'pokepack-run.log';
+export const RUN_LOG_PREV = 'pokepack-run.log.1';
+
+/**
+ * openRunLog(saveDir) -> fd | null
+ *
+ * The game prints everything it knows to stdout -- the mod loader's warnings,
+ * which mods loaded, and whatever it manages to say on the way down.  Launching
+ * with stdio 'ignore' threw all of that away, so a crash left nothing behind
+ * unless it happened to be a Lua error the engine could catch.  A graphics
+ * fault is not, which is exactly the kind that ends a session abruptly.
+ *
+ * The previous run is kept: the log you want is almost always the one from the
+ * launch that just died, and the next launch would otherwise overwrite it.
+ */
+function openRunLog(saveDir) {
+  if (!saveDir) return null;
+  try {
+    const path = join(saveDir, RUN_LOG);
+    if (existsSync(path)) {
+      try {
+        renameSync(path, join(saveDir, RUN_LOG_PREV));
+      } catch { /* keeping the previous run is a nicety, not a reason to fail */ }
+    }
+    return openSync(path, 'w');
+  } catch {
+    return null; // a log we cannot write must never stop the game starting
+  }
+}
+
+export function launchGame({ exePath, identity, version = null, saveDir = null }) {
   const check = checkGameExe(exePath);
   if (!check.ok) throw new Error(check.reason);
   if (identity !== null && !validIdentity(identity).ok && identity !== DEFAULT_IDENTITY) {
@@ -317,15 +348,29 @@ export function launchGame({ exePath, identity, version = null }) {
   if (version) env.POKEPORT_GAME = version;
   else delete env.POKEPORT_GAME;
 
+  const log = openRunLog(saveDir);
   const child = spawn(check.path, [], {
     env,
     cwd: dirname(check.path),
     detached: true,
-    stdio: 'ignore',
+    stdio: log === null ? 'ignore' : ['ignore', log, log],
   });
   child.unref();
+  // The child holds its own handle; ours would otherwise leak for the life of
+  // the hub, and on Windows keep the file locked against the next rotation.
+  if (log !== null) {
+    try {
+      closeSync(log);
+    } catch { /* already gone */ }
+  }
   const raised = raiseWindow(child.pid);
-  return { pid: child.pid, identity: identity ?? DEFAULT_IDENTITY, version, raised };
+  return {
+    pid: child.pid,
+    identity: identity ?? DEFAULT_IDENTITY,
+    version,
+    raised,
+    log: log === null ? null : join(saveDir, RUN_LOG),
+  };
 }
 
 /**

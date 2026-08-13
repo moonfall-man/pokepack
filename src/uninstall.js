@@ -16,7 +16,7 @@
 import { readFileSync, writeFileSync, existsSync, mkdirSync, renameSync } from 'node:fs';
 import { join } from 'node:path';
 import { LOCK_FILE } from './state.js';
-import { BACKUP_DIR } from './install.js';
+import { backupRoot as backupDirFor } from './install.js';
 import { parse, toArray } from './luadata.js';
 import { encode } from './luawrite.js';
 import { isGameRunning, OPTIONS } from './liveapply.js';
@@ -71,8 +71,7 @@ export function uninstall(saveDir, pack, { running: runningOverride, exePath = n
     return { ...plan, moved: [], optionsChanged: false, reason: 'nothing this pack installed is still here' };
   }
 
-  const backupRoot = join(saveDir, 'mods', BACKUP_DIR);
-  mkdirSync(backupRoot, { recursive: true });
+  const backupRoot = backupDirFor(saveDir);
 
   const moved = [];
   for (const mod of plan.remove) {
@@ -117,8 +116,7 @@ export function removeMod(saveDir, id, { running: runningOverride, exePath = nul
     version = JSON.parse(readFileSync(join(from, 'manifest.json'), 'utf8')).version ?? null;
   } catch { /* a mod with no readable manifest still gets moved, just unlabelled */ }
 
-  const backupRoot = join(saveDir, 'mods', BACKUP_DIR);
-  mkdirSync(backupRoot, { recursive: true });
+  const backupRoot = backupDirFor(saveDir);
   let target = join(backupRoot, `${id}-${version ?? 'unknown'}`);
   for (let n = 2; existsSync(target); n++) target = join(backupRoot, `${id}-${version ?? 'unknown'}-${n}`);
   renameSync(from, target);

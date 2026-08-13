@@ -141,6 +141,88 @@ export function check(mods) {
   return out;
 }
 
+/**
+ * loadOrder(mods) -> { order, brokenLoop }
+ *
+ * The order the engine will load these mods in, worked out without running it.
+ *
+ * A deliberate mirror of Loader:_order, down to the tiebreaks, because the
+ * point is to agree with it:
+ *
+ *   - only active mods take part
+ *   - priority ascending, ties broken by id, so it never depends on the order
+ *     a directory happened to be read in
+ *   - both hard *and optional* dependencies create an ordering edge, so an
+ *     optional dependency still loads first when it is present
+ *   - Kahn's algorithm, always taking the ready mod with the lowest
+ *     (priority, id)
+ *   - an optional dependency can close a loop that the hard-dependency check
+ *     deliberately ignores; break it at the lowest id rather than dropping the
+ *     mods, and say which one
+ *
+ * priority defaults to 0, matching Manifest.lua's `tonumber(raw.priority) or 0`
+ * -- a mod that declares none must not sort after one that asked for 0.
+ */
+export function loadOrder(mods) {
+  const active = Object.keys(mods).filter((id) => mods[id]?.enabled !== false);
+  const prio = (id) => {
+    const p = Number(mods[id]?.priority);
+    return Number.isFinite(p) ? p : 0;
+  };
+  const before = (a, b) => (prio(a) !== prio(b) ? prio(a) - prio(b) : (a < b ? -1 : 1));
+
+  const pending = new Set(active);
+  const indegree = new Map(active.map((id) => [id, 0]));
+  const dependents = new Map();
+
+  for (const id of active) {
+    const edges = [
+      ...parseDeps(mods[id]?.dependencies),
+      ...parseDeps(mods[id]?.optional_dependencies ?? mods[id]?.optionalDependencies),
+    ];
+    for (const dep of edges) {
+      if (!pending.has(dep.id) || dep.id === id) continue;
+      if (!dependents.has(dep.id)) dependents.set(dep.id, []);
+      dependents.get(dep.id).push(id);
+      indegree.set(id, indegree.get(id) + 1);
+    }
+  }
+
+  const order = [];
+  let brokenLoop = null;
+  while (pending.size > 0) {
+    const ready = [...pending].filter((id) => indegree.get(id) === 0).sort(before);
+    let next = ready[0];
+    if (next === undefined) {
+      // Everything left is in a cycle only optional dependencies could have
+      // closed.  Dropping them would be worse than picking one.
+      next = [...pending].sort()[0];
+      brokenLoop = brokenLoop ?? next;
+    }
+    pending.delete(next);
+    // Why it sits here.  "priority 110" and "after DRAMATIC_SHAPE" are
+    // different problems: one you could ask an author to change, the other is
+    // the dependency graph and cannot move.
+    const forcedAfter = [
+      ...parseDeps(mods[next]?.dependencies),
+      ...parseDeps(mods[next]?.optional_dependencies ?? mods[next]?.optionalDependencies),
+    ].map((d) => d.id).filter((id) => id !== next && order.some((m) => m.id === id));
+
+    order.push({
+      id: next,
+      priority: prio(next),
+      version: mods[next]?.version ?? null,
+      after: forcedAfter,
+      why: forcedAfter.length ? `after ${forcedAfter.join(', ')}` : `priority ${prio(next)}`,
+    });
+    for (const dependent of dependents.get(next) ?? []) {
+      if (indegree.has(dependent)) indegree.set(dependent, indegree.get(dependent) - 1);
+    }
+  }
+
+  return { order, brokenLoop };
+}
+
 // Does this mod have anything wrong with it?
 export function isHealthy(report) {
   return !report || (report.missing.length === 0

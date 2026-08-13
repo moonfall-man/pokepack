@@ -68,6 +68,11 @@ export function readSaveDir(dir) {
         // or two behind what somebody has on disk.
         dependencies: Array.isArray(manifest.dependencies) ? manifest.dependencies : [],
         conflicts: Array.isArray(manifest.conflicts) ? manifest.conflicts : [],
+        // Both feed the load order, and priority defaults to 0 the way the
+        // engine's own manifest reader defaults it.
+        optional_dependencies: Array.isArray(manifest.optional_dependencies)
+          ? manifest.optional_dependencies : [],
+        priority: Number.isFinite(Number(manifest.priority)) ? Number(manifest.priority) : 0,
       };
     }
   }

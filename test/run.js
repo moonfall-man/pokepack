@@ -1,4 +1,4 @@
-// Offline test suite.  Nothing here touches the network; the one module that
+﻿// Offline test suite.  Nothing here touches the network; the one module that
 // does is handed a fake.
 
 import { readFileSync, writeFileSync, existsSync, mkdirSync, rmSync } from 'node:fs';
@@ -16,6 +16,7 @@ import * as deps from '../src/deps.js';
 import * as gh from '../src/github.js';
 import * as net from '../src/net.js';
 import * as update from '../src/update.js';
+import * as logs from '../src/logs.js';
 import * as packfeed from '../src/packfeed.js';
 import { applyToOptions, setModEnabled } from '../src/liveapply.js';
 import { uninstall, planUninstall } from '../src/uninstall.js';
@@ -1193,6 +1194,78 @@ it('says when a pack is too big to send as a link rather than truncating it', ()
   eq(tooLong, true);
 });
 
+// ------- logs
+
+describe('logs');
+
+it('reads the end of a long log, not the whole thing', () => {
+  // A long session prints megabytes and the interesting part is always the
+  // last thing that happened.
+  const root = join(HERE, '..', '.test-tmp-logs');
+  rmSync(root, { recursive: true, force: true });
+  mkdirSync(root, { recursive: true });
+  const path = join(root, 'big.log');
+  writeFileSync(path, `${'filler line\n'.repeat(2000)}the last thing\n`);
+
+  const got = logs.tail(path, 200);
+  ok(got.endsWith('the last thing\n'), 'the end must be there');
+  ok(got.length <= 200, `expected a tail, got ${got.length} bytes`);
+  ok(!got.startsWith('ler'), 'a tail starting mid-line reads as corruption');
+
+  eq(logs.tail(path, 1024 * 1024).endsWith('the last thing\n'), true, 'a short file comes back whole');
+  rmSync(root, { recursive: true, force: true });
+});
+
+it('collects every log a pack has, and shrugs at the ones it has not', () => {
+  const root = join(HERE, '..', '.test-tmp-logs2');
+  rmSync(root, { recursive: true, force: true });
+  mkdirSync(root, { recursive: true });
+
+  eq(logs.readLogs(root).any, false, 'a pack that has never crashed has no logs');
+  eq(logs.readLogs(null).sources, [], 'and no pack at all is not an error');
+
+  writeFileSync(join(root, 'pokepack-run.log'), '[info] game loaded\n');
+  writeFileSync(join(root, 'lua-error.log'), '[2026-08-12] boom\n');
+  const out = logs.readLogs(root);
+  eq(out.any, true);
+  eq(out.sources.map((s) => s.kind), ['run', 'error']);
+  ok(out.sources[0].text.includes('game loaded'));
+
+  rmSync(root, { recursive: true, force: true });
+});
+
+it('reads back the order mods actually loaded in', () => {
+  // Not predicted -- the engine decides order from the manifests (priority,
+  // then dependencies first) so it is the same everywhere, but when two mods
+  // fight over the same thing, which one ran second is the answer.
+  const order = logs.loadOrder([
+    '[info] generated data loaded (222 maps, 151 species, 165 moves)',
+    '[info] loaded mod unique_menu_icons 1.4.0',
+    '[info] loaded mod rby_mmo 1.0.3',
+    '[info] loaded mod unique_menu_icons 1.4.0',
+    '[info] game loaded',
+  ].join('\n'));
+  eq(order.map((m) => m.id), ['unique_menu_icons', 'rby_mmo'], 'in order, and only once each');
+  eq(order[1].version, '1.0.3');
+  eq(logs.loadOrder('nothing here').length, 0);
+  eq(logs.loadOrder(null).length, 0);
+});
+
+it('picks out the lines worth showing first', () => {
+  const found = logs.interesting([
+    '[info] generated data loaded',
+    '[warn] mod VOXEL_DEX ignored: missing dependency',
+    '[info] display: 1024x768',
+    '[error] shader failed to compile',
+    'stack traceback:',
+    '',
+  ].join('\n'));
+  eq(found.map((f) => f.level), ['warn', 'error', 'error']);
+  ok(found[0].line.includes('VOXEL_DEX'));
+  eq(logs.interesting('').length, 0);
+  eq(logs.interesting(null).length, 0);
+});
+
 // ------- deps
 
 describe('deps');
@@ -1240,6 +1313,59 @@ it('spots a missing dependency, a wrong version and a clash', () => {
   });
   eq(tooOld.A.missing, [], 'it is installed, just not new enough');
   eq(tooOld.A.wrongVersion[0].have, '1.0.0');
+});
+
+it('orders mods the way the engine does: priority, then id', () => {
+  // Mirrors Loader:_order.  The id tiebreak matters -- without it the order
+  // would depend on whatever order a directory happened to be read in, and two
+  // machines running the same pack could load them differently.
+  const { order } = deps.loadOrder({
+    zeta: { priority: 10 }, alpha: { priority: 10 }, first: { priority: 1 },
+  });
+  eq(order.map((m) => m.id), ['first', 'alpha', 'zeta']);
+
+  // A mod that declares no priority is 0, matching the engine's manifest
+  // reader -- it must not sort after one that explicitly asked for 0.
+  const { order: defaulted } = deps.loadOrder({ declared: { priority: 5 }, silent: {} });
+  eq(defaulted.map((m) => m.id), ['silent', 'declared']);
+});
+
+it('loads dependencies first, even against priority', () => {
+  const { order } = deps.loadOrder({
+    // needs would sort first on priority alone; the dependency overrides that.
+    needy: { priority: 1, dependencies: ['base@>=1.0.0'] },
+    base: { priority: 99 },
+  });
+  eq(order.map((m) => m.id), ['base', 'needy']);
+
+  // An optional dependency orders without requiring anything.
+  const { order: opt } = deps.loadOrder({
+    late: { priority: 1, optional_dependencies: ['early'] },
+    early: { priority: 50 },
+  });
+  eq(opt.map((m) => m.id), ['early', 'late']);
+
+  // ...and one that is not installed simply does not constrain anything.
+  const { order: absent } = deps.loadOrder({ solo: { optional_dependencies: ['nobody'] } });
+  eq(absent.map((m) => m.id), ['solo']);
+});
+
+it('breaks an optional-dependency loop rather than dropping the mods', () => {
+  // Hard-dependency cycles are refused elsewhere; optional ones can still close
+  // a loop, and silently losing both mods would be the worst outcome.
+  const { order, brokenLoop } = deps.loadOrder({
+    b: { optional_dependencies: ['a'] },
+    a: { optional_dependencies: ['b'] },
+  });
+  eq(order.map((m) => m.id).sort(), ['a', 'b'], 'both still load');
+  eq(brokenLoop, 'a', 'and it says where it cut the loop');
+});
+
+it('leaves a disabled mod out of the order entirely', () => {
+  const { order } = deps.loadOrder({
+    on: { priority: 1 }, off: { priority: 0, enabled: false },
+  });
+  eq(order.map((m) => m.id), ['on']);
 });
 
 it('reports a conflict to both sides, whichever one declared it', () => {
