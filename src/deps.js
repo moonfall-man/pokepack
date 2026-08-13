@@ -200,7 +200,21 @@ export function loadOrder(mods) {
       brokenLoop = brokenLoop ?? next;
     }
     pending.delete(next);
-    order.push({ id: next, priority: prio(next), version: mods[next]?.version ?? null });
+    // Why it sits here.  "priority 110" and "after DRAMATIC_SHAPE" are
+    // different problems: one you could ask an author to change, the other is
+    // the dependency graph and cannot move.
+    const forcedAfter = [
+      ...parseDeps(mods[next]?.dependencies),
+      ...parseDeps(mods[next]?.optional_dependencies ?? mods[next]?.optionalDependencies),
+    ].map((d) => d.id).filter((id) => id !== next && order.some((m) => m.id === id));
+
+    order.push({
+      id: next,
+      priority: prio(next),
+      version: mods[next]?.version ?? null,
+      after: forcedAfter,
+      why: forcedAfter.length ? `after ${forcedAfter.join(', ')}` : `priority ${prio(next)}`,
+    });
     for (const dependent of dependents.get(next) ?? []) {
       if (indegree.has(dependent)) indegree.set(dependent, indegree.get(dependent) - 1);
     }
