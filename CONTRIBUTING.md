@@ -6,8 +6,12 @@ release page.
 
 ## Make one
 
+Double-click `start-pokepack.cmd` on Windows, or run `./start-pokepack.sh` on
+macOS and Linux. You need [Node.js](https://nodejs.org) 18 or newer and nothing
+else.
+
 ```bash
-node bin/pokepack.js ui
+node bin/pokepack.js ui   # the same thing, if you would rather type it
 ```
 
 1. **New pack** — a fresh setup with its own mods, saves and settings.

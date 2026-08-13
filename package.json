@@ -7,6 +7,7 @@
     "pokepack": "./bin/pokepack.js"
   },
   "scripts": {
+    "start": "node bin/pokepack.js ui",
     "test": "node test/run.js",
     "hub": "node bin/pokepack.js ui",
     "feed": "node bin/pokepack.js feed packs --out packs.json"

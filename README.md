@@ -8,8 +8,13 @@ one to the exact bytes that were tested, and carries the settings those mods
 were tested at. Same reason the game ships no ROM: this distributes
 instructions, not other people's work.
 
+**Start it** by double-clicking `start-pokepack.cmd` on Windows, or running
+`./start-pokepack.sh` on macOS and Linux. All you need installed is
+[Node.js](https://nodejs.org) 18 or newer — pokepack has no dependencies, so
+there is no install step and nothing to build.
+
 ```bash
-node bin/pokepack.js ui
+node bin/pokepack.js ui   # the same thing, if you would rather type it
 ```
 
 ## Why not just a list of mods
@@ -426,7 +431,7 @@ rather than a broken boot.
 node test/run.js
 ```
 
-95 tests, no network, no dependencies. `fixtures/index.json` is a real published
+147 tests, no network, no dependencies. `fixtures/index.json` is a real published
 feed; `fixtures/save/` is a save directory shaped like a real one.
 
 `engine-src/` (gitignored) is the game's Lua source, unpacked from the shipped
