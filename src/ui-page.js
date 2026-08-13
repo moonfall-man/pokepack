@@ -398,6 +398,7 @@ function renderPackActions() {
     (enabled
       ? '<button class="quiet" data-export-inst="' + esc(inst.identity) + '">Export</button>'
         + '<button class="quiet" data-publish="' + esc(inst.identity) + '">Publish</button>'
+        + '<button class="quiet" data-android="' + esc(inst.identity) + '">To Android</button>'
       : '')
     + (inst.isDefault ? ''
       : '<button class="quiet danger" data-del-inst="' + esc(inst.identity) + '">Delete</button>');
@@ -718,6 +719,51 @@ function exportInstance(identity) {
         + 'Share this pack\\u2026</button><span class="why">send it to the gallery for review</span></div>';
       b.textContent = 'Exported';
       load();
+    },
+  });
+}
+
+// The handheld route.  The game runs on Android already; what it has no way to
+// do is receive a setup built here, because POKEPORT_IDENTITY is an environment
+// variable and an app has no environment.  So this is a copy job, and the
+// dialog's whole job is to say plainly what travels and what does not -- the
+// two questions somebody about to overwrite a device wants answered first.
+function sendToAndroid(identity) {
+  const inst = S.instances.find(i => i.identity === identity);
+  if (!inst) return toast('no such setup', true);
+  const on = inst.modList.filter(m => m.enabled).length;
+
+  dialog({
+    title: 'Send "' + identity + '" to Android',
+    sub: plural(on, 'mod') + ' and every tested setting, zipped for the device.',
+    body: '<div class="why">Your ROM data and your save files stay here. The device '
+      + 'imports its own ROM, and its saves are its own.</div>'
+      + '<div class="why" style="margin-top:8px">Android has no per-pack isolation, so '
+      + 'extracting this replaces the mods and settings on the device.</div>'
+      + '<div id="an-out"></div>',
+    go: 'Build the zip',
+    onGo: async () => {
+      const b = document.getElementById('d-go');
+      b.disabled = true;
+      b.textContent = 'Zipping\\u2026';
+      const { ok, data } = await post('instance/android', { identity });
+      const out = document.getElementById('an-out');
+      if (!ok) {
+        out.innerHTML = '<pre class="log">' + esc(data.error) + '</pre>';
+        b.disabled = false; b.textContent = 'Build the zip';
+        return;
+      }
+      const mb = n => (n / 1048576).toFixed(1) + ' MB';
+      out.innerHTML = '<pre class="log">wrote ' + esc(data.file) + '\\n'
+        + data.entries + ' files, ' + mb(data.raw) + ' packed to ' + mb(data.bytes) + '\\n\\n'
+        + 'Extract it into the game\\u2019s save folder on the device, so that\\n'
+        + 'mods/ and options.lua sit directly inside:\\n\\n'
+        + '    Android/data/&lt;package&gt;/files/save/' + esc(data.identity) + '/\\n\\n'
+        + 'The game shows you that path on its ROM import screen.\\n'
+        + (data.left.length
+          ? '\\nleft behind: ' + esc(data.left.map(l => l.name).join(', ')) : '')
+        + '</pre>';
+      b.textContent = 'Built';
     },
   });
 }
@@ -1117,6 +1163,8 @@ document.getElementById('pack-acts').addEventListener('click', (e) => {
   if (pub) return publishInstance(pub.dataset.publish);
   const exp = e.target.closest('[data-export-inst]');
   if (exp) return exportInstance(exp.dataset.exportInst);
+  const dro = e.target.closest('[data-android]');
+  if (dro) return sendToAndroid(dro.dataset.android);
 });
 
 document.getElementById('rail').addEventListener('click', async (e) => {
