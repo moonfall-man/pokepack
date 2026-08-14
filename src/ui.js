@@ -873,6 +873,61 @@ export function serve({ packsDir, saveDir, indexFile, port = 7666, host = '127.0
       });
     }
 
+    // ------- saves: the one thing here nobody can re-download
+    if (url.pathname === '/api/saves') {
+      const saves = await import('./saves.js');
+      const all = findSaveDirs().map((i) => ({
+        identity: i.identity,
+        path: i.path,
+        ...saves.describe(i.path),
+      }));
+      return json(res, 200, { setups: all.filter((s) => s.total > 0) });
+    }
+
+    if (url.pathname === '/api/saves/backup' && req.method === 'POST') {
+      const opts = await readBody(req);
+      if (!opts) return json(res, 400, { error: 'bad request body' });
+      const saves = await import('./saves.js');
+      const { homeDir } = await import('./packaged.js');
+      const inst = findSaveDirs().find((i) => i.identity === opts.identity);
+      if (!inst) return json(res, 400, { error: `no setup called ${opts.identity}` });
+      try {
+        return json(res, 200, saves.backup(inst.path, { outDir: join(homeDir(), 'save-backups') }));
+      } catch (e) {
+        return json(res, 400, { error: e.message });
+      }
+    }
+
+    if (url.pathname === '/api/saves/transfer' && req.method === 'POST') {
+      const opts = await readBody(req);
+      if (!opts) return json(res, 400, { error: 'bad request body' });
+      const saves = await import('./saves.js');
+      const { homeDir } = await import('./packaged.js');
+      const all = findSaveDirs();
+      const from = all.find((i) => i.identity === opts.from);
+      const to = all.find((i) => i.identity === opts.to);
+      if (!from) return json(res, 400, { error: `no setup called ${opts.from}` });
+      if (!to) return json(res, 400, { error: `no setup called ${opts.to}` });
+
+      // Back the destination up before adding to it. Nothing here overwrites,
+      // but this is the one operation where being wrong is unrecoverable.
+      let backedUp = null;
+      try {
+        if (saves.describe(to.path).total > 0) {
+          backedUp = saves.backup(to.path, { outDir: join(homeDir(), 'save-backups') }).file;
+        }
+      } catch { /* a destination with nothing to save needs no backup */ }
+
+      try {
+        const out = saves.transfer({
+          from: from.path, to: to.path, exePath: config.read().gamePath ?? null,
+        });
+        return json(res, 200, { ...out, backedUp });
+      } catch (e) {
+        return json(res, 400, { error: e.message, backedUp });
+      }
+    }
+
     // ------- fetch the game itself
     //
     // The one question the hub could not answer for you.  Hosts nothing: it is

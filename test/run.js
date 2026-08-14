@@ -20,6 +20,7 @@ import * as logs from '../src/logs.js';
 import * as android from '../src/android.js';
 import * as packaged from '../src/packaged.js';
 import * as gamedl from '../src/game.js';
+import * as saves from '../src/saves.js';
 import * as packfeed from '../src/packfeed.js';
 import { applyToOptions, setModEnabled } from '../src/liveapply.js';
 import { uninstall, planUninstall } from '../src/uninstall.js';
@@ -1785,6 +1786,126 @@ it('computes the CRC every unzipper will check', () => {
   // The check value from the zip spec's own test vector.
   eq(zip.crc32(Buffer.from('123456789')), 0xcbf43926);
   eq(zip.crc32(Buffer.alloc(0)), 0);
+});
+
+// ------- moving a save between setups
+
+describe('saves');
+
+function tmpSaveDir(name, { slots = ['slot1'], active = 'slot1', body = 'save' } = {}) {
+  const root = join(HERE, '..', name);
+  rmSync(root, { recursive: true, force: true });
+  mkdirSync(join(root, 'saves', 'red'), { recursive: true });
+  for (const s of slots) {
+    writeFileSync(join(root, 'saves', 'red', `${s}.lua`), `return { who = "${body}-${s}" }`);
+    // The engine's own crash copy sits beside every slot and is not a save.
+    writeFileSync(join(root, 'saves', 'red', `${s}.lua.bak`), 'return {}');
+  }
+  const list = slots.map((s, i) => `      [${i + 1}] = "${s}",`).join('\n');
+  writeFileSync(join(root, 'options.lua'),
+    `return {\n  saveSlots = {\n    red = {\n      active = "${active}",\n`
+    + `      list = {\n${list}\n      },\n    },\n  },\n}\n`);
+  return root;
+}
+
+it('reads both halves of a save, not just the files', () => {
+  const root = tmpSaveDir('.test-tmp-sv1');
+  const found = saves.describe(root);
+  eq(found.total, 1);
+  eq(found.versions.length, 1);
+  eq(found.versions[0].version, 'red');
+  eq(found.versions[0].active, 'slot1');
+  const s = found.versions[0].slots[0];
+  eq(s.name, 'slot1');
+  eq(s.active, true);
+  eq(s.listed, true);
+  ok(s.size > 0, 'and the file behind it');
+  rmSync(root, { recursive: true, force: true });
+});
+
+it('names the two ways a save can be half-there', () => {
+  // Both of these are what a careless copy leaves behind, and both look like
+  // "my save vanished" from inside the game.
+  const root = tmpSaveDir('.test-tmp-sv2');
+  writeFileSync(join(root, 'saves', 'red', 'slot9.lua'), 'return {}');   // on disk, unlisted
+  writeFileSync(join(root, 'options.lua'),
+    'return {\n  saveSlots = {\n    red = {\n      active = "slot1",\n'
+    + '      list = {\n        [1] = "slot1",\n        [2] = "slot7",\n      },\n    },\n  },\n}\n');
+
+  const byName = Object.fromEntries(saves.describe(root).versions[0].slots.map((s) => [s.name, s]));
+  eq(byName.slot9.orphanFile, true, 'on disk but the game will not list it');
+  eq(byName.slot7.missingFile, true, 'listed but the file is gone');
+  eq(byName.slot1.orphanFile, false);
+  rmSync(root, { recursive: true, force: true });
+});
+
+it('copies a save into a free slot and registers it, both halves', () => {
+  const from = tmpSaveDir('.test-tmp-sv-from', { body: 'mine' });
+  const to = tmpSaveDir('.test-tmp-sv-to', { body: 'theirs' });
+
+  const out = saves.transfer({ from, to, running: false });
+  eq(out.copied.length, 1);
+  eq(out.copied[0].fromSlot, 'slot1');
+  eq(out.copied[0].toSlot, 'slot2', 'beside what was there, never on top of it');
+
+  // The half that is easy to forget: the destination has to LIST it.
+  const after = saves.describe(to);
+  const names = after.versions[0].slots.map((s) => s.name);
+  eq(names, ['slot1', 'slot2']);
+  eq(after.versions[0].active, 'slot2', 'and it is the one that loads');
+  ok(after.versions[0].slots.every((s) => s.listed), 'both listed, so both are reachable in game');
+
+  // And what was already there is untouched.
+  eq(readFileSync(join(to, 'saves', 'red', 'slot1.lua'), 'utf8'), 'return { who = "theirs-slot1" }');
+  eq(readFileSync(join(to, 'saves', 'red', 'slot2.lua'), 'utf8'), 'return { who = "mine-slot1" }');
+
+  rmSync(from, { recursive: true, force: true });
+  rmSync(to, { recursive: true, force: true });
+});
+
+it('never overwrites, however many times you copy', () => {
+  const from = tmpSaveDir('.test-tmp-sv-f2', { body: 'mine' });
+  const to = tmpSaveDir('.test-tmp-sv-t2', { body: 'theirs' });
+  saves.transfer({ from, to, running: false });
+  saves.transfer({ from, to, running: false });
+  saves.transfer({ from, to, running: false });
+  eq(saves.describe(to).versions[0].slots.map((s) => s.name), ['slot1', 'slot2', 'slot3', 'slot4']);
+  eq(readFileSync(join(to, 'saves', 'red', 'slot1.lua'), 'utf8'), 'return { who = "theirs-slot1" }');
+  rmSync(from, { recursive: true, force: true });
+  rmSync(to, { recursive: true, force: true });
+});
+
+it('refuses to touch anything while the game is open', () => {
+  // LOVE rewrites options.lua wholesale on exit, so a write under a running
+  // game is lost -- and the save it was registering goes invisible with it.
+  const from = tmpSaveDir('.test-tmp-sv-f3');
+  const to = tmpSaveDir('.test-tmp-sv-t3');
+  throws(() => saves.transfer({ from, to, running: true }), 'the game is running');
+  throws(() => saves.transfer({ from, to, running: null }), 'could not tell');
+  eq(saves.describe(to).total, 1, 'and nothing was copied');
+  rmSync(from, { recursive: true, force: true });
+  rmSync(to, { recursive: true, force: true });
+});
+
+it('backs up the slot list along with the files', () => {
+  const root = tmpSaveDir('.test-tmp-sv-b', { slots: ['slot1', 'slot2'], active: 'slot2' });
+  const out = join(HERE, '..', '.test-tmp-sv-bak');
+  rmSync(out, { recursive: true, force: true });
+
+  const made = saves.backup(root, { outDir: out, stamp: '2026-08-14T10:00:00.000Z' });
+  eq(made.slots, 2);
+  const entries = zip.read(readFileSync(made.file));
+  const names = entries.map((e) => e.name).sort();
+  eq(names, ['saves.json', 'saves/red/slot1.lua', 'saves/red/slot2.lua']);
+
+  // Without this the restore puts files back that the game cannot see.
+  const meta = JSON.parse(entries.find((e) => e.name === 'saves.json').data().toString('utf8'));
+  eq(meta.saveSlots.red.active, 'slot2');
+  eq(meta.saveSlots.red.list, ['slot1', 'slot2']);
+
+  throws(() => saves.backup(join(HERE, '..', '.test-tmp-sv-none'), { outDir: out }), 'no saves');
+  rmSync(root, { recursive: true, force: true });
+  rmSync(out, { recursive: true, force: true });
 });
 
 // ------- fetching the game itself

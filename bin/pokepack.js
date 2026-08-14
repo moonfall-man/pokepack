@@ -541,6 +541,82 @@ async function cmdInstance({ positional, flags }) {
     : 'This instance has no game data, so the game will ask for your ROM the first time.');
 }
 
+async function cmdSaves({ positional, flags }) {
+  const saves = await import('../src/saves.js');
+  const cfg = await import('../src/config.js');
+  const { homeDir } = await import('../src/packaged.js');
+  const [sub, ...rest] = positional;
+
+  const show = (dir) => {
+    const found = saves.describe(resolvePath(dir));
+    if (found.versions.length === 0) return say(`${dir}: no saves`);
+    say(dir);
+    for (const v of found.versions) {
+      for (const s of v.slots) {
+        const note = s.missingFile ? '  LISTED BUT THE FILE IS GONE'
+          : s.orphanFile ? '  on disk but not listed, so the game will not show it' : '';
+        say(`  ${v.version}/${s.name}${s.active ? ' *' : '  '}  ${String(s.size).padStart(6)} bytes`
+          + `  ${s.modified ? s.modified.toISOString().slice(0, 16) : '-'}${note}`);
+      }
+    }
+    say('  (* is the one the game loads)');
+  };
+
+  // `saves <dir>` and `saves list <dir>` both read naturally, and only two
+  // words are reserved, so anything else is a path rather than a typo.
+  if (!sub || sub === 'list' || !['backup', 'copy'].includes(sub)) {
+    const dirs = sub && sub !== 'list' ? [sub, ...rest] : rest;
+    if (dirs.length) return dirs.forEach(show);
+    const { findSaveDirs } = await import('../src/discover.js');
+    for (const i of findSaveDirs()) {
+      if (saves.describe(i.path).total > 0) show(i.path);
+    }
+    return;
+  }
+
+  if (sub === 'backup') {
+    const dir = rest[0] ?? die('usage: pokepack saves backup <saveDir> [--out DIR]');
+    const out = saves.backup(resolvePath(dir), {
+      outDir: resolvePath(flags.out ?? join(homeDir(), 'save-backups')),
+    });
+    say(`wrote ${out.file}`);
+    say(`  ${out.slots} save(s), ${(out.bytes / 1024).toFixed(1)} KB, with the slot list beside them`);
+    return;
+  }
+
+  if (sub === 'copy') {
+    const from = rest[0];
+    const to = rest[1];
+    if (!from || !to) die('usage: pokepack saves copy <fromSaveDir> <toSaveDir> [--version red] [--slot slot1]');
+
+    // The destination's saves are somebody's hours. Back them up before adding
+    // to them, even though nothing here overwrites -- the cost is a few KB and
+    // the alternative is finding out the hard way.
+    const dest = resolvePath(to);
+    if (saves.describe(dest).total > 0) {
+      const b = saves.backup(dest, { outDir: resolvePath(flags.out ?? join(homeDir(), 'save-backups')) });
+      say(`backed the destination up first: ${b.file}`);
+    }
+
+    const out = saves.transfer({
+      from: resolvePath(from),
+      to: dest,
+      version: flags.version ?? null,
+      slot: flags.slot ?? null,
+      makeActive: !flags['keep-active'],
+      exePath: cfg.read().gamePath ?? null,
+    });
+    for (const c of out.copied) {
+      say(`${c.version}: ${c.fromSlot} -> ${c.toSlot}  (${c.bytes} bytes)${c.active ? ', now the one that loads' : ''}`);
+      if (c.keptAlongside.length) say(`  kept alongside ${c.keptAlongside.join(', ')}`);
+    }
+    say(`updated ${out.options}`);
+    return;
+  }
+
+  die(`unknown: pokepack saves ${sub}. try: list, backup, copy`);
+}
+
 async function cmdGame({ flags }) {
   const game = await import('../src/game.js');
   const cfg = await import('../src/config.js');
@@ -629,6 +705,8 @@ function cmdHelp() {
   instance <name>      make an isolated copy of the game  --pack P --exe PATH
                        --seed-from ID  copy game data from that instance
                        --no-seed       start with no game data
+  saves list|backup|copy   move a save to another setup, or keep a copy of it
+                       copy <from> <to> --version red --slot slot1 --keep-active
   game                 download gen1recomp itself, verified against its checksum
                        --dir DIR       --force  replace what is configured
   android <saveDir>    zip a setup's mods and settings for an Android handheld
@@ -648,7 +726,7 @@ const args = parseArgs(rest);
 const commands = {
   build: cmdBuild, resolve: cmdResolve, fetch: cmdFetch, install: cmdInstall,
   validate: cmdValidate, inspect: cmdInspect, hash: cmdHash, feed: cmdFeed, ui: cmdUi,
-  instance: cmdInstance, gallery: cmdGallery, android: cmdAndroid, game: cmdGame,
+  instance: cmdInstance, gallery: cmdGallery, android: cmdAndroid, game: cmdGame, saves: cmdSaves,
 };
 
 // Wrapped in a function rather than run at the top level, because a top-level

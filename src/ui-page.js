@@ -400,6 +400,7 @@ function renderPackActions() {
         + '<button class="quiet" data-publish="' + esc(inst.identity) + '">Publish</button>'
         + '<button class="quiet" data-android="' + esc(inst.identity) + '">To Android</button>'
       : '')
+    + '<button class="quiet" data-saves="' + esc(inst.identity) + '">Saves\\u2026</button>'
     + (inst.isDefault ? ''
       : '<button class="quiet danger" data-del-inst="' + esc(inst.identity) + '">Delete</button>');
 }
@@ -718,6 +719,69 @@ function exportInstance(identity) {
         + '<div class="bar" style="margin:0"><button class="sm" data-share="' + esc(data.id) + '">'
         + 'Share this pack\\u2026</button><span class="why">send it to the gallery for review</span></div>';
       b.textContent = 'Exported';
+      load();
+    },
+  });
+}
+
+// Saves.  A new pack means a new setup, which means a fresh game -- fine when
+// you wanted a fresh game, and the reason people stop trying packs when they
+// did not.  Bringing the save across is the whole feature; the rest of this
+// dialog exists to make it obvious that nothing gets overwritten doing it.
+async function manageSaves(identity) {
+  let data;
+  try {
+    data = await (await fetch(api('saves'))).json();
+  } catch (e) {
+    return toast('could not read the saves: ' + e.message, true);
+  }
+  if (data.error) return toast(data.error, true);
+  const setups = data.setups ?? [];
+  const mine = setups.find(s => s.identity === identity);
+  const others = setups.filter(s => s.identity !== identity);
+
+  const listOf = (s) => (s.versions ?? []).flatMap(v => v.slots.map(sl =>
+    v.version + '/' + sl.name + (sl.active ? ' \\u2605' : '')
+    + (sl.missingFile ? ' (file missing)' : sl.orphanFile ? ' (not listed in game)' : ''))).join(', ');
+
+  dialog({
+    title: 'Saves \\u2014 "' + identity + '"',
+    sub: mine ? listOf(mine) : 'This setup has no saves yet.',
+    body: (others.length
+      ? '<div><div class="why" style="margin-bottom:5px">Bring a save here from another setup</div>'
+        + '<select id="sv-from">' + others.map(s =>
+          '<option value="' + esc(s.identity) + '">' + esc(s.identity) + ' \\u2014 ' + esc(listOf(s)) + '</option>').join('')
+        + '</select>'
+        + '<div class="why" style="margin-top:6px">It arrives in a new slot and becomes the one that '
+        + 'loads. Nothing here is replaced \\u2014 whatever this setup already had stays, and a backup '
+        + 'is written first.</div></div>'
+      : '<div class="why">No other setup has a save to bring across yet.</div>')
+      + '<div id="sv-out"></div>',
+    go: others.length ? 'Bring it across' : null,
+    alt: mine ? { label: 'Back these up', onClick: async () => {
+      const r = await post('saves/backup', { identity });
+      const out = document.getElementById('sv-out');
+      out.innerHTML = r.ok
+        ? '<pre class="log">wrote ' + esc(r.data.file) + '\\n' + r.data.slots + ' save(s)</pre>'
+        : '<pre class="log">' + esc(r.data.error) + '</pre>';
+    } } : null,
+    onGo: async () => {
+      const b = document.getElementById('d-go');
+      b.disabled = true; b.textContent = 'Copying\\u2026';
+      const { ok: k, data: d } = await post('saves/transfer', { from: val('sv-from'), to: identity });
+      const out = document.getElementById('sv-out');
+      if (!k) {
+        out.innerHTML = '<pre class="log">' + esc(d.error)
+          + (d.backedUp ? '\\n\\nnothing was changed; the backup taken first is at\\n' + esc(d.backedUp) : '') + '</pre>';
+        b.disabled = false; b.textContent = 'Bring it across';
+        return;
+      }
+      out.innerHTML = '<pre class="log">'
+        + d.copied.map(c => c.version + ': ' + c.fromSlot + ' \\u2192 ' + c.toSlot
+          + (c.active ? ', now the one that loads' : '')
+          + (c.keptAlongside.length ? '\\nkept alongside ' + esc(c.keptAlongside.join(', ')) : '')).join('\\n')
+        + (d.backedUp ? '\\n\\nbacked up first: ' + esc(d.backedUp) : '') + '</pre>';
+      b.textContent = 'Done';
       load();
     },
   });
@@ -1187,6 +1251,8 @@ document.getElementById('pack-acts').addEventListener('click', (e) => {
   if (exp) return exportInstance(exp.dataset.exportInst);
   const dro = e.target.closest('[data-android]');
   if (dro) return sendToAndroid(dro.dataset.android);
+  const sv = e.target.closest('[data-saves]');
+  if (sv) return manageSaves(sv.dataset.saves);
 });
 
 document.getElementById('rail').addEventListener('click', async (e) => {

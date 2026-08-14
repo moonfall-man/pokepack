@@ -454,6 +454,30 @@ and which the device imports for itself. Not your save files, which would
 overwrite the ones already on it. This is an allowlist rather than a skip-list
 so that a folder the engine grows later cannot join by default.
 
+## Saves
+
+A new pack means a new setup, which means a fresh game. That is right when you
+wanted one and wrong when you did not, so a save can move:
+
+```bash
+node bin/pokepack.js saves copy <fromSetup> <toSetup>
+```
+
+or **Saves…** in the top bar. It arrives in a free slot and becomes the one that
+loads; whatever the destination already had is still there, still listed, still
+loadable. The destination is backed up first regardless.
+
+**A save is two things**, and that is the part that catches you out. The data
+lives in `saves/<version>/<slot>.lua`, and the list of which slots exist lives
+in `options.lua` under `saveSlots`. Copy only the folder and the file is there
+while the game never mentions it, because nothing lists it. Both halves travel
+together or the transfer is a silent no-op.
+
+`saves backup` writes every slot to a zip with that list beside it, which is
+what makes it restorable rather than a pile of files. Same rules as the rest of
+this file: the game must be closed, `options.lua` is merged and never
+templated, and the previous copy is kept under our own name.
+
 ## Known limits
 
 - **Installed mods are extracted folders**, so the hash of the zip they came
@@ -505,7 +529,7 @@ rather than a broken boot.
 node test/run.js
 ```
 
-162 tests, no network, no dependencies. `fixtures/index.json` is a real published
+168 tests, no network, no dependencies. `fixtures/index.json` is a real published
 feed; `fixtures/save/` is a save directory shaped like a real one.
 
 ### Building the single file

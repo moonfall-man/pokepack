@@ -20,6 +20,11 @@ downloads/
 # unpacked. It is a transfer, not a release.
 android/
 
+# Save backups. Somebody's actual game, and the one thing in here that exists
+# in no other copy -- which is exactly why it must never be swept into a commit
+# by a careless `git add -A`.
+save-backups/
+
 # Deleted packs. The tool never erases anything -- it moves it here -- but a
 # thing you deleted is the last thing that should come back in a commit.
 .trash/
