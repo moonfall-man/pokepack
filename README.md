@@ -454,6 +454,32 @@ and which the device imports for itself. Not your save files, which would
 overwrite the ones already on it. This is an allowlist rather than a skip-list
 so that a folder the engine grows later cannot join by default.
 
+## Mod settings
+
+A mod's own settings live in `options.modOptions`, and the game's own MODS menu
+used to be the only thing that could reach them. That is how a
+`COUCH_MULTIPLAYER players = 2` can sit quietly splitting a controller across
+two windows while every other check comes back clean.
+
+```bash
+node bin/pokepack.js option <saveDir>                              # everything
+node bin/pokepack.js option <saveDir> COUCH_MULTIPLAYER players 1
+```
+
+or **Settings…** on any installed mod's card.
+
+Two halves, kept apart because they are not equally trustworthy. What is **set**
+is read straight out of `options.lua` and is exact. What is **declared** is
+scraped from the mod's own Lua, where `key`/`label`/`type` are string literals
+even when the defaults are expressions — so a mod that builds its schema behind
+a conditional is under-reported, and saying so beats a list that quietly claims
+to be complete. A stored value the source never declared still shows: a schema
+we could not parse is our problem, not the player's.
+
+A value keeps the type it already had. `players` is stored as the string `"2"`,
+not the number `2`, and writing the wrong one is how a setting silently stops
+being read.
+
 ## Saves
 
 A new pack means a new setup, which means a fresh game. That is right when you
@@ -542,7 +568,7 @@ rather than a broken boot.
 node test/run.js
 ```
 
-173 tests, no network, no dependencies. `fixtures/index.json` is a real published
+177 tests, no network, no dependencies. `fixtures/index.json` is a real published
 feed; `fixtures/save/` is a save directory shaped like a real one.
 
 ### Building the single file

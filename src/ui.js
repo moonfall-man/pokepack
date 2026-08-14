@@ -873,6 +873,37 @@ export function serve({ packsDir, saveDir, indexFile, port = 7666, host = '127.0
       });
     }
 
+    // ------- a mod's own settings, which until now only the game could reach
+    if (url.pathname === '/api/mod/options') {
+      const modopts = await import('./modoptions.js');
+      const act = url.searchParams.get('identity')
+        ? findSaveDirs().find((i) => i.identity === url.searchParams.get('identity'))
+        : activeInstance();
+      if (!act) return json(res, 400, { error: 'no active instance' });
+      return json(res, 200, { identity: act.identity, mods: modopts.describe(act.path) });
+    }
+
+    if (url.pathname === '/api/mod/options' && req.method === 'POST') {
+      return json(res, 405, { error: 'use /api/mod/option' });
+    }
+
+    if (url.pathname === '/api/mod/option' && req.method === 'POST') {
+      const opts = await readBody(req);
+      if (!opts) return json(res, 400, { error: 'bad request body' });
+      const modopts = await import('./modoptions.js');
+      const act = opts.identity
+        ? findSaveDirs().find((i) => i.identity === opts.identity)
+        : activeInstance();
+      if (!act) return json(res, 400, { error: 'no active instance' });
+      try {
+        return json(res, 200, modopts.set(act.path, opts.id, opts.key, opts.value, {
+          exePath: config.read().gamePath ?? null,
+        }));
+      } catch (e) {
+        return json(res, 400, { error: e.message });
+      }
+    }
+
     // ------- saves: the one thing here nobody can re-download
     if (url.pathname === '/api/saves') {
       const saves = await import('./saves.js');

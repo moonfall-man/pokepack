@@ -522,6 +522,12 @@ async function loadMods(force) {
           : '')
       + (behind && m.installable
           ? '<button class="sm" data-mod="' + esc(m.id) + '" data-do="update">Update</button>' : '')
+      // A mod's own settings used to be reachable only from inside the game,
+      // which is how "players = 2" sat there splitting a controller for days
+      // while every other check came back clean.
+      + (m.installedVersion
+          ? '<button class="sm quiet" data-mod="' + esc(m.id) + '" data-do="settings">Settings\\u2026</button>'
+          : '')
       + (m.installedVersion
           ? '<button class="sm quiet danger" data-mod="' + esc(m.id) + '" data-do="remove">Remove</button>'
           : m.installable
@@ -1349,6 +1355,72 @@ document.getElementById('d-body').addEventListener('click', (e) => {
   if (share) return sharePack(share.dataset.share);
 });
 
+// One mod's own settings.  These live in options.modOptions and the game's own
+// MODS menu was the only thing that could reach them, which meant a wrong value
+// was invisible from here -- the failure mode being a setting nobody remembers
+// changing quietly breaking something unrelated weeks later.
+//
+// Declared-but-unset rows are shown greyed rather than hidden: "this mod has a
+// PLAYERS setting and it has never been written" is the useful sentence, and a
+// list of only what happens to be set cannot say it.
+async function modSettings(id) {
+  let data;
+  try {
+    data = await (await fetch(api('mod/options'))).json();
+  } catch (e) {
+    return toast('could not read the settings: ' + e.message, true);
+  }
+  if (data.error) return toast(data.error, true);
+  const mod = (data.mods ?? []).find(m => m.id === id);
+  if (!mod || !mod.options.length) {
+    return dialog({
+      title: id, sub: 'No settings found.',
+      body: '<div class="why">Nothing is stored for this mod, and nothing could be read out of its '
+        + 'source. Some mods build their settings list at runtime, which cannot be seen from here \\u2014 '
+        + 'those still show up once the game has written a value.</div>',
+      go: null,
+    });
+  }
+
+  dialog({
+    title: id + ' \\u2014 settings',
+    sub: 'Written straight into options.lua. The game must be closed.',
+    body: '<div class="sv-list" style="max-height:260px">'
+      + mod.options.map(o =>
+        '<label class="sv-row" style="cursor:default">'
+        + '<span class="sv-name" style="min-width:150px">' + esc(o.label)
+        + (o.label !== o.key ? '<span class="why" style="margin-left:6px">' + esc(o.key) + '</span>' : '')
+        + '</span>'
+        + '<input data-opt="' + esc(o.key) + '" value="' + esc(o.set ? String(o.value) : '') + '"'
+        + ' placeholder="' + (o.set ? '' : 'not set') + '" style="flex:1;min-width:80px">'
+        + (o.type ? '<span class="why">' + esc(o.type) + '</span>' : '')
+        + '</label>').join('')
+      + '</div>'
+      + '<div class="why" style="margin-top:8px">A value keeps the type it already had, so a setting '
+      + 'stored as text stays text. Blank rows are settings the mod declares but has never written.</div>'
+      + '<div id="mo-out"></div>',
+    go: 'Save changes',
+    onGo: async () => {
+      const b = document.getElementById('d-go');
+      b.disabled = true; b.textContent = 'Saving\\u2026';
+      const out = document.getElementById('mo-out');
+      const lines = [];
+      for (const o of mod.options) {
+        const el = document.querySelector('[data-opt="' + CSS.escape(o.key) + '"]');
+        const typed = el.value.trim();
+        if (typed === '' || (o.set && typed === String(o.value))) continue;
+        const r = await post('mod/option', { id, key: o.key, value: typed });
+        lines.push(r.ok
+          ? o.key + ': ' + JSON.stringify(r.data.from) + ' \\u2192 ' + JSON.stringify(r.data.to)
+          : o.key + ': ' + r.data.error);
+      }
+      out.innerHTML = '<pre class="log">' + esc(lines.length ? lines.join('\\n') : 'nothing changed') + '</pre>';
+      b.disabled = false; b.textContent = 'Save changes';
+      load();
+    },
+  });
+}
+
 // ------- mod actions
 
 document.getElementById('mods-rows').addEventListener('click', async (e) => {
@@ -1356,6 +1428,7 @@ document.getElementById('mods-rows').addEventListener('click', async (e) => {
   if (!btn) return;
   const id = btn.dataset.mod;
   const doing = btn.dataset.do;
+  if (doing === 'settings') return modSettings(id);
   const was = btn.textContent;
   btn.disabled = true;
   btn.textContent = doing === 'remove' ? 'Removing\\u2026'

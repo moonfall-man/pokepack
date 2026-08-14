@@ -541,6 +541,46 @@ async function cmdInstance({ positional, flags }) {
     : 'This instance has no game data, so the game will ask for your ROM the first time.');
 }
 
+async function cmdOption({ positional, flags }) {
+  const mo = await import('../src/modoptions.js');
+  const cfg = await import('../src/config.js');
+  const [dir, modId, key, ...rest] = positional;
+  if (!dir) die('usage: pokepack option <saveDir> [MOD_ID [key [value]]]');
+  const saveDir = resolvePath(dir);
+
+  // No mod named: everything, so a wrong value has somewhere to be noticed.
+  if (!modId) {
+    const all = mo.describe(saveDir);
+    if (all.length === 0) return say(`${dir}: no mod settings`);
+    for (const m of all) {
+      say(m.id);
+      for (const o of m.options) {
+        say(`  ${o.key.padEnd(24)}${(o.set ? JSON.stringify(o.value) : '(unset)').padEnd(16)}`
+          + `${o.label !== o.key ? o.label : ''}${o.type ? `  [${o.type}]` : ''}`);
+      }
+    }
+    say('');
+    say('unset rows are settings the mod declares but has never written.');
+    return;
+  }
+
+  const value = rest.length ? rest.join(' ') : flags.value;
+  if (key === undefined || value === undefined) {
+    const m = mo.describe(saveDir).find((x) => x.id === modId);
+    if (!m) die(`no settings found for ${modId} in ${dir}`);
+    for (const o of m.options) {
+      if (key !== undefined && o.key !== key) continue;
+      say(`${o.key.padEnd(24)}${(o.set ? JSON.stringify(o.value) : '(unset)').padEnd(16)}`
+        + `${o.label !== o.key ? o.label : ''}${o.type ? `  [${o.type}]` : ''}`);
+    }
+    return;
+  }
+
+  const out = mo.set(saveDir, modId, key, value, { exePath: cfg.read().gamePath ?? null });
+  say(`${out.modId}.${out.key}: ${JSON.stringify(out.from)} -> ${JSON.stringify(out.to)}`);
+  say(`updated ${out.path}`);
+}
+
 async function cmdSaves({ positional, flags }) {
   const saves = await import('../src/saves.js');
   const cfg = await import('../src/config.js');
@@ -746,6 +786,8 @@ function cmdHelp() {
   instance <name>      make an isolated copy of the game  --pack P --exe PATH
                        --seed-from ID  copy game data from that instance
                        --no-seed       start with no game data
+  option <saveDir>     show every mod setting, or change one
+                       <MOD> <key> <value>   e.g. COUCH_MULTIPLAYER players 1
   saves ...            move a save to another setup, or keep a copy of it
                        list | backup | backups | restore <zip> <to> | copy <from> <to>
                        copy <from> <to> --version red --slot slot1 --keep-active
@@ -768,7 +810,7 @@ const args = parseArgs(rest);
 const commands = {
   build: cmdBuild, resolve: cmdResolve, fetch: cmdFetch, install: cmdInstall,
   validate: cmdValidate, inspect: cmdInspect, hash: cmdHash, feed: cmdFeed, ui: cmdUi,
-  instance: cmdInstance, gallery: cmdGallery, android: cmdAndroid, game: cmdGame, saves: cmdSaves,
+  instance: cmdInstance, gallery: cmdGallery, android: cmdAndroid, game: cmdGame, saves: cmdSaves, option: cmdOption,
 };
 
 // Wrapped in a function rather than run at the top level, because a top-level
