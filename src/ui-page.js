@@ -122,6 +122,17 @@ button:disabled { opacity:.4; cursor:not-allowed; }
 .pack-acts { display:flex; gap:4px; align-items:center;
   padding-left:12px; margin-left:4px; border-left:1px solid var(--line); }
 .pack-acts button { padding:5px 10px; font-size:12.5px; }
+
+/* Save sources: every one visible at once, because a collapsed control here
+   reads as "there is only one". Scrolls rather than growing the dialog. */
+.sv-list { display:flex; flex-direction:column; gap:2px; max-height:190px; overflow-y:auto;
+  border:1px solid var(--line); border-radius:6px; padding:4px; }
+.sv-row { display:flex; align-items:center; gap:8px; padding:6px 8px; border-radius:4px;
+  cursor:pointer; }
+.sv-row:hover { background:var(--panel); }
+.sv-row input { width:auto; flex:none; margin:0; }
+.sv-name { font-weight:600; font-size:13px; }
+.sv-row .why { margin:0; margin-left:auto; text-align:right; }
 @media (max-width:700px) { .pack-acts { display:none; } }
 
 /* ---- main */
@@ -747,15 +758,23 @@ async function manageSaves(identity) {
   dialog({
     title: 'Saves \\u2014 "' + identity + '"',
     sub: mine ? listOf(mine) : 'This setup has no saves yet.',
+    // A <select> was here and it lied: collapsed, it shows one row, so three
+    // setups with saves read as "it only found one". Every choice stays on
+    // screen now, and the count says so out loud.
     body: (others.length
-      ? '<div><div class="why" style="margin-bottom:5px">Bring a save here from another setup</div>'
-        + '<select id="sv-from">' + others.map(s =>
-          '<option value="' + esc(s.identity) + '">' + esc(s.identity) + ' \\u2014 ' + esc(listOf(s)) + '</option>').join('')
-        + '</select>'
-        + '<div class="why" style="margin-top:6px">It arrives in a new slot and becomes the one that '
+      ? '<div><div class="why" style="margin-bottom:6px">Bring a save here from another setup '
+        + '\\u2014 <b>' + others.length + '</b> ' + (others.length === 1 ? 'has' : 'have') + ' one</div>'
+        + '<div class="sv-list">' + others.map((s, i) =>
+          '<label class="sv-row"><input type="radio" name="sv-from" value="' + esc(s.identity) + '"'
+          + (i === 0 ? ' checked' : '') + '>'
+          + '<span class="sv-name">' + esc(s.identity) + '</span>'
+          + '<span class="why">' + esc(listOf(s)) + '</span></label>').join('')
+        + '</div>'
+        + '<div class="why" style="margin-top:8px">It arrives in a new slot and becomes the one that '
         + 'loads. Nothing here is replaced \\u2014 whatever this setup already had stays, and a backup '
         + 'is written first.</div></div>'
-      : '<div class="why">No other setup has a save to bring across yet.</div>')
+      : '<div class="why">No other setup has a save to bring across yet. This list skips '
+        + 'the one you are on, so a setup only appears here when it has a save and is not this one.</div>')
       + '<div id="sv-out"></div>',
     go: others.length ? 'Bring it across' : null,
     alt: mine ? { label: 'Back these up', onClick: async () => {
@@ -768,7 +787,9 @@ async function manageSaves(identity) {
     onGo: async () => {
       const b = document.getElementById('d-go');
       b.disabled = true; b.textContent = 'Copying\\u2026';
-      const { ok: k, data: d } = await post('saves/transfer', { from: val('sv-from'), to: identity });
+      const picked = document.querySelector('input[name="sv-from"]:checked');
+      if (!picked) { b.disabled = false; b.textContent = 'Bring it across'; return; }
+      const { ok: k, data: d } = await post('saves/transfer', { from: picked.value, to: identity });
       const out = document.getElementById('sv-out');
       if (!k) {
         out.innerHTML = '<pre class="log">' + esc(d.error)
