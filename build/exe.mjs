@@ -143,7 +143,15 @@ if (MAC) {
   } catch { /* an unsigned copy is fine to inject into */ }
 }
 
-runTool('postject', [out, 'NODE_SEA_BLOB', blob, '--sentinel-fuse', FUSE], { stdio: 'ignore' });
+// --macho-segment-name is required on macOS and meaningless elsewhere. Without
+// it the blob is written into a segment Node never looks in, and the result is
+// not a binary that ignores its payload -- it is one the loader rejects
+// outright, which looks from out here like `--version` failing with no output.
+runTool('postject', [
+  out, 'NODE_SEA_BLOB', blob,
+  '--sentinel-fuse', FUSE,
+  ...(MAC ? ['--macho-segment-name', 'NODE_SEA'] : []),
+], { stdio: 'ignore' });
 
 if (MAC) {
   // "-" is the ad-hoc identity: no certificate, no authority, just a signature
