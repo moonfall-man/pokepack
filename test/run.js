@@ -736,6 +736,16 @@ it('writes a launcher that boots straight into the game', () => {
   rmSync(root, { recursive: true, force: true });
 });
 
+it('does not touch the foreground unless asked', () => {
+  // raiseWindow borrows another window's input queue through AttachThreadInput,
+  // which Microsoft warns can wedge input, and it has never been shown to work.
+  // Default off, so a launch cannot be blamed for it.
+  throws(() => launchGame({ exePath: 'C:\\nope\\missing.exe', identity: 'x' }), 'does not exist');
+  const call = launchGame.toString();
+  ok(call.includes('raise = false'), 'the parameter defaults to off');
+  ok(call.includes('raise ? raiseWindow'), 'and nothing runs unless it is on');
+});
+
 it('spots which instances have unpacked ROM data', () => {
   const root = join(HERE, '..', '.test-tmp-rom');
   rmSync(root, { recursive: true, force: true });

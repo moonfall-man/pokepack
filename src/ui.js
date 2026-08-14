@@ -1112,6 +1112,10 @@ export function serve({ packsDir, saveDir, indexFile, port = 7666, host = '127.0
         // saveDir is what turns stdout into a file you can read afterwards.
         const out = launchGame({
           exePath, identity: act.identity, version, saveDir: act.path,
+          // Opt-in: see the note on raiseWindow. The window opens behind the
+          // browser without it, which is a smaller annoyance than an
+          // unverified input-queue trick running on every launch.
+          raise: config.read().raiseWindow === true,
         });
         return json(res, 200, {
           ...out,
