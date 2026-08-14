@@ -40,11 +40,17 @@ function run(cmd, args, opts = {}) {
   return execFileSync(cmd, args, { cwd: ROOT, encoding: 'utf8', windowsHide: true, ...opts });
 }
 
-// The package's own entry script, not the node_modules/.bin shim.  On Windows
-// that shim is a .cmd, and Node has refused to execFile a .cmd since the
-// argument-injection fix in 20.x -- it comes back EINVAL.  Every one of these
-// is a plain JS file, so running it under the Node we are already in sidesteps
-// the whole question and works the same on every platform.
+// postject's bin is a plain .js file on every platform, so running it under the
+// Node we are already in is portable.  Deliberately not the node_modules/.bin
+// shim: on Windows that is a .cmd, and Node has refused to execFile a .cmd
+// since the argument-injection fix in 20.x -- it comes back EINVAL.
+//
+// esbuild does NOT get the same treatment, and the difference cost a release.
+// Its bin/esbuild is a JS shim on Windows and the native executable itself on
+// Linux and macOS, so `node bin/esbuild` works on one platform and dies with
+// "SyntaxError: Invalid or unexpected token" on the other two, having tried to
+// parse an ELF header as JavaScript.  Its JS API has no such seam, so the
+// bundle step calls that instead of spawning anything.
 function tool(name) {
   const pkg = join(ROOT, 'node_modules', name, 'package.json');
   if (!existsSync(pkg)) {
@@ -58,6 +64,14 @@ function runTool(name, args, opts = {}) {
   return run(process.execPath, [tool(name), ...args], opts);
 }
 
+async function loadEsbuild() {
+  try {
+    return await import('esbuild');
+  } catch {
+    throw new Error('esbuild is not installed -- run "npm install" first (it is a build-only dependency)');
+  }
+}
+
 const mb = (n) => `${(n / 1048576).toFixed(1)} MB`;
 const say = (s) => process.stdout.write(`${s}\n`);
 
@@ -67,20 +81,23 @@ mkdirSync(DIST, { recursive: true });
 // ------- 1. one CommonJS file
 
 const bundle = join(DIST, 'pokepack.bundle.cjs');
-runTool('esbuild', [
-  join(ROOT, 'bin', 'pokepack.js'),
-  '--bundle',
-  '--platform=node',
-  '--format=cjs',
-  `--target=node${process.versions.node.split('.')[0]}`,
-  `--outfile=${bundle}`,
-  // What tells the running program it is the exe rather than a checkout.
-  '--define:globalThis.__POKEPACK_EXE__=true',
-  `--define:globalThis.__POKEPACK_VERSION__=${JSON.stringify(version)}`,
+const esbuild = await loadEsbuild();
+esbuild.buildSync({
+  entryPoints: [join(ROOT, 'bin', 'pokepack.js')],
+  bundle: true,
+  platform: 'node',
+  format: 'cjs',
+  target: `node${process.versions.node.split('.')[0]}`,
+  outfile: bundle,
+  define: {
+    // What tells the running program it is the exe rather than a checkout.
+    'globalThis.__POKEPACK_EXE__': 'true',
+    'globalThis.__POKEPACK_VERSION__': JSON.stringify(version),
+  },
   // src/update.js still reads import.meta.url on the checkout path, which the
   // packaged build never reaches -- see repoRoot().
-  '--log-override:empty-import-meta=silent',
-]);
+  logOverride: { 'empty-import-meta': 'silent' },
+});
 say(`bundled  ${mb(statSync(bundle).size)}`);
 
 // ------- 2. blob
