@@ -216,6 +216,19 @@ function cmdShow(pos) {
   console.log(JSON.stringify(ticketOrDie(b, pos[0]), null, 2));
 }
 
+function cmdResprint(pos, flags) {
+  const [id, sprint] = pos;
+  if (!id || !sprint) die('usage: resprint <ID> <sprintNumber> [--by X]');
+  withLock((b) => {
+    const t = ticketOrDie(b, id);
+    t.sprint = Number(sprint);
+    if (t.status === 'backlog') t.status = 'todo';
+    t.comments.push({ at: nowIso(), by: flags.by || 'board', text: `carried into sprint ${Number(sprint)}` });
+    t.updated = nowIso();
+  });
+  console.log(`${id.toUpperCase()} -> sprint ${sprint}`);
+}
+
 function cmdSprintStart(pos) {
   const key = (pos[0] || '').toUpperCase();
   const goal = pos[1];
@@ -539,6 +552,7 @@ usage: node board.mjs <command>
   assign <ID> <name>
   list [KEY] [--json]
   show <ID>
+  resprint <ID> <sprintNumber> [--by X]   carry an existing ticket into a sprint
   sprint-start <KEY> "<goal>"
   sprint-close <KEY>
   serve [--port ${DEFAULT_PORT}]
@@ -555,6 +569,7 @@ switch (cmd) {
   case 'assign': cmdAssign(pos); break;
   case 'list': cmdList(pos, flags); break;
   case 'show': cmdShow(pos); break;
+  case 'resprint': cmdResprint(pos, flags); break;
   case 'sprint-start': cmdSprintStart(pos); break;
   case 'sprint-close': cmdSprintClose(pos); break;
   case 'serve': cmdServe(flags); break;

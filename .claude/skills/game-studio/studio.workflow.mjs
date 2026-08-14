@@ -127,6 +127,7 @@ const PLAN_SCHEMA = {
           type: { type: 'string', description: 'story or task' },
           points: { type: 'number' },
           acceptance: { type: 'array', items: { type: 'string' } },
+          carryOf: { type: 'string', description: 'existing open ticket ID this sprint carries (reuse it; do not cut a duplicate)' },
         },
       },
     },
@@ -143,11 +144,23 @@ const SEED_SCHEMA = {
 }
 
 const DEV_SCHEMA = {
-  type: 'object', required: ['id', 'branch', 'commit', 'summary'],
+  type: 'object', required: ['id', 'summary'],
   properties: {
     id: { type: 'string' }, branch: { type: 'string' },
     commit: { type: 'string', description: 'short hash' },
     summary: { type: 'string' }, howToTest: { type: 'string' },
+    blocked: { type: 'boolean', description: 'true ONLY if a process gate prevented starting' },
+    blockReason: { type: 'string' },
+  },
+}
+
+// Mid-sprint chair: sprint WILD#2 deadlocked because a dev correctly refused to
+// self-waive a process gate and there was no producer between planning and retro.
+const RULING_SCHEMA = {
+  type: 'object', required: ['ruling', 'unblocks'],
+  properties: {
+    ruling: { type: 'string', description: 'the binding chair ruling, 1-4 sentences' },
+    unblocks: { type: 'boolean' },
   },
 }
 
@@ -243,6 +256,7 @@ ${JSON.stringify(takes, null, 1)}
 Reconcile into the sprint plan:
 - sprintGoal: one sentence.
 - tickets: at most ${MAX}, ordered so each builds on the previous (they are implemented sequentially, merged one by one). Each: title, desc (1-3 concrete sentences), type (story|task), points (reconcile the room's estimates planning-poker style; record disagreements in the minutes), acceptance (2-4 criteria QA can verify by playing).
+- Carry-overs: if the board already holds an open ticket for a piece of this scope (check ${BOARD.replace(/`/g, '')} list ${KEY} --json for todo/in-progress/qa tickets), set carryOf to that existing ID on the matching plan ticket instead of drafting a duplicate — the scribe re-sprints it.
 - minutesMd: full markdown minutes — date ${A.date}, attendees, each person's take (quote or tight paraphrase, in their voice), the pointing discussion, decisions, risks, and the final ticket table.
 Do NOT touch the board or write files; the scribe handles that.`,
   tier(cast.producer, { label: 'producer:synthesis', schema: PLAN_SCHEMA }),
@@ -257,9 +271,10 @@ Execute these steps exactly, in order, using Bash and Write.
 1. Run: ${BOARD} init ${KEY} "${A.projectName}"
 2. Run: ${BOARD} sprint-start ${KEY} "<sprint goal below, quotes escaped>"  — note the sprint number it prints.
 3. Write the minutes (verbatim, given below) to ${ROOT}/studio/meetings/${A.date}-${KEY.toLowerCase()}-sprint-planning-s<sprintNumber>.md using that number.
-4. For each ticket below IN ORDER run:
-   ${BOARD} add ${KEY} "<title>" --type <type or story> --points <points> --sprint <sprintNumber> --assignee "${cast.dev.name}" --desc "<desc>" --acceptance "<acceptance criteria joined with ;>" --by "${cast.scribe.firstName}"
-   Capture each printed id (format: "created ${KEY}-N") in order.
+4. For each ticket below IN ORDER:
+   - If it has carryOf: run ${BOARD} resprint <carryOf ID> <sprintNumber> --by "${cast.scribe.firstName}" and capture that existing ID.
+   - Otherwise: run ${BOARD} add ${KEY} "<title>" --type <type or story> --points <points> --sprint <sprintNumber> --assignee "${cast.dev.name}" --desc "<desc>" --acceptance "<acceptance criteria joined with ;>" --by "${cast.scribe.firstName}" and capture the printed id (format: "created ${KEY}-N").
+   Keep the captured IDs in ticket order.
 Escape double quotes inside shell arguments. Return sprintNumber and ticketIds in ticket order (plus problems if any command failed).
 
 Sprint goal: ${plan.sprintGoal}
@@ -284,8 +299,7 @@ for (let i = 0; i < count; i++) {
   const id = seed.ticketIds[i]
   const t = plan.tickets[i]
 
-  const dev = await ragent(
-    `${persona.dev(cast.dev)}
+  const devPrompt = (rulingText) => `${persona.dev(cast.dev)}
 
 You are shipping ticket ${id} — "${t.title}" — for ${A.projectName}, sprint ${seed.sprintNumber}.
 Project repo: ${PROJ}
@@ -302,10 +316,33 @@ Follow this exact flow:
 6. ${BOARD} comment ${id} "<short hash> - <one line how to test>" --by "${cast.dev.firstName}", then ${BOARD} move ${id} in-review --by "${cast.dev.firstName}"
 Context — already merged this sprint: ${shipped.map((s) => `${s.id} (${s.summary})`).join('; ') || 'nothing yet this sprint; build on whatever main already contains'}.
 Do not touch main directly and do not touch anything outside ${PROJ} except the board CLI.
-Return id, branch, commit, summary, howToTest.`,
-    tier(cast.dev, { label: `dev:${id}`, schema: DEV_SCHEMA }),
-  )
-  if (!dev) { log(`${id}: dev agent lost; ticket stays on the board`); continue }
+${rulingText ? `CHAIR RULING (binding, already logged on the board): ${rulingText}
+Proceed under this ruling; do not re-escalate the same gate.
+` : ''}If a process gate on the board genuinely blocks you from STARTING (a required ruling or board object that does not exist), do not self-waive it and do not idle: comment the blocker on ${id}, leave the ticket in todo, and return blocked: true with blockReason — the chair rules within the hour. Blocked means zero code written.
+Return id, branch, commit, summary, howToTest (blocked and blockReason only if you could not start).`
+
+  let dev = await ragent(devPrompt(''), tier(cast.dev, { label: `dev:${id}`, schema: DEV_SCHEMA }))
+  if (dev && dev.blocked) {
+    log(`${id}: ${cast.dev.firstName} blocked — ${dev.blockReason || 'process gate'}; convening the chair`)
+    const ruling = await ragent(
+      `${persona.producer(cast.producer)}
+
+CHAIR RULING REQUEST — your one-hour ruling clock is running. ${cast.dev.firstName} is blocked on ${id} ("${t.title}"): ${dev.blockReason || 'an unresolved process gate'}.
+${BOARD_HOWTO}
+1. Read the escalation trail: ${BOARD} show ${id} (and any gate it references).
+2. Rule as chair, on the record: either CLEAR the gate — if it is process paperwork, satisfy it yourself right now via board comments/objects, or explicitly waive it with reasoning — or UPHOLD the block if work truly must not start.
+3. Log the binding ruling as a comment on ${id} --by "${cast.producer.firstName}".
+Return ruling (the binding text) and unblocks (true if ${cast.dev.firstName} can start immediately).`,
+      tier(cast.producer, { label: `chair:${id}`, schema: RULING_SCHEMA }),
+    )
+    if (ruling && ruling.unblocks) {
+      dev = await ragent(devPrompt(ruling.ruling), tier(cast.dev, { label: `dev:${id}:unblocked`, schema: DEV_SCHEMA }))
+    } else {
+      log(`${id}: chair upheld the block — carries to the next sprint`)
+      continue
+    }
+  }
+  if (!dev || dev.blocked || !dev.commit) { log(`${id}: not started; ticket stays on the board`); continue }
 
   const review = await ragent(
     `${persona.engLead(cast.engLead)}

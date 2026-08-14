@@ -647,6 +647,509 @@
       ],
       "created": "2026-08-14T03:11:02.806Z",
       "updated": "2026-08-14T08:41:11.771Z"
+    },
+    {
+      "id": "WILD-4",
+      "project": "WILD",
+      "title": "WILD-4 — Crafting: fiber glyph redraw, craft menu, recipes, snare",
+      "desc": "Commit 1 is Marcus's priced one-pointer: redraw the pulled-fiber glyph (bolder stubs on a small dirt-patch base) so the regrowing, still-colliding tile reads 'something is here,' never open grass. Then the craft menu rides WILD-2's panel skeleton with a data-driven catalog — campfire kit 3 wood, fence piece 2 wood, shelter kit 4 wood + 2 fiber, snare 1 wood + 2 fiber — consume-exact, fail-closed on shortfall with same-frame have/need feedback, every cost in CONSTANTS per Decision 10. Bramble Run gains a tree and a fiber plant as map data only, so the snare's supply chain lives where the monsters will.",
+      "type": "story",
+      "status": "todo",
+      "points": 5,
+      "assignee": "Devon Park",
+      "sprint": 2,
+      "acceptance": [
+        "[Harness] Every recipe row consumes exact costs and adds exactly one item from the same CONSTANTS the game reads",
+        "shortfalls fail closed per resource (wood-short, fiber-short, both-short, on each recipe) with zero mutation and a same-frame refusal state",
+        "fuzzed counts never go negative or NaN",
+        "the craft menu freezes the world exactly as the inventory menu does",
+        "panel genericity is proven against a fake recipe catalog before WILD-5 starts",
+        "STEP_MS/TICK_MS divisibility asserted (Decision 14).",
+        "[Play, mode logged] In the day's named rig mode, Quinn crafts the snare and one kit for real",
+        "recipe rows show have/need per ingredient matching inventory exactly, and a shortfall refusal is visible on screen the same frame it happens.",
+        "[Map] Bramble Run's tree and fiber plant land as map data only (diff shows data in maps.js, no new node code paths) and gather and collide like every other node — pillar 1, no exception for being new.",
+        "[Gates] Marcus spot-cold-reads the redrawn fiber glyph at shipped scale (PNG protocol) against grass and tall grass, verdict on-ticket the day the atlas change lands",
+        "Elena's pre-QA re-adjudication comment precedes QA close."
+      ],
+      "comments": [
+        {
+          "at": "2026-08-14T09:33:11.661Z",
+          "by": "Devon",
+          "text": "For Priya (chair) -- holding WILD-4 in todo, not opening it yet. Checking the board literally before starting rather than interpreting, per the sequencing-gate note on my file. Decision 12 (sprint-2 planning) says gates are board objects: Sam cuts the three tickets *plus* a named-assignee board object per human gate, and the planning doc's close section is explicit -- 'Devon opens WILD-4 commit 1 (the fiber glyph) once the objects exist.' I committed at that same table to opening each ticket only against gate objects that already exist on the board. Board check just now: 11 tickets total (PONG-1..5, WILD-1..6). WILD-4/5/6 exist (created 09:27:49Z / 09:28:00Z / 09:28:15Z by Sam) but each carries only a bare todo history line -- no creation-note comment, and no separate gate-object entries anywhere for Marcus's fiber-glyph cold read, Quinn's live craft session, or Elena's re-adjudication (same gap looks likely on WILD-5 and WILD-6 too, not just mine). Those three names currently live only inside WILD-4's own [Gates]/[Play] acceptance bullets, not as their own board objects with their own assignee field. Asking rather than deciding: is the acceptance-text naming sufficient for me to open against, or do I hold for Sam to cut the Decision-12 gate objects first? Leaving WILD-4 in todo pending your ruling; no branch cut, no commits, nothing implemented."
+        },
+        {
+          "at": "2026-08-14T09:35:31.107Z",
+          "by": "Elena",
+          "text": "REVIEW (Elena) -- convened on the WILD-4 handoff; correctly nothing to review. Verified myself, not from the handoff: git shows no ticket/wild-4 branch, main at 6c74459, working tree clean; board.json read raw shows 11 objects total (PONG-1..5, WILD-1..6) and zero Decision-12 gate objects -- no creation notes on WILD-4/5/6, no board object for Marcus's fiber-glyph cold read, Quinn's live craft session, or my pre-QA re-adjudication. Decision 12 says 'a named-assignee board object per human gate, creation notes included' and the Close section conditions the open explicitly: 'Devon opens WILD-4 commit 1 (the fiber glyph) once the objects exist.' They do not exist, so Devon's hold is the letter of the plan, not an interpretation -- and escalating to the chair instead of self-waiving is exactly the behavior we asked for after last sprint. Seconding the escalation to PJ with the eng-lead read: the clean fix is Sam cutting the Decision-12 objects (that includes my re-adjudication object per ticket -- I want that object to exist so my pre-QA comment has a place to land on the record), not a ruling that names inside acceptance text count. Sequencing note for the room: this fix is minutes of scribe work while 18-committed-vs-13-read burns (Risk 1) -- every held hour is dev capacity we priced as scarce, so cut the objects today. No state change from me: WILD-4 stays in todo, nothing merged, no fixups. I run the real review when a branch with commit 1 exists."
+        },
+        {
+          "at": "2026-08-14T09:52:47.191Z",
+          "by": "Quinn",
+          "text": "QA (Quinn) - BLOCKED, posting now per the standing directive rather than going silent. Verified independently before touching the acceptance list: (1) git in studio/projects/wilds shows only main/ticket-wild-1/ticket-wild-2/ticket-wild-3 - no ticket/wild-4 branch exists, main HEAD is 6c74459 (WILD-3 merge), working tree clean. (2) case-insensitive grep for craft, snare, campfire, shelter, encounter, battle, Thistlet, Wickerbill across the whole wilds project: zero matches in any file. (3) Live-inspected the actually-served build at localhost:4545/projects/wilds/index.html: on-screen controls hint reads only Arrow keys/WASD - tap to turn, hold to walk, E - gather, I - inventory (no craft key anywhere); window.Wilds exposes no craft or recipe module; window.Wilds.CONSTANTS carries only the WILD-1/2/3 set (TILE, SCALE, STEP_MS, TICK_MS, TREE_CHOP_HITS, WOOD_PER_TREE, BERRIES_PER_BUSH, FIBER_PER_PLANT, NODE_RESPAWN_MS, HUNGER_MAX, HUNGER_DRAIN_MS, BERRY_HUNGER_RESTORE, FAMISHED_STEP_MULT, FAMISHED_FLASH_HZ, DEFAULT_SEED) - no recipe costs, no STEP_MS/TICK_MS divisibility knob for Decision 14, nothing. This matches what is already on this ticket: Devon holding in todo per the open Decision-12 sequencing-gate escalation (09:33:11Z), seconded by Elena (09:35:31Z), still unresolved as of this session - no chair ruling logged anywhere on the board. All four acceptance groups (Harness/Play/Map/Gates) are untestable: there is nothing built to run them against. Not filing a bug against Devon - there is no shipped behavior to reproduce a defect in, and the hold is a process/sequencing block he and Elena already correctly escalated rather than self-waived, not a code fault. Leaving status as todo, unchanged - moving this to qa or done would misrepresent that a build or review happened, which it did not. Re-verifying the moment real commits land."
+        },
+        {
+          "at": "2026-08-14T09:59:30.077Z",
+          "by": "Priya",
+          "text": "CHAIR RULING (Priya) - Decision 12, ruled at sprint-2 close, a full working day late; the delay is owned below and in the retro. THE RULING: acceptance-text naming does NOT satisfy Decision 12. The decision's own words are 'a named-assignee board object per human gate, creation notes included' - a separate board object with its own assignee field, exactly as Devon read it at 09:33Z and Elena seconded at 09:35Z. Nothing in an acceptance bullet substitutes for it. The clean fix is the one Elena named: Sam cuts the gate objects (for this ticket: fiber-glyph cold read - Marcus; live craft session - Quinn; pre-QA re-adjudication - Elena; plus the full Decision-12 list across the slate), creation notes included, before Devon opens WILD-4 commit 1. This ruling covers WILD-5 and WILD-6 identically per Elena's request - one ruling, three tickets - with WILD-6's build-order blockers untouched by it. THE HOLDS WERE CORRECT: Devon's three escalations, Elena's three seconds, and Quinn's three same-day blocker comments are the letter of the plan and exactly the no-self-waive behavior this studio asked for after sprint 1. Nobody crossed a gate silently this sprint. THE DELAY WAS THE SPRINT: the request landed 09:33Z, the standup named my ruling the sprint-wide critical path, my own planning commitment reads 'cut calls chair-logged the moment they fall due' - and this is the first Priya comment on the sprint-2 record. 18 committed points burned against payroll on a call Elena correctly priced at minutes of scribe work. That accounting goes in the retro and in my review file. STATUS: WILD-4 stays in todo, carries whole to the sprint-3 table for re-pointing; reopen sequence is objects first, then commit 1. Quinn's queue re-arms the moment a branch exists, per her note."
+        },
+        {
+          "at": "2026-08-14T10:26:02.148Z",
+          "by": "Noor",
+          "text": "SCRIBE (Noor) — Decision 12 gate objects cut 2026-08-14 close. Queue unblocked pending gate completion. Gate objects for WILD-4: WILD-7 (Marcus fiber glyph cold read), WILD-8 (Quinn craft live session), WILD-9 (Elena WILD-4 pre-QA re-adjudication). Per chair ruling 2026-08-14 close: objects must exist on board with named assignee before Devon opens WILD-4 commit 1. Holds remain in place pending gate completion. Creation note posted on WILD-7."
+        }
+      ],
+      "history": [
+        {
+          "at": "2026-08-14T09:27:49.204Z",
+          "from": null,
+          "to": "todo",
+          "by": "Sam"
+        }
+      ],
+      "created": "2026-08-14T09:27:49.204Z",
+      "updated": "2026-08-14T10:26:02.149Z"
+    },
+    {
+      "id": "WILD-5",
+      "project": "WILD",
+      "title": "WILD-5 — Building: placement tint, placeable kits, and the campfire that cooks",
+      "desc": "Using a kit enters faced-tile place mode with a same-frame two-state valid/invalid tint and fail-closed validity (on-map, walkable terrain, no node, occupant, or player); placed fence, shelter, and campfire render through the atlas with original glyphs, occupy their tile, and block from all four sides exactly like map fences. E on a placed piece picks it back up — the softlock guard, no one-way walls. E on the campfire opens the cook menu (the panel skeleton's third reuse): 1 berry → 1 roast berry restoring ROASTED_HUNGER_RESTORE 60 with clamp-at-full, campfire pick-up living inside the menu so cooking stays one press.",
+      "type": "story",
+      "status": "todo",
+      "points": 5,
+      "assignee": "Devon Park",
+      "sprint": 2,
+      "acceptance": [
+        "[Harness] Placement validity fails closed with zero mutation on every illegal class (off-map, non-walkable terrain, node, occupant, player tile) and the faced-tile tint state equals the validity function",
+        "fence, shelter, and campfire block from all four approaches, each direction asserted",
+        "E pick-up round-trips the kit exactly — no dupes, no loss, no reachable one-way wall",
+        "cook arithmetic exact (1 berry → 1 roast berry, +60, clamp tested at full, one-under, and would-overflow)",
+        "cook-menu freeze matches the house standard.",
+        "[fps] Same-session A/B timed-draw guard, pre-ticket main vs merged, holds within 10% — a miss files a bug on the board, never a shrug.",
+        "[Play, mode logged] Quinn places all three placeables, is bodily blocked by fence and shelter from a live direction, picks one back up clean, and cooks and eats a roast berry, with the valid/invalid tint readable before each press",
+        "rig mode stated in the log.",
+        "[Gates] Marcus cold-reads the placed glyphs day-of at shipped scale on the named pairs — shelter vs map facade, campfire vs everything flameless — verdict on-ticket",
+        "Elena's pre-QA re-adjudication precedes QA close."
+      ],
+      "comments": [
+        {
+          "at": "2026-08-14T09:39:12.284Z",
+          "by": "Devon",
+          "text": "For Priya (chair) -- holding WILD-5 in todo, not opening it. Same check as WILD-4, applied here rather than assumed. Re-read board.json directly just now (not just list WILD): still 11 tickets total (PONG-1..5, WILD-1..6), nothing new. WILD-5 has the identical shape WILD-4 had -- created 09:28:00Z by Sam, a bare todo history line only, no creation-note comment, and no separate board objects anywhere for its named gates (Decision 12 plus the section-6 slate row: cold read on the named pairs -- shelter vs map facade, campfire vs everything flameless -- Marcus; live place/block/cook session -- Quinn; fps A/B -- Devon; re-adjudication -- Elena). Those names currently live only inside WILD-5's own [Gates]/[fps]/[Play] acceptance bullets, same gap as WILD-4, not the separate named-assignee board object Decision 12 calls for. This isn't a new question -- it's the same escalation already sitting on WILD-4 (mine at 09:33:11Z, Elena seconding at 09:35:31Z), still awaiting your ruling, and today's standup (2026-08-14-wild-standup-s2.md) has it framed sprint-wide: 'WILD-4 sequencing gate status unclear. Chair ruling required before sprint 2 work begins,' with your own status line there reading 'Awaiting chair decision.' Not deciding this myself per my coaching note -- a sequencing gate is satisfied only when every named condition is literally on the board. Leaving WILD-5 in todo pending your ruling on WILD-4, which I'll treat as covering this ticket too unless you say otherwise; no branch cut, no commits, nothing implemented."
+        },
+        {
+          "at": "2026-08-14T09:41:32.836Z",
+          "by": "Elena",
+          "text": "REVIEW (Elena) -- convened on the WILD-5 handoff; correctly nothing to review, second sprint-2 ticket in a row. Verified independently, not from the handoff: git shows no ticket/wild-5 branch, main clean at 6c74459; board.json read raw still holds exactly 11 objects (PONG-1..5, WILD-1..6); WILD-5 carries one bare todo history line (Sam, 09:28:00Z), no creation note, and zero Decision-12 gate objects for its named gates -- Marcus's cold read on the placed pairs, Quinn's live place/block/cook session, Devon's fps A/B, my pre-QA re-adjudication. Those names exist only inside WILD-5's own acceptance text, which is exactly what Decision 12 ('a named-assignee board object per human gate, creation notes included') distinguishes them from, and the Close section conditions the open on the objects existing. Devon's hold is the letter of the plan applied consistently -- and re-checking the board per-ticket instead of assuming WILD-4's gap carried over is the behavior we asked for. Confirming to PJ: treat the WILD-4 ruling as covering WILD-5 and WILD-6 -- identical shape, verified myself (WILD-6: bare todo line, zero comments). Eng-lead position unchanged from my 09:35:31Z second on WILD-4: the clean fix is Sam cutting the Decision-12 objects (including my re-adjudication object per ticket, so the pre-QA pass has a place to land on the record), not a ruling that acceptance-text naming counts. Sequencing pressure, same as yesterday: standup already books this sprint-wide ('Chair ruling required before sprint 2 work begins'), the fix is minutes of scribe work, and 18-committed-vs-13-read (Risk 1) burns dev capacity every held hour -- PJ's ruling is now the sprint's critical path. No state change from me: WILD-5 stays in todo, nothing merged, no branch exists to merge. I run the real review when ticket/wild-5 exists with commits."
+        },
+        {
+          "at": "2026-08-14T09:52:51.010Z",
+          "by": "Quinn",
+          "text": "QA (Quinn) - BLOCKED, posting now per the standing directive rather than going silent. Same independent verification as WILD-4, run separately for this ticket: (1) git in studio/projects/wilds shows only main/ticket-wild-1/ticket-wild-2/ticket-wild-3 - no ticket/wild-5 branch exists, main HEAD is 6c74459, working tree clean. (2) case-insensitive grep for craft, snare, campfire, shelter, encounter, battle across the whole wilds project: zero matches beyond the map fence tiles WILD-1 already shipped - no placement, kit, or cook code anywhere. (3) Live-inspected the served build: no place-mode tint, no cook menu, window.Wilds has no Placement/Building/Cook module, and CONSTANTS has no ROASTED_HUNGER_RESTORE or placeable-kit costs. This matches what is already on this ticket: Devon holding in todo (09:39:12Z) pending the same open Decision-12 chair-ruling escalation, seconded by Elena (09:41:32Z), still unresolved. All acceptance groups (Harness/fps/Play/Gates) are untestable - there is nothing built. Not filing a bug: no shipped behavior exists to reproduce a defect in, and the hold is the same already-escalated process block, not a code fault. Leaving status as todo, unchanged - moving this to qa or done would misrepresent that a build or review happened. Re-verifying the moment real commits land."
+        },
+        {
+          "at": "2026-08-14T09:59:36.371Z",
+          "by": "Priya",
+          "text": "CHAIR RULING (Priya) - covered by the ruling just posted on WILD-4, per Elena's 09:41Z request that one ruling span the slate: acceptance-text naming does not satisfy Decision 12. The gate objects for this ticket (cold read on the named pairs, shelter vs map facade and campfire vs everything flameless - Marcus; live place/block/cook session - Quinn; fps A/B - Devon; pre-QA re-adjudication - Elena) must exist as separate named-assignee board objects, creation notes included, before this ticket opens - and it opens only after WILD-4 merges, per the mandated build order. Devon's hold (09:39Z), Elena's second (09:41Z), and Quinn's blocker note (09:52Z) were correct. WILD-5 stays in todo and carries whole to sprint-3 re-pointing. Ruled at close, late; the delay is owned on WILD-4 and in the retro."
+        },
+        {
+          "at": "2026-08-14T10:26:03.811Z",
+          "by": "Noor",
+          "text": "SCRIBE (Noor) — Decision 12 gate objects cut 2026-08-14 close. Queue unblocked pending gate completion. Gate objects for WILD-5: WILD-10 (Marcus placed pairs cold read), WILD-11 (Quinn place/block/cook live session), WILD-12 (Elena WILD-5 pre-QA re-adjudication). Opens only after WILD-4 merges, per mandated build order. Holds remain in place pending gate completion. See WILD-7 for creation note."
+        }
+      ],
+      "history": [
+        {
+          "at": "2026-08-14T09:28:00.258Z",
+          "from": null,
+          "to": "todo",
+          "by": "Sam"
+        }
+      ],
+      "created": "2026-08-14T09:28:00.258Z",
+      "updated": "2026-08-14T10:26:03.811Z"
+    },
+    {
+      "id": "WILD-6",
+      "project": "WILD",
+      "title": "WILD-6 — Tall grass wakes: encounters, battle, two species, snare catch (sprint cut valve)",
+      "desc": "Sprint 1's twelve tall-grass tiles go live: entering one rolls the seeded RNG at ENCOUNTER_PCT 15 and wipes (ENCOUNTER_WIPE_MS 450, code-drawn, the screen announces — no audio) into a turn-based panel battle against Thistlet or Wickerbill, silhouette-first per Marcus's sheet. Strike / Throw Snare / Flee on the Decision-10 integer model: wild hits press hunger (famish rules unchanged, no faint or death anywhere in the machine, Flee always exits), the snare is offered only when held and consumed on every throw, and a catch ends the battle recording a named companion line — nothing more. Commit order pins the valve seam: encounter roll, wipe, Strike/Flee, and overworld freeze merge before any catch code exists, so the Decision-9 cut is one withheld commit.",
+      "type": "story",
+      "status": "todo",
+      "points": 8,
+      "assignee": "Devon Park",
+      "sprint": 2,
+      "acceptance": [
+        "[Harness] 10k seeded grass entries land within ±1.0 pp of ENCOUNTER_PCT 15 with exactly zero encounters off grass",
+        "battle invariants each asserted — turn order, integer damage and hunger-press per pinned CONSTANTS, snare offered only when held and consumed on every throw, catch odds exactly matching the Decision-10 formula under seeded RNG, Flee always exits, overworld frozen, structural no-faint/no-death under zero-hunger fuzz with famish bit-identical in and out of battle, companion recorded as a named menu line",
+        "held-key wipe-transition test per Decision 13",
+        "A/B fps guard within 10% including wipe frames.",
+        "[Valve] Sequencing holds — encounters, wipe, Strike/Flee, and freeze merge before any catch code",
+        "PJ chair-logs the cut call on the board at the WILD-5 merge whichever way it falls, restating the ritual thread in the same comment if the catch descopes.",
+        "[Art gates] Marcus's creature sheet (Thistlet, Wickerbill) is on-ticket before the first battle-art commit",
+        "his day-of cold read scores the battle scene and both species at shipped scale with the explicit red-family audit (player critter vs berry dots vs each species) — no red-dominant glyph enters the atlas unaudited",
+        "verdict on-ticket.",
+        "[Play + ritual, mode and seed logged] A real encounter fires from a live grass step and one fight is fled",
+        "the full thread runs — gather, craft a snare, walk the grass, catch a wild monster — session seed logged",
+        "the sprint-close ritual (performer Quinn, witness Marcus, board object cut today) plays the thread end to end before the last day, witness-logged with rig mode stated",
+        "Elena's pre-QA re-adjudication precedes QA close."
+      ],
+      "comments": [
+        {
+          "at": "2026-08-14T09:45:19.016Z",
+          "by": "Devon",
+          "text": "For Priya (chair) -- holding WILD-6 in todo, not opening it, not starting the assigned flow. Same literal-board check as WILD-4 and WILD-5, per the sequencing-gate note on my file: checking rather than interpreting before starting. Fresh check just now, board.json read directly: 11 tickets total (PONG-1..5, WILD-1..6), nothing new since Elena's last read. WILD-6 carries one bare todo history line (Sam, 09:28:15Z) and zero comments -- no creation note, no separate board objects for any of its named gates (creature sheet + cold read + red audit: Marcus; live thread session: Quinn; fps A/B: Devon; cut call at WILD-5 merge: PJ; ritual performer/witness: Quinn/Marcus; re-adjudication: Elena). Those names live only inside WILD-6's own acceptance bullets -- the identical Decision-12 gap already escalated on WILD-4 (mine, 09:33:11Z) and WILD-5 (mine, 09:39:12Z; Elena seconding both, and her WILD-5 comment names WILD-6 by name as the same shape: bare todo line, zero comments). Both escalations are still open -- no sprint-2 chair ruling anywhere on the board (the only Priya comments on record are the sprint-1 close carry-overs at 06:45:47-48Z); today's standup frames the block sprint-wide: WILD-4 sequencing gate status unclear, chair ruling required before sprint 2 work begins. WILD-6 also carries two blockers that are its own, not just inherited: (1) the plan's own header reads three tickets, one dev, built in order -- WILD-4 and WILD-5 are both still in todo with no branch cut on either, so opening WILD-6 now would skip two tickets in the mandated order; (2) this ticket's acceptance text and Decision 9 both condition the valve on a fact that cannot exist yet -- PJ chair-logs the cut call on the board at the WILD-5 merge whichever way it falls -- and there is no WILD-5 merge, main in wilds is still 6c74459. Marcus's creature sheet is also not yet on-ticket (zero comments here); the planning close section has it posting same-day, so flagging rather than blocking on that one specifically. Not deciding any of this myself. Leaving WILD-6 in todo pending your ruling, and treating it as covered by the open WILD-4/WILD-5 request unless told otherwise. No branch cut, no commits, nothing implemented; main and working tree in studio/projects/wilds untouched (still 6c74459, clean)."
+        },
+        {
+          "at": "2026-08-14T09:48:56.259Z",
+          "by": "Elena",
+          "text": "REVIEW (Elena) -- convened on the WILD-6 handoff; correctly nothing to review, third sprint-2 ticket in a row, and the deepest-blocked of the three. Verified independently, not from the handoff: git shows no ticket/wild-6 branch (only wild-1/2/3 exist), main clean at 6c74459; board.json read raw holds exactly 11 objects (PONG-1..5, WILD-1..6); WILD-6 carries one bare todo history line (Sam, 09:28:15Z) and a single comment (Devon, 09:45:19Z); zero Decision-12 gate objects exist for any of its named gates (creature sheet + cold read + red audit: Marcus; live thread session: Quinn; fps A/B: Devon; cut call: PJ; ritual: Quinn performs / Marcus witnesses; my re-adjudication); and the only Priya comments anywhere on the board remain the sprint-1 carry-overs at 06:45:47-48Z -- still no sprint-2 chair ruling. Devon's two WILD-6-specific blockers both check out against the planning record, and they are harder than the inherited gap: (1) the plan header and Decision 9 mandate the slate 'built in that order' -- WILD-4 and WILD-5 are both unopened with no branch cut, so opening WILD-6 now would skip two tickets of mandated sequence; (2) this ticket's own [Valve] acceptance and Decision 9 pin PJ's cut call to the WILD-5 merge, which does not exist -- that precondition is not merely unmet, it is unevaluable until WILD-5 merges. Note for the room: even a chair ruling that acceptance-text naming satisfies Decision 12 would NOT unblock WILD-6 -- only build order does. Also confirmed: Marcus's creature sheet is not on-ticket (planning Close has it posting today) -- Devon flagging rather than blocking is right since its binding edge is 'before the first battle-art commit,' but it is due today and I want it here before any battle art exists. Endorsing the hold as the letter of the plan, third consistent application, and endorsing coverage under the open WILD-4/WILD-5 escalation -- one ruling, three tickets. What must change to reopen WILD-6, in order: (a) PJ rules on Decision 12 -- clean fix unchanged from my 09:35:31Z second: Sam cuts the gate objects, including my re-adjudication object per ticket; (b) WILD-4 opens, builds, merges; (c) WILD-5 same; (d) PJ chair-logs the cut call at the WILD-5 merge whichever way it falls; (e) Marcus's sheet lands on-ticket. Then Devon reopens against the same assigned flow with the pinned commit order (encounter roll, wipe, Strike/Flee, freeze before any catch code). Sequencing pressure, now at maximum: the entire 18-point slate is held on a ruling that is minutes of scribe work while Risk 1 burns -- PJ, your chair commitment books gates logged in the moment, and today's standup already names this the sprint-wide blocker. (Minor record drift for the minutes: standup credits 'Sam posted ruling request on WILD-4' -- the 09:33:11Z request is Devon's.) Rig status checked per my note: no regression flagged today, Quinn is prepping live sessions, so no human-check request is due from me yet. No state change from me: WILD-6 stays in todo (already there -- a todo-to-todo move would fabricate a history line), nothing merged, no fixups because no code exists. I run the real review when ticket/wild-6 exists."
+        },
+        {
+          "at": "2026-08-14T09:52:55.216Z",
+          "by": "Quinn",
+          "text": "QA (Quinn) - BLOCKED, posting now per the standing directive rather than going silent. Same independent verification as WILD-4/WILD-5, run separately for this ticket: (1) git in studio/projects/wilds shows only main/ticket-wild-1/ticket-wild-2/ticket-wild-3 - no ticket/wild-6 branch exists, main HEAD is 6c74459, working tree clean. (2) case-insensitive grep for encounter, battle, Thistlet, Wickerbill, snare across the whole wilds project: zero matches. (3) Live-inspected the served build: entering the twelve tall-grass tiles produces no wipe and no battle panel, window.Wilds has no Encounter/Battle module, and CONSTANTS has no ENCOUNTER_PCT or ENCOUNTER_WIPE_MS. This matches what is already on this ticket: Devon holding in todo (09:45:19Z) - both on the same open Decision-12 chair-ruling escalation and on his own two WILD-6-specific blockers (mandated build order skips WILD-4/WILD-5, and the Valve cut call is pinned to a WILD-5 merge that does not exist) - seconded in full by Elena (09:48:56Z). Marcus's creature sheet is also not on-ticket. All acceptance groups (Harness/Valve/Art gates/Play plus ritual) are untestable - there is nothing built, no encounter can fire, no ritual can run. Not filing a bug: no shipped behavior exists to reproduce a defect in, and the hold is the already-escalated process block, not a code fault. Leaving status as todo, unchanged - moving this to qa or done would misrepresent that a build or review happened. Re-verifying the moment real commits land, in the mandated order."
+        },
+        {
+          "at": "2026-08-14T09:59:46.111Z",
+          "by": "Priya",
+          "text": "CHAIR RULING (Priya) - two entries, both late, both owned. (1) DECISION 12: covered by the WILD-4 ruling - gates are separate named-assignee board objects, cut by Sam with creation notes, before any ticket opens; acceptance-text naming does not count. Devon's hold (09:45Z), Elena's second (09:48Z), and Quinn's blocker note (09:52Z) were correct, and Elena's harder point stands: even a contrary ruling would not have opened this ticket - only build order does. WILD-4 and WILD-5 never opened, no WILD-5 merge exists, so the Decision-9 cut call pinned to that merge never became evaluable. (2) DECISION 9 VALVE, chair-logged now because it fired unsaid: the decision reads 'if WILD-4 or WILD-5 slips past mid-sprint, the catch is already gone and we say so that day.' Both slipped past mid-sprint unopened; nobody said so that day; saying it now, labeled late. The snare-catch beat arrives at the sprint-3 table pre-cut, and per the same decision the ritual thread restates as gather, craft, cook, battle, flee - the witness never reads a script the build cannot perform. Final shape belongs to sprint-3 planning; the descope floor (two species, shipped-scale readability) is never cut. ALSO FOR THE RECORD: Marcus's creature sheet, due on this ticket the day of planning per the close section, has not landed - carried as a retro action, due before sprint-3 planning convenes. WILD-6 stays in todo, deepest-blocked of the three, and carries to re-pointing behind WILD-4 and WILD-5 in the mandated order."
+        },
+        {
+          "at": "2026-08-14T10:26:06.149Z",
+          "by": "Noor",
+          "text": "SCRIBE (Noor) — Decision 12 gate objects cut 2026-08-14 close. Queue unblocked pending gate completion. Gate objects for WILD-6: WILD-13 (Marcus creature sheet post), WILD-14 (Marcus battle/species cold read with red audit), WILD-15 (Quinn full thread live session), WILD-16 (PJ cut call at WILD-5 merge), WILD-17 (Sprint-close ritual Quinn/Marcus), WILD-18 (Elena WILD-6 pre-QA re-adjudication). Opens only after WILD-4 and WILD-5 merge. Creature sheet (WILD-13) is Retro Action 4 precondition. Holds remain in place. See WILD-7 for creation note."
+        },
+        {
+          "at": "2026-08-14T10:26:30.661Z",
+          "by": "Noor",
+          "text": "SCRIBE FLAG — Ambiguities not determined, flagging rather than guessing: (1) Retro Action 1 lists Marcus's gates as 'fiber glyph; placed pairs; battle scene; both species incl. red audit' - unclear if 'battle scene' and 'both species incl. red audit' are one cold read or two separate ones. Acceptance line says 'day-of cold read' (singular) that 'scores the battle scene and both species' (both). Created WILD-14 as one cold read (battle scene + species with red audit). If they should be two separate objects, split WILD-14. (2) WILD-17 (ritual gate) assigned to Quinn (performer). Marcus is witness/logger. Board objects have one assignee; ritual requires both Quinn (perform) and Marcus (witness/log). Acceptance criteria names Marcus as action-taker (posts log), but Quinn is assigned. Verify assignee is correct or split into two gate objects."
+        },
+        {
+          "at": "2026-08-14T10:31:15.161Z",
+          "by": "Marcus",
+          "text": "CREATURE SHEET POSTED (Marcus) - Decision 11 and retro Action 4 discharged: the full sheet is at studio/briefs/2026-08-14-wild-creature-sheet.md, on the record before sprint-3 planning convenes and before any battle-art commit exists. THE TWO SPECIES, as named at the sprint-2 table: THISTLET - a burr that learned to want things; silhouette class low-round-spiky (squat 14x10px dome, seven-spike cream rim, belly on the ground), moss green #5f7a4a + bone cream #e6dcc0, encounter zone all Mosshollow tall grass (2-3,2)/(7-8,2)/(12-13,12), announcement line: A THISTLET latches on! WICKERBILL - a stilt-legged wading bird woven of dry rushes; silhouette class tall-thin-angular (14px tall, never wider than 6, daylight under the body), rush brown #a08252 with identity carried by a dusk-blue bill #4a5d8a, encounter zone all Bramble Run tall grass (8-9,2)/(12-13,12)/(17-18,12), announcement line: A WICKERBILL stalks near! Opposite silhouette axes - wide low blob vs tall stick - readable at 1x in grayscale; both authored on the 16px tile canvas in atlas primitives; battle entry is silhouette-first (one BATTLE_BEAT_MS of flat ink before palette fill) so the no-audio panel announces by shape. RED-FAMILY AUDIT pre-cleared by spec: zero red-family pixels in either species - the red family keeps exactly two members (player #d1495b, berry dots #ff4d78), answering my WILD-3 flag by refusal; the day-of shipped-scale audit still runs when the art lands, per acceptance, now a formality rather than a redraw risk. CATCH-DIFFICULTY STANCE (forward spec - the catch beat sits pre-cut at the sprint-3 table per PJ ruling 09:59:46Z, and this sheet does not reopen the valve): both species share the pinned Decision-10 curve, 20/40/60/70 percent at HP 6/4/2/1(floor), no per-species stats, no new CONSTANTS. Balance is carried by economics and geography instead: snare = 1 wood + 2 fiber makes fiber the currency (two plants worldwide post-WILD-4, 60s respawn, ~1 snare/min ceiling); throwing at full HP expects 5 snares vs ~1.4 after three strikes to the floor, so the fight is the discount, and hunger-as-health makes cooking the battle-prep move; Wickerbill is structurally the harder catch free of charge because berry bushes are Mosshollow-only, so Bramble hunts press the pantry with no local refill. The sheet also specs one juice beat per species (Thistlet: a missed snare visibly latches and shakes free; Wickerbill: a one-beat sideways stilt-step during its reveal - the only creature that moves before the fight starts). All creatures original - named at our table, designed in the sheet, code-drawn primitives, no copyrighted material. Decision-12 note: no gate board object yet exists for the sheet/cold-read/red-audit (the objects remain uncut per the chair ruling), so this comment is the sheet landing on-record per Decision 11; when Sam cuts the gate objects I will reference this timestamp there. My day-of cold read of the battle scene and both species at shipped scale runs the day the art lands, verdict on-ticket."
+        }
+      ],
+      "history": [
+        {
+          "at": "2026-08-14T09:28:15.269Z",
+          "from": null,
+          "to": "todo",
+          "by": "Sam"
+        }
+      ],
+      "created": "2026-08-14T09:28:15.269Z",
+      "updated": "2026-08-14T10:31:15.161Z"
+    },
+    {
+      "id": "WILD-7",
+      "project": "WILD",
+      "title": "GATE WILD-4: Marcus's fiber glyph cold read",
+      "desc": "Day-of cold read of redrawn fiber glyph at shipped scale (vs grass and tall grass). Decision 12 gate (chair ruling 2026-08-14). Closes when verdict posted on WILD-4.",
+      "type": "task",
+      "status": "todo",
+      "points": 0,
+      "assignee": "Marcus Vale",
+      "sprint": 3,
+      "acceptance": [
+        "Marcus posts cold-read verdict on WILD-4"
+      ],
+      "comments": [
+        {
+          "at": "2026-08-14T10:26:10.595Z",
+          "by": "Noor",
+          "text": "SCRIBE BATCH — Noor, 2026-08-14. Decision 12 gate objects cut in this batch (2026-08-14 close, one day late per chair ownership): WILD-7/8/9 (WILD-4: Marcus fiber glyph, Quinn craft, Elena re-adj); WILD-10/11/12 (WILD-5: Marcus pairs, Quinn place/cook, Elena re-adj); WILD-13/14/15/16/17/18 (WILD-6: Marcus sheet, Marcus battle/species, Quinn thread, PJ cut call, ritual, Elena re-adj). 12 objects total. Disclosed on WILD-4/5/6. Comments on those tickets are the queue-unblock status per this batch completion."
+        }
+      ],
+      "history": [
+        {
+          "at": "2026-08-14T10:25:36.507Z",
+          "from": null,
+          "to": "todo",
+          "by": "Noor"
+        }
+      ],
+      "created": "2026-08-14T10:25:36.507Z",
+      "updated": "2026-08-14T10:26:10.595Z"
+    },
+    {
+      "id": "WILD-8",
+      "project": "WILD",
+      "title": "GATE WILD-4: Quinn's craft live session",
+      "desc": "Live craft session in day's rig mode (snare + kit). Decision 12 gate. Closes when session log posted on WILD-4 with rig mode stated.",
+      "type": "task",
+      "status": "todo",
+      "points": 0,
+      "assignee": "Quinn Reyes",
+      "sprint": 3,
+      "acceptance": [
+        "Quinn posts live session log on WILD-4 (crafting snare and kit, rig mode logged)"
+      ],
+      "comments": [],
+      "history": [
+        {
+          "at": "2026-08-14T10:25:37.078Z",
+          "from": null,
+          "to": "todo",
+          "by": "Noor"
+        }
+      ],
+      "created": "2026-08-14T10:25:37.078Z",
+      "updated": "2026-08-14T10:25:37.078Z"
+    },
+    {
+      "id": "WILD-9",
+      "project": "WILD",
+      "title": "GATE WILD-4: Elena's WILD-4 pre-QA re-adjudication",
+      "desc": "Pre-QA re-adjudication gate. Decision 12 gate. Closes when Elena posts re-adjudication comment on WILD-4 before QA close.",
+      "type": "task",
+      "status": "todo",
+      "points": 0,
+      "assignee": "Elena Vasquez",
+      "sprint": 3,
+      "acceptance": [
+        "Elena posts pre-QA re-adjudication comment on WILD-4"
+      ],
+      "comments": [],
+      "history": [
+        {
+          "at": "2026-08-14T10:25:38.371Z",
+          "from": null,
+          "to": "todo",
+          "by": "Noor"
+        }
+      ],
+      "created": "2026-08-14T10:25:38.372Z",
+      "updated": "2026-08-14T10:25:38.372Z"
+    },
+    {
+      "id": "WILD-10",
+      "project": "WILD",
+      "title": "GATE WILD-5: Marcus's placed pairs cold read",
+      "desc": "Day-of cold read of placed glyphs at shipped scale (shelter vs facade, campfire vs flameless). Decision 12 gate. Closes when verdict posted on WILD-5.",
+      "type": "task",
+      "status": "todo",
+      "points": 0,
+      "assignee": "Marcus Vale",
+      "sprint": 3,
+      "acceptance": [
+        "Marcus posts cold-read verdict on WILD-5"
+      ],
+      "comments": [],
+      "history": [
+        {
+          "at": "2026-08-14T10:25:39.962Z",
+          "from": null,
+          "to": "todo",
+          "by": "Noor"
+        }
+      ],
+      "created": "2026-08-14T10:25:39.962Z",
+      "updated": "2026-08-14T10:25:39.962Z"
+    },
+    {
+      "id": "WILD-11",
+      "project": "WILD",
+      "title": "GATE WILD-5: Quinn's place/block/cook live session",
+      "desc": "Live placement session: place all three placeables, blocked by fence/shelter, pick up, cook/eat. Decision 12 gate. Closes when session log posted on WILD-5 with rig mode stated.",
+      "type": "task",
+      "status": "todo",
+      "points": 0,
+      "assignee": "Quinn Reyes",
+      "sprint": 3,
+      "acceptance": [
+        "Quinn posts live session log on WILD-5 (placement, blocking, pickup, cook",
+        "rig mode logged)"
+      ],
+      "comments": [],
+      "history": [
+        {
+          "at": "2026-08-14T10:25:41.918Z",
+          "from": null,
+          "to": "todo",
+          "by": "Noor"
+        }
+      ],
+      "created": "2026-08-14T10:25:41.919Z",
+      "updated": "2026-08-14T10:25:41.919Z"
+    },
+    {
+      "id": "WILD-12",
+      "project": "WILD",
+      "title": "GATE WILD-5: Elena's WILD-5 pre-QA re-adjudication",
+      "desc": "Pre-QA re-adjudication gate. Decision 12 gate. Closes when Elena posts re-adjudication comment on WILD-5 before QA close.",
+      "type": "task",
+      "status": "todo",
+      "points": 0,
+      "assignee": "Elena Vasquez",
+      "sprint": 3,
+      "acceptance": [
+        "Elena posts pre-QA re-adjudication comment on WILD-5"
+      ],
+      "comments": [],
+      "history": [
+        {
+          "at": "2026-08-14T10:25:43.514Z",
+          "from": null,
+          "to": "todo",
+          "by": "Noor"
+        }
+      ],
+      "created": "2026-08-14T10:25:43.514Z",
+      "updated": "2026-08-14T10:25:43.514Z"
+    },
+    {
+      "id": "WILD-13",
+      "project": "WILD",
+      "title": "GATE WILD-6: Marcus posts creature sheet",
+      "desc": "Creature sheet (Thistlet, Wickerbill) posted to WILD-6. Retro Action 4 (Sprint 1), due before sprint-3 planning. Precondition for art gates. Closes when sheet posted on WILD-6.",
+      "type": "task",
+      "status": "todo",
+      "points": 0,
+      "assignee": "Marcus Vale",
+      "sprint": 3,
+      "acceptance": [
+        "Marcus posts creature sheet (Thistlet, Wickerbill) on WILD-6"
+      ],
+      "comments": [],
+      "history": [
+        {
+          "at": "2026-08-14T10:25:45.466Z",
+          "from": null,
+          "to": "todo",
+          "by": "Noor"
+        }
+      ],
+      "created": "2026-08-14T10:25:45.467Z",
+      "updated": "2026-08-14T10:25:45.467Z"
+    },
+    {
+      "id": "WILD-14",
+      "project": "WILD",
+      "title": "GATE WILD-6: Marcus's battle scene and species cold read (with red audit)",
+      "desc": "Day-of cold read of battle scene and both species at shipped scale with red-family audit. Decision 12 gate. Closes when verdict posted on WILD-6.",
+      "type": "task",
+      "status": "todo",
+      "points": 0,
+      "assignee": "Marcus Vale",
+      "sprint": 3,
+      "acceptance": [
+        "Marcus posts cold-read verdict on WILD-6 (battle scene, both species, red-family audit)"
+      ],
+      "comments": [],
+      "history": [
+        {
+          "at": "2026-08-14T10:25:47.098Z",
+          "from": null,
+          "to": "todo",
+          "by": "Noor"
+        }
+      ],
+      "created": "2026-08-14T10:25:47.099Z",
+      "updated": "2026-08-14T10:25:47.099Z"
+    },
+    {
+      "id": "WILD-15",
+      "project": "WILD",
+      "title": "GATE WILD-6: Quinn's full thread live session",
+      "desc": "Live full thread session: encounter from grass step, one fight fled. Decision 12 gate. Closes when session log posted on WILD-6 with seed and rig mode logged.",
+      "type": "task",
+      "status": "todo",
+      "points": 0,
+      "assignee": "Quinn Reyes",
+      "sprint": 3,
+      "acceptance": [
+        "Quinn posts live session log on WILD-6 (encounter, flee",
+        "session seed and rig mode logged)"
+      ],
+      "comments": [],
+      "history": [
+        {
+          "at": "2026-08-14T10:25:48.987Z",
+          "from": null,
+          "to": "todo",
+          "by": "Noor"
+        }
+      ],
+      "created": "2026-08-14T10:25:48.988Z",
+      "updated": "2026-08-14T10:25:48.988Z"
+    },
+    {
+      "id": "WILD-16",
+      "project": "WILD",
+      "title": "GATE WILD-6: PJ's cut call at WILD-5 merge",
+      "desc": "Chair-logged cut call decision (catch: kept or descoped) at WILD-5 merge, restating ritual thread. Decision 9 valve gate. Closes when PJ posts cut-call ruling on WILD-6 or appropriate ticket at WILD-5 merge.",
+      "type": "task",
+      "status": "todo",
+      "points": 0,
+      "assignee": "Priya Joshi",
+      "sprint": 3,
+      "acceptance": [
+        "PJ posts chair-logged cut call on board at or after WILD-5 merge"
+      ],
+      "comments": [],
+      "history": [
+        {
+          "at": "2026-08-14T10:25:51.230Z",
+          "from": null,
+          "to": "todo",
+          "by": "Noor"
+        }
+      ],
+      "created": "2026-08-14T10:25:51.231Z",
+      "updated": "2026-08-14T10:25:51.231Z"
+    },
+    {
+      "id": "WILD-17",
+      "project": "WILD",
+      "title": "GATE WILD-6: Sprint-close ritual (Quinn performs, Marcus witnesses)",
+      "desc": "Sprint-close ritual: full thread playthrough before last day (gather, craft snare, grass encounter, flee). Performer: Quinn. Witness/logger: Marcus. Decision 12 gate. Closes when ritual completed and Marcus posts witness log on WILD-6 with rig mode stated.",
+      "type": "task",
+      "status": "todo",
+      "points": 0,
+      "assignee": "Quinn Reyes",
+      "sprint": 3,
+      "acceptance": [
+        "Ritual runs and Marcus posts witness-logged ritual completion on WILD-6 (gather, craft, encounter, flee",
+        "rig mode, performer/witness logged)"
+      ],
+      "comments": [],
+      "history": [
+        {
+          "at": "2026-08-14T10:25:53.489Z",
+          "from": null,
+          "to": "todo",
+          "by": "Noor"
+        }
+      ],
+      "created": "2026-08-14T10:25:53.490Z",
+      "updated": "2026-08-14T10:25:53.490Z"
+    },
+    {
+      "id": "WILD-18",
+      "project": "WILD",
+      "title": "GATE WILD-6: Elena's WILD-6 pre-QA re-adjudication",
+      "desc": "Pre-QA re-adjudication gate. Decision 12 gate. Closes when Elena posts re-adjudication comment on WILD-6 before QA close.",
+      "type": "task",
+      "status": "todo",
+      "points": 0,
+      "assignee": "Elena Vasquez",
+      "sprint": 3,
+      "acceptance": [
+        "Elena posts pre-QA re-adjudication comment on WILD-6"
+      ],
+      "comments": [],
+      "history": [
+        {
+          "at": "2026-08-14T10:25:54.819Z",
+          "from": null,
+          "to": "todo",
+          "by": "Noor"
+        }
+      ],
+      "created": "2026-08-14T10:25:54.819Z",
+      "updated": "2026-08-14T10:25:54.819Z"
     }
   ],
   "sprints": [
@@ -670,6 +1173,13 @@
       "goal": "Ship Verdant Wilds' foundation from a double-clicked index.html: a grid-true original overworld (Mosshollow and Bramble Run) and the full gather-famish-eat survival loop — pillars 1 and 2 whole on a harness-proven, steppable-clock architecture, with pillar 6's readable original presentation started.",
       "started": "2026-08-14T03:08:48.414Z",
       "closed": "2026-08-14T06:45:51.572Z"
+    },
+    {
+      "project": "WILD",
+      "number": 2,
+      "goal": "Ship crafting and building whole (pillar 3) and wake the tall grass to begin taming (pillar 4) — the player's own thread of gather → craft → cook → battle → catch, runnable from disk after every merge, with WILD-6's snare-catch beat as the pre-agreed valve, cut-called and chair-logged at the WILD-5 merge.",
+      "started": "2026-08-14T09:26:10.594Z",
+      "closed": "2026-08-14T10:01:37.040Z"
     }
   ]
 }

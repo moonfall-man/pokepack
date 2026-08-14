@@ -1,6 +1,6 @@
 {
   "studio": "Moonfall Interactive",
-  "balance": 661193,
+  "balance": 625065,
   "log": [
     {
       "at": "2026-08-13T19:52:08.947Z",
@@ -36,6 +36,20 @@
       "amount": 144000,
       "balance": 661193,
       "note": "sprint WILD#1 shipped points"
+    },
+    {
+      "at": "2026-08-14T10:03:06.861Z",
+      "kind": "payroll",
+      "amount": -36128,
+      "balance": 625065,
+      "note": "payroll for 7 staff (sprint WILD#2)"
+    },
+    {
+      "at": "2026-08-14T10:03:12.048Z",
+      "kind": "revenue",
+      "amount": 0,
+      "balance": 625065,
+      "note": "sprint WILD#2 shipped points"
     }
   ]
 }
