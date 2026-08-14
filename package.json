@@ -8,6 +8,7 @@
   },
   "scripts": {
     "start": "node bin/pokepack.js ui",
+    "build:exe": "node build/exe.mjs",
     "test": "node test/run.js",
     "hub": "node bin/pokepack.js ui",
     "feed": "node bin/pokepack.js feed packs --out packs.json"
@@ -21,6 +22,11 @@
   ],
   "engines": {
     "node": ">=18"
+  },
+  "//devDependencies": "Build-time only. pokepack runs with nothing installed; these package it into dist/pokepack.exe.",
+  "devDependencies": {
+    "esbuild": "^0.28.2",
+    "postject": "^1.0.0-alpha.6"
   },
   "license": "MIT",
   "files": [

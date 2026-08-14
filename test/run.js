@@ -18,6 +18,9 @@ import * as net from '../src/net.js';
 import * as update from '../src/update.js';
 import * as logs from '../src/logs.js';
 import * as android from '../src/android.js';
+import * as packaged from '../src/packaged.js';
+import * as gamedl from '../src/game.js';
+import * as saves from '../src/saves.js';
 import * as packfeed from '../src/packfeed.js';
 import { applyToOptions, setModEnabled } from '../src/liveapply.js';
 import { uninstall, planUninstall } from '../src/uninstall.js';
@@ -1664,6 +1667,8 @@ function tmpAndroidSave(name) {
   writeFileSync(join(root, 'mods', 'VOXEL', 'manifest.json'), '{"id":"VOXEL"}');
   writeFileSync(join(root, 'mods', 'VOXEL', 'main.lua'), '-- mod\n'.repeat(200));
   writeFileSync(join(root, 'mods', '.pokepack-backup', 'old.lua'), 'stale');
+  mkdirSync(join(root, 'profiles'), { recursive: true });
+  writeFileSync(join(root, 'profiles', 'VOXEL-MMO.g1rmodlist'), 'return { name = "VOXEL-MMO" }');
   writeFileSync(join(root, 'options.lua'), 'return { mods = {} }');
   writeFileSync(join(root, 'pokepack-installed.json'), '{"mods":{}}');
   writeFileSync(join(root, 'red', 'rom-cache.complete'), 'rom-cache-v9:abc');
@@ -1676,8 +1681,11 @@ it('sends the mods and the settings, and leaves ROM data behind', () => {
   const { files, left } = android.plan(root);
   const names = files.map((f) => f.name).sort();
 
+  // profiles/ is what makes a handheld able to hold more than one pack: the
+  // device has a single save folder, so switching between packs is the game
+  // importing a .g1rmodlist rather than anything overwriting anything.
   eq(names, ['mods/VOXEL/main.lua', 'mods/VOXEL/manifest.json', 'options.lua',
-    'pokepack-installed.json']);
+    'pokepack-installed.json', 'profiles/VOXEL-MMO.g1rmodlist']);
   // The thing that must never travel.  A ROM is the player's own, and this
   // repo's whole argument is that it distributes instructions, not other
   // people's work -- an archive that quietly carried game data would be the
@@ -1714,7 +1722,7 @@ it('packs paths relative to the save folder, so it extracts straight into it', (
   const names = entries.map((e) => e.name).sort();
 
   eq(names, [android.NOTES, 'mods/VOXEL/main.lua', 'mods/VOXEL/manifest.json',
-    'options.lua', 'pokepack-installed.json']);
+    'options.lua', 'pokepack-installed.json', 'profiles/VOXEL-MMO.g1rmodlist']);
   ok(!names.some((n) => n.startsWith('/') || /^[A-Za-z]:/.test(n) || n.includes('..')),
     'nothing absolute and nothing that climbs out');
 
@@ -1725,6 +1733,8 @@ it('packs paths relative to the save folder, so it extracts straight into it', (
   ok(readme.includes('Voxel MMO'), 'the notes name the pack');
   ok(readme.includes(android.ANDROID_IDENTITY), 'and the folder it goes in');
   ok(readme.includes('saves'), 'and promise the saves are untouched');
+  ok(readme.includes('import'), 'and say how to switch to it on the device');
+  ok(readme.includes('adds another profile'), 'without implying it wipes the last one');
 
   rmSync(root, { recursive: true, force: true });
 });
@@ -1776,6 +1786,318 @@ it('computes the CRC every unzipper will check', () => {
   // The check value from the zip spec's own test vector.
   eq(zip.crc32(Buffer.from('123456789')), 0xcbf43926);
   eq(zip.crc32(Buffer.alloc(0)), 0);
+});
+
+// ------- moving a save between setups
+
+describe('saves');
+
+function tmpSaveDir(name, { slots = ['slot1'], active = 'slot1', body = 'save' } = {}) {
+  const root = join(HERE, '..', name);
+  rmSync(root, { recursive: true, force: true });
+  mkdirSync(join(root, 'saves', 'red'), { recursive: true });
+  for (const s of slots) {
+    writeFileSync(join(root, 'saves', 'red', `${s}.lua`), `return { who = "${body}-${s}" }`);
+    // The engine's own crash copy sits beside every slot and is not a save.
+    writeFileSync(join(root, 'saves', 'red', `${s}.lua.bak`), 'return {}');
+  }
+  const list = slots.map((s, i) => `      [${i + 1}] = "${s}",`).join('\n');
+  writeFileSync(join(root, 'options.lua'),
+    `return {\n  saveSlots = {\n    red = {\n      active = "${active}",\n`
+    + `      list = {\n${list}\n      },\n    },\n  },\n}\n`);
+  return root;
+}
+
+it('reads both halves of a save, not just the files', () => {
+  const root = tmpSaveDir('.test-tmp-sv1');
+  const found = saves.describe(root);
+  eq(found.total, 1);
+  eq(found.versions.length, 1);
+  eq(found.versions[0].version, 'red');
+  eq(found.versions[0].active, 'slot1');
+  const s = found.versions[0].slots[0];
+  eq(s.name, 'slot1');
+  eq(s.active, true);
+  eq(s.listed, true);
+  ok(s.size > 0, 'and the file behind it');
+  rmSync(root, { recursive: true, force: true });
+});
+
+it('names the two ways a save can be half-there', () => {
+  // Both of these are what a careless copy leaves behind, and both look like
+  // "my save vanished" from inside the game.
+  const root = tmpSaveDir('.test-tmp-sv2');
+  writeFileSync(join(root, 'saves', 'red', 'slot9.lua'), 'return {}');   // on disk, unlisted
+  writeFileSync(join(root, 'options.lua'),
+    'return {\n  saveSlots = {\n    red = {\n      active = "slot1",\n'
+    + '      list = {\n        [1] = "slot1",\n        [2] = "slot7",\n      },\n    },\n  },\n}\n');
+
+  const byName = Object.fromEntries(saves.describe(root).versions[0].slots.map((s) => [s.name, s]));
+  eq(byName.slot9.orphanFile, true, 'on disk but the game will not list it');
+  eq(byName.slot7.missingFile, true, 'listed but the file is gone');
+  eq(byName.slot1.orphanFile, false);
+  rmSync(root, { recursive: true, force: true });
+});
+
+it('copies a save into a free slot and registers it, both halves', () => {
+  const from = tmpSaveDir('.test-tmp-sv-from', { body: 'mine' });
+  const to = tmpSaveDir('.test-tmp-sv-to', { body: 'theirs' });
+
+  const out = saves.transfer({ from, to, running: false });
+  eq(out.copied.length, 1);
+  eq(out.copied[0].fromSlot, 'slot1');
+  eq(out.copied[0].toSlot, 'slot2', 'beside what was there, never on top of it');
+
+  // The half that is easy to forget: the destination has to LIST it.
+  const after = saves.describe(to);
+  const names = after.versions[0].slots.map((s) => s.name);
+  eq(names, ['slot1', 'slot2']);
+  eq(after.versions[0].active, 'slot2', 'and it is the one that loads');
+  ok(after.versions[0].slots.every((s) => s.listed), 'both listed, so both are reachable in game');
+
+  // And what was already there is untouched.
+  eq(readFileSync(join(to, 'saves', 'red', 'slot1.lua'), 'utf8'), 'return { who = "theirs-slot1" }');
+  eq(readFileSync(join(to, 'saves', 'red', 'slot2.lua'), 'utf8'), 'return { who = "mine-slot1" }');
+
+  rmSync(from, { recursive: true, force: true });
+  rmSync(to, { recursive: true, force: true });
+});
+
+it('never overwrites, however many times you copy', () => {
+  const from = tmpSaveDir('.test-tmp-sv-f2', { body: 'mine' });
+  const to = tmpSaveDir('.test-tmp-sv-t2', { body: 'theirs' });
+  saves.transfer({ from, to, running: false });
+  saves.transfer({ from, to, running: false });
+  saves.transfer({ from, to, running: false });
+  eq(saves.describe(to).versions[0].slots.map((s) => s.name), ['slot1', 'slot2', 'slot3', 'slot4']);
+  eq(readFileSync(join(to, 'saves', 'red', 'slot1.lua'), 'utf8'), 'return { who = "theirs-slot1" }');
+  rmSync(from, { recursive: true, force: true });
+  rmSync(to, { recursive: true, force: true });
+});
+
+it('refuses to touch anything while the game is open', () => {
+  // LOVE rewrites options.lua wholesale on exit, so a write under a running
+  // game is lost -- and the save it was registering goes invisible with it.
+  const from = tmpSaveDir('.test-tmp-sv-f3');
+  const to = tmpSaveDir('.test-tmp-sv-t3');
+  throws(() => saves.transfer({ from, to, running: true }), 'the game is running');
+  throws(() => saves.transfer({ from, to, running: null }), 'could not tell');
+  eq(saves.describe(to).total, 1, 'and nothing was copied');
+  rmSync(from, { recursive: true, force: true });
+  rmSync(to, { recursive: true, force: true });
+});
+
+it('backs up the slot list along with the files', () => {
+  const root = tmpSaveDir('.test-tmp-sv-b', { slots: ['slot1', 'slot2'], active: 'slot2' });
+  const out = join(HERE, '..', '.test-tmp-sv-bak');
+  rmSync(out, { recursive: true, force: true });
+
+  const made = saves.backup(root, { outDir: out, stamp: '2026-08-14T10:00:00.000Z' });
+  eq(made.slots, 2);
+  const entries = zip.read(readFileSync(made.file));
+  const names = entries.map((e) => e.name).sort();
+  eq(names, ['saves.json', 'saves/red/slot1.lua', 'saves/red/slot2.lua']);
+
+  // Without this the restore puts files back that the game cannot see.
+  const meta = JSON.parse(entries.find((e) => e.name === 'saves.json').data().toString('utf8'));
+  eq(meta.saveSlots.red.active, 'slot2');
+  eq(meta.saveSlots.red.list, ['slot1', 'slot2']);
+
+  throws(() => saves.backup(join(HERE, '..', '.test-tmp-sv-none'), { outDir: out }), 'no saves');
+  rmSync(root, { recursive: true, force: true });
+  rmSync(out, { recursive: true, force: true });
+});
+
+it('puts a backup back, both halves, keeping the slot names when it can', () => {
+  const root = tmpSaveDir('.test-tmp-sv-r1', { slots: ['slot1', 'slot2'], active: 'slot2' });
+  const out = join(HERE, '..', '.test-tmp-sv-r1-bak');
+  rmSync(out, { recursive: true, force: true });
+  const made = saves.backup(root, { outDir: out, stamp: '2026-08-14T10:00:00.000Z' });
+
+  // The case that matters: the setup is gone and a fresh one is standing in.
+  const fresh = join(HERE, '..', '.test-tmp-sv-r1-new');
+  rmSync(fresh, { recursive: true, force: true });
+  mkdirSync(fresh, { recursive: true });
+  writeFileSync(join(fresh, 'options.lua'), 'return { musicVol = 7 }');
+
+  const back = saves.restore({ buffer: readFileSync(made.file), to: fresh, running: false });
+  eq(back.restored.map((r) => r.toSlot).sort(), ['slot1', 'slot2'], 'names kept, nothing was using them');
+  eq(back.restored.every((r) => !r.renamed), true);
+
+  const after = saves.describe(fresh);
+  eq(after.versions[0].slots.map((s) => s.name), ['slot1', 'slot2']);
+  eq(after.versions[0].active, 'slot2', 'and the one that was live is live again');
+  // Exactly one winner. Restoring slot1 into an empty setup makes it active
+  // for want of anything else, and then slot2 arrives and takes it.
+  eq(back.restored.filter((r) => r.active).map((r) => r.toSlot), ['slot2']);
+  ok(after.versions[0].slots.every((s) => s.listed && s.file), 'listed AND on disk, or the game cannot see it');
+  // A restore is a merge like everything else here.
+  eq(parse(readFileSync(join(fresh, 'options.lua'), 'utf8')).musicVol, 7, 'the rest of the file survived');
+
+  rmSync(root, { recursive: true, force: true });
+  rmSync(out, { recursive: true, force: true });
+  rmSync(fresh, { recursive: true, force: true });
+});
+
+it('restores beside a save rather than onto it', () => {
+  const root = tmpSaveDir('.test-tmp-sv-r2', { body: 'backed-up' });
+  const out = join(HERE, '..', '.test-tmp-sv-r2-bak');
+  rmSync(out, { recursive: true, force: true });
+  const made = saves.backup(root, { outDir: out, stamp: '2026-08-14T10:00:00.000Z' });
+
+  const busy = tmpSaveDir('.test-tmp-sv-r2-busy', { body: 'playing-now' });
+  const back = saves.restore({ buffer: readFileSync(made.file), to: busy, running: false });
+  eq(back.restored[0].renamed, true, 'slot1 was taken');
+  eq(back.restored[0].toSlot, 'slot2');
+  eq(readFileSync(join(busy, 'saves', 'red', 'slot1.lua'), 'utf8'), 'return { who = "playing-now-slot1" }',
+    'the save being played is untouched');
+
+  rmSync(root, { recursive: true, force: true });
+  rmSync(out, { recursive: true, force: true });
+  rmSync(busy, { recursive: true, force: true });
+});
+
+it('refuses a zip that is not one of ours, or that climbs out of the folder', () => {
+  const to = tmpSaveDir('.test-tmp-sv-r3');
+  const notOurs = zip.write([{ name: 'hello.txt', data: Buffer.from('hi') }]);
+  eq(saves.readBackup(notOurs).error.includes('no saves.json'), true);
+  throws(() => saves.restore({ buffer: notOurs, to, running: false }), 'not a pokepack save backup');
+
+  const escaping = zip.write([
+    { name: 'saves.json', data: Buffer.from('{"saveSlots":{}}') },
+    { name: '../escaped.lua', data: Buffer.from('return {}') },
+  ]);
+  eq(saves.readBackup(escaping).error.includes('unsafe path'), true);
+  eq(existsSync(join(HERE, '..', '..', 'escaped.lua')), false, 'and nothing was written');
+
+  eq(saves.readBackup(Buffer.from('not a zip at all')).error.includes('readable zip'), true);
+  throws(() => saves.restore({ buffer: readFileSync(join(HERE, 'run.js')), to, running: false }), 'readable zip');
+  rmSync(to, { recursive: true, force: true });
+});
+
+it('will not restore into a running game either', () => {
+  const root = tmpSaveDir('.test-tmp-sv-r4');
+  const out = join(HERE, '..', '.test-tmp-sv-r4-bak');
+  rmSync(out, { recursive: true, force: true });
+  const made = saves.backup(root, { outDir: out, stamp: '2026-08-14T10:00:00.000Z' });
+  throws(() => saves.restore({ buffer: readFileSync(made.file), to: root, running: true }), 'the game is running');
+  rmSync(root, { recursive: true, force: true });
+  rmSync(out, { recursive: true, force: true });
+});
+
+it('lists what is in a folder of backups, including the broken ones', () => {
+  // A backup you cannot see is one you will not know is broken until the day
+  // it is the only copy left.
+  const root = tmpSaveDir('.test-tmp-sv-r5');
+  const out = join(HERE, '..', '.test-tmp-sv-r5-bak');
+  rmSync(out, { recursive: true, force: true });
+  saves.backup(root, { outDir: out, stamp: '2026-08-14T10:00:00.000Z' });
+  writeFileSync(join(out, 'corrupt-saves-2026.zip'), 'this is not a zip');
+
+  const listed = saves.listBackups(out);
+  eq(listed.length, 2);
+  const bad = listed.find((b) => b.name.startsWith('corrupt'));
+  ok(bad.error, 'reported rather than dropped');
+  const good = listed.find((b) => !b.error);
+  eq(good.setup, '.test-tmp-sv-r5');
+  eq(good.slots, ['red/slot1']);
+  eq(saves.listBackups(join(HERE, '..', '.test-tmp-nope')), []);
+
+  rmSync(root, { recursive: true, force: true });
+  rmSync(out, { recursive: true, force: true });
+});
+
+// ------- fetching the game itself
+
+describe('game download');
+
+it('reads the checksum file the author publishes', () => {
+  const sums = gamedl.parseChecksums([
+    '83d413eb87e75ad31ad9a2665c66173a52282feccce4a66a743c6f0207940085  gen1recomp-0.1.81-windows.zip',
+    '25bfa307280e40512bb28dcccbb5822b587c5be4f48b0bc255a374b44a8caaa7  gen1recomp-0.1.81-android.apk',
+    '',
+    'not a checksum line at all',
+  ].join('\n'));
+  eq(sums['gen1recomp-0.1.81-windows.zip'],
+    '83d413eb87e75ad31ad9a2665c66173a52282feccce4a66a743c6f0207940085');
+  eq(Object.keys(sums).length, 2, 'the junk line is skipped, not guessed at');
+});
+
+it('picks the build for the machine asking, and admits when there is none', () => {
+  ok(gamedl.assetFor('win32').match.test('gen1recomp-0.1.81-windows.zip'));
+  ok(!gamedl.assetFor('win32').match.test('gen1recomp-0.1.81-linux.zip'), 'not another platform');
+  ok(gamedl.assetFor('darwin').match.test('gen1recomp-0.1.81-macos.zip'));
+  ok(gamedl.assetFor('linux', 'arm64').match.test('gen1recomp-0.1.81-linux-arm64.AppImage'));
+  ok(gamedl.assetFor('linux', 'x64').match.test('gen1recomp-0.1.81-linux.zip'));
+  eq(gamedl.assetFor('aix'), null, 'rather than handing over a build for something else');
+});
+
+it('refuses a download that names a path outside the folder', () => {
+  // This one arrives over the network, so the check is not about these authors
+  // -- it is that the alternative is trusting a download to behave.
+  const root = join(HERE, '..', '.test-tmp-game');
+  rmSync(root, { recursive: true, force: true });
+  mkdirSync(root, { recursive: true });
+  const nasty = zip.write([{ name: '../escaped.txt', data: Buffer.from('nope') }]);
+  throws(() => gamedl.unpack(nasty, root), 'unsafe path');
+  eq(existsSync(join(HERE, '..', '..', 'escaped.txt')), false, 'and nothing was written');
+  rmSync(root, { recursive: true, force: true });
+});
+
+it('unpacks a well-formed one and finds the executable in it', () => {
+  const root = join(HERE, '..', '.test-tmp-game2');
+  rmSync(root, { recursive: true, force: true });
+  mkdirSync(root, { recursive: true });
+  // The shape their release actually has: everything under one folder.
+  const buf = zip.write([
+    { name: 'gen1recomp-win64/gen1recomp.exe', data: Buffer.from('MZ fake') },
+    { name: 'gen1recomp-win64/love.dll', data: Buffer.from('dll') },
+  ]);
+  const { files, exePath } = gamedl.unpack(buf, root, { exeMatch: /gen1recomp\.exe$/i });
+  eq(files.length, 2);
+  eq(exePath, join(root, 'gen1recomp-win64', 'gen1recomp.exe'));
+  eq(readFileSync(exePath, 'utf8'), 'MZ fake');
+  rmSync(root, { recursive: true, force: true });
+});
+
+// ------- checkout or exe
+
+describe('packaged builds');
+
+it('is a checkout unless the build said otherwise', () => {
+  eq(packaged.isPackaged(), false);
+  eq(packaged.packagedVersion(), null);
+  eq(packaged.defaultPacksDir(), 'packs', 'relative to the working directory');
+  ok(update.repoRoot() !== null, 'and there is a checkout to point at');
+});
+
+it('reads its version from the build, not a package.json it does not have', () => {
+  // What build/exe.mjs injects with --define.  Set here rather than mocked,
+  // because the whole mechanism is "is this global set", and a mock of that
+  // would test nothing.
+  globalThis.__POKEPACK_EXE__ = true;
+  globalThis.__POKEPACK_VERSION__ = '9.9.9';
+  try {
+    eq(packaged.isPackaged(), true);
+    eq(update.currentVersion(), '9.9.9');
+    eq(update.repoRoot(), null, 'nothing to read package.json out of');
+    eq(packaged.defaultPacksDir(), join(dirname(process.execPath), 'packs'),
+      'beside the exe, because a double-clicked program has no cwd anyone chose');
+
+    // The update offer has to degrade rather than break: an exe cannot pull.
+    const st = update.status();
+    eq(st.git, false);
+    eq(st.packaged, true);
+    ok(st.reason.includes('releases page'), st.reason);
+  } finally {
+    delete globalThis.__POKEPACK_EXE__;
+    delete globalThis.__POKEPACK_VERSION__;
+  }
+});
+
+it('leaves the checkout path alone once the flags are gone', () => {
+  eq(packaged.isPackaged(), false, 'no state left behind by the test above');
+  eq(packaged.defaultPacksDir(), 'packs');
 });
 
 // ------- report

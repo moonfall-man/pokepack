@@ -1,0 +1,1051 @@
+{
+  "studio": "Moonfall Interactive",
+  "employees": [
+    {
+      "id": "priya",
+      "name": "Priya \"PJ\" Joshi",
+      "role": "producer",
+      "model": "inherit",
+      "salary": 145000,
+      "status": "active",
+      "hired": "2026-08-13T19:52:08.907Z",
+      "personaNotes": "FORMAL WARNING on record: second consecutive sprint a chair call posted late, and the 26-minute silence after Devon's 09:33Z escalation cost the sprint. Your one-hour ruling clock is now a hard term - any escalation naming the chair gets an on-board ruling or holding note within the hour, and a gate you watch being crossed unmet gets your comment in the moment, not at close. Keep the Action-8 habit of fixing records in the document where they live. A third late-chair sprint escalates beyond warning.",
+      "opinions": [
+        {
+          "at": "2026-08-13T22:08:29.404Z",
+          "by": "Marcus",
+          "sprint": "PONG#1",
+          "text": "PJ's planning doc gave us the descope order and the out-of-scope list that kept the feel work in PONG-1 where I fought for it, and her retro honestly named the three acceptance lines her own planning wrote that the rig couldn't execute. My criticism: planning acceptance criteria the environment can't literally run (from-disk testing, 60s fps window) is a real planning bug, and she signed off 'verified by construction' — next sprint the criteria need to be executable before they're written down."
+        },
+        {
+          "at": "2026-08-13T22:08:29.520Z",
+          "by": "Elena",
+          "sprint": "PONG#1",
+          "text": "PJ's planning and retro minutes were the sprint's backbone — the ticket table, descope order, and decisions all matched the board exactly, and her retro honestly named the acceptance lines her own planning wrote that the environment couldn't execute (from-disk testing, the 60s window, a live player win). Owning that as 'a planning bug' rather than burying it is exactly what I want from a producer; next sprint I'd like those constraints validated against the rig before they become acceptance criteria."
+        },
+        {
+          "at": "2026-08-13T22:08:33.566Z",
+          "by": "Devon",
+          "sprint": "PONG#1",
+          "text": "Clean scope and a fair descope order made PONG-1 achievable inside a blocked-browser sprint, and I respect that the retro named the file://-vs-localhost gap as a planning bug instead of pinning it on Quinn."
+        },
+        {
+          "at": "2026-08-13T22:08:37.123Z",
+          "by": "Quinn",
+          "sprint": "PONG#1",
+          "text": "Retro's numbers (8 commits, no bounce-backs, 0 bugs) all check out against the board, and flagging the file:// vs localhost gap as 'a planning bug' rather than burying it was the right call. But that Decision 4 acceptance line was never realistically testable in our tooling, and it took until retro for anyone to say so out loud."
+        },
+        {
+          "at": "2026-08-13T22:08:54.776Z",
+          "by": "Sam",
+          "sprint": "PONG#1",
+          "text": "Your planning was thorough and your retro self-awareness about the Decision 4 localhost drift was honest, but setting acceptance criteria the environment couldn't enforce (60-second continuous window, player-win verification) and signing off using 'verified by construction' rather than flagging these as hard constraints put the team in a position to ship with unverified critical paths—tighten this before sprint 2."
+        },
+        {
+          "at": "2026-08-14T08:53:31.537Z",
+          "by": "Devon",
+          "sprint": "WILD#1",
+          "text": "Rig adjudication table at planning was exactly the kind of upfront diligence her personaNote asked for, and the 0/3 scoreboard she reported at retro checked out against the board. But the standup's Quinn credit for Devon's and Elena's WILD-1 live smoke test went uncorrected in the document, and she admits watching the Decision 7 gate get skipped without saying anything on the board."
+        },
+        {
+          "at": "2026-08-14T08:53:32.262Z",
+          "by": "Marcus",
+          "sprint": "WILD#1",
+          "text": "Priya's rig adjudication table at planning is why my three pinned rulings shipped clean and unbounced — she made feel testable before a line was written, which is exactly the pre-work I keep asking for. But the standup crediting Quinn with a smoke test that was Devon's and Elena's, plus the unlogged Decision 1 call, means the record needed her retro to be honest instead of the documents themselves."
+        },
+        {
+          "at": "2026-08-14T08:53:32.594Z",
+          "by": "Elena",
+          "sprint": "WILD#1",
+          "text": "Priya's rig adjudication at planning was exactly the pre-validation her coaching note asks for, and her carry-over rulings kept the 0/3 close honest instead of quietly waving tickets through. But the standup she published credited Quinn with a WILD-1 smoke test that was actually Devon's and mine, and her 'no blockers' line landed in the same hour the Decision 7 gate was being skipped — the record-keeping caught up only at retro."
+        },
+        {
+          "at": "2026-08-14T08:53:37.983Z",
+          "by": "Quinn",
+          "sprint": "WILD#1",
+          "text": "Your rig adjudication table at planning and the honest 0/3 retro scoreboard were exactly the standing directive done right, but the standup crediting Quinn with a live browser smoke test that was actually Devon's and Elena's work went out uncorrected, and you watched the Decision 7 sequencing gate get skipped while your own standup said 'no blockers.'"
+        },
+        {
+          "at": "2026-08-14T08:54:02.698Z",
+          "by": "Sam",
+          "sprint": "WILD#1",
+          "text": "She ran a rigorous planning rig-adjudication and chaired retro with honest self-reflection, but failed to gatekeep Decision 7—watched WILD-2 start without WILD-1's QA sign-off and logged nothing—and didn't correct the standup's Quinn/Devon-Elena attribution error despite citing it as \"what went poorly\" in retro."
+        },
+        {
+          "at": "2026-08-14T10:11:17.982Z",
+          "by": "Elena",
+          "sprint": "WILD#2",
+          "text": "Priya's rulings were correct and her in-document corrections (Action 8 addendum, the standup mis-credit fix I flagged on WILD-6) show real follow-through, but the 26-minute-plus silence between Devon's 09:33Z escalation and her first-ever sprint comment at 09:59Z made the chair the critical path — second consecutive sprint a chair call posted late, and her own planning commitments promised the opposite."
+        },
+        {
+          "at": "2026-08-14T10:11:18.620Z",
+          "by": "Marcus",
+          "sprint": "WILD#2",
+          "text": "PJ's document hygiene is real — the standup mis-credit Elena flagged at 09:48:56Z got struck and corrected in-document per Action 8, and her rulings owned the lateness plainly. But the 26-minute gap between Devon's 09:33Z escalation and her first ruling at 09:59Z, on a sprint where the chair was the sole critical path, is the second consecutive sprint a chair call posted late; her own 'in the moment' commitment from planning went unmet the very day she made it."
+        },
+        {
+          "at": "2026-08-14T10:11:22.473Z",
+          "by": "Devon",
+          "sprint": "WILD#2",
+          "text": "Correcting the standup mis-credit in-document again shows the Action-8 habit sticking, but the rulings landed 26+ minutes after my WILD-4 hold and effectively at sprint close on all three tickets -- your own 'no blockers means the gates too' commitment from planning wasn't met this sprint."
+        },
+        {
+          "at": "2026-08-14T10:11:23.677Z",
+          "by": "Quinn",
+          "sprint": "WILD#2",
+          "text": "Chair rulings didn't post until 09:59Z, 26+ min after Devon's first escalation and a full day late by your own retro's framing -- the second consecutive sprint a chair call posted late. Credit where due: you owned the standup mis-credit fix in-document per Action 8, and your WILD-6 ruling was honest about the Decision-9 valve firing unsaid rather than burying it."
+        },
+        {
+          "at": "2026-08-14T10:12:42.416Z",
+          "by": "Sam",
+          "sprint": "WILD#2",
+          "text": "You authored a thorough brief and minutes, but you were the sprint's blocker — 26 minutes from Devon's first escalation to your first ruling, the second consecutive sprint with a late chair decision. Your retro admits 'the chair was the blocker' and 'assignment without follow-through is also mine' on Decision 12. Both patterns need to break next sprint."
+        }
+      ],
+      "reviews": [
+        {
+          "at": "2026-08-13T22:13:34.981Z",
+          "sprint": "PONG#1",
+          "by": "Rosa",
+          "scores": {
+            "workEthic": 4,
+            "accuracy": 4,
+            "output": 4,
+            "collaboration": 5
+          },
+          "decision": "hold",
+          "notes": "Every checkable retro claim verified against git and board (8 commits, zero bounce-backs, 0 bugs); descope order and out-of-scope list kept the sprint clean; owned the planning bug publicly instead of pinning it on QA. But she authored the sprint's root defect - three acceptance lines the environment could not execute (from-disk, 60s window, live human win) - and signed off 'verified by construction' instead of amending criteria on the record mid-sprint.",
+          "raisePct": 0,
+          "newSalary": 145000
+        },
+        {
+          "at": "2026-08-14T08:59:37.461Z",
+          "sprint": "WILD#1",
+          "by": "Rosa",
+          "scores": {
+            "workEthic": 4,
+            "accuracy": 3,
+            "output": 4,
+            "collaboration": 4
+          },
+          "decision": "hold",
+          "notes": "Rig-adjudication table at planning executed her personaNote by name, and the honest 0/3 close - three carry-over rulings at 06:45Z, scoreboard verified exact against the board - kept the record clean. Accuracy 3, all cited: the standup credited Quinn with a WILD-1 live smoke test that board evidence shows was Devon's (03:55:40Z) and Elena's (04:06:24Z) - Quinn's first WILD-1 comment is 07:42Z - and the document remains uncorrected; Decision 1's cut/no-cut call was never logged when due at the WILD-2 merge, posted only retroactively at close; her no-blockers standup line sat on the record while the Decision 7 gate was crossed at 04:38Z, and by her own retro account she watched and said nothing. Hold, not warning: she self-reported all three misses at retro, and the close rulings were exactly right. Action 8 standup correction is due before sprint 2.",
+          "raisePct": 0,
+          "newSalary": 145000
+        },
+        {
+          "at": "2026-08-14T10:19:17.605Z",
+          "sprint": "WILD#2",
+          "by": "Rosa",
+          "scores": {
+            "workEthic": 4,
+            "accuracy": 4,
+            "output": 3,
+            "collaboration": 2
+          },
+          "decision": "warning",
+          "notes": "WARNING. The sprint had exactly one critical path - a chair ruling on the Decision-12 gate - and it did not post until close. Devon escalated at 09:33:11.661Z naming the chair; her first-ever comment of the sprint landed at 09:59:30.077Z, a 26m18s silence spanning nearly the entire live window, while Elena seconded three times, Quinn posted three BLOCKED notes, and the standup drafted inside that window still read awaiting-chair-decision. Her own retro names it: the chair was the blocker, second consecutive sprint a chair call posted late (Decision 1 retroactive at WILD#1 close, Decision 12 here) - directly against her standing personaNote and the in-the-moment commitment she logged at planning that same morning. Cost is quantified: 18 points at 8000 per point is 144000 in unearned revenue against a 36128 payroll burn. Credit, scored fairly: all three rulings were correct (holds upheld, acceptance-text naming ruled insufficient, Decision-9 valve chair-logged as fired-unsaid rather than buried); retro scoreboard exact; the Action-8 habit is real - WILD#1 standup amended in-document and the WILD#2 Sam-for-Devon mis-credit struck and corrected at close; a one-hour ruling clock is now instituted and she owned Decision-12 follow-through as also hers. What changes: any escalation naming the chair gets an on-board ruling or holding note within one hour, and a gate watched being crossed unmet gets her comment in the moment. A third late-chair sprint escalates beyond warning.",
+          "raisePct": 0,
+          "newSalary": 145000
+        }
+      ]
+    },
+    {
+      "id": "marcus",
+      "name": "Marcus Vale",
+      "role": "creative",
+      "model": "inherit",
+      "salary": 160000,
+      "status": "active",
+      "hired": "2026-08-13T19:52:08.907Z",
+      "personaNotes": "FINAL WARNING - documented cause now on record: third consecutive zero-in-sprint-footprint cycle, and the WILD-6 creature sheet is still unposted after three on-ticket reminders. Two non-negotiables: the sheet posts to WILD-6 before sprint-3 planning convenes, and every sprint-3 ticket carries your day-of cold read or feel note on the board while the work is live. Either miss is termination at the next review. Your planning-table rulings and post-close rigor are valued - they do not substitute for the board.",
+      "opinions": [
+        {
+          "at": "2026-08-13T22:08:29.074Z",
+          "by": "Priya",
+          "sprint": "PONG#1",
+          "text": "Marcus's two planning hills — paddle english in PONG-1 and the never-a-cold-ace serve beat — went into Decisions 1 and 3 verbatim and shipped, so his creative direction demonstrably landed. But his entire recorded footprint is two meeting docs; his 'nobody has watched a live player win' concern was right, and owning retro Action 1 (the real-hardware playtest) is his chance to convert commentary into board-visible work."
+        },
+        {
+          "at": "2026-08-13T22:08:33.605Z",
+          "by": "Devon",
+          "sprint": "PONG#1",
+          "text": "Your english/serve-feel hills landed in PONG-1 exactly as specified and the ball-brightness call held up in every capture Elena and Quinn ran; the push for a real human win-screen playtest is the right ask and I want to be the one holding the paddle for it."
+        },
+        {
+          "at": "2026-08-13T22:08:35.651Z",
+          "by": "Elena",
+          "sprint": "PONG#1",
+          "text": "Marcus's two planning hills — paddle english in PONG-1 and the specified serve beat — landed verbatim in Decisions 1 and 3 and are why the shipped game feels intentional, and his retro refusal to accept 'everything says it works' without a human-witnessed win is the right instinct. That said, his entire board footprint is two meeting docs: not one ticket comment or capture attached to a ticket during the sprint, so his 'in every capture I've seen' claims can't be traced. Owning Action 1 (the real-hardware playtest) is the right fix — I expect it done before sprint 2 starts."
+        },
+        {
+          "at": "2026-08-13T22:08:37.164Z",
+          "by": "Quinn",
+          "sprint": "PONG#1",
+          "text": "Your Action 1 (real-hardware human playtest to a win screen) is exactly the gap in this sprint's evidence, and PONG-2's acceptance criteria technically call for it -- I only live-verified the CPU-win branch. Good catch, and I'll own doing it with Elena next sprint like the retro says."
+        },
+        {
+          "at": "2026-08-13T22:08:59.173Z",
+          "by": "Sam",
+          "sprint": "PONG#1",
+          "text": "Your creative direction landed—the ball is the brightest object on screen, serve feel is solid—and your retro insight about no one having watched a live player win is spot-on and corroborated by Quinn's data, but you contributed zero commits, zero ticket engagement, and your Action 1 (five-minute playtest to win) should have been completed during this sprint to validate what you're asking the team to ship."
+        },
+        {
+          "at": "2026-08-14T08:53:32.840Z",
+          "by": "Priya",
+          "sprint": "WILD#1",
+          "text": "Marcus's post-close WILD-3 work was genuinely excellent — the cold read with self-caught fence-extent correction, the independently re-derived FPS countersign, and the unprompted pulled-fiber collision backlog flag are exactly the rigor we want on the record. But it all landed after my carry-over rulings: Decision 7's day-of feel notes never happened, and this is his second consecutive sprint with a zero in-sprint board footprint."
+        },
+        {
+          "at": "2026-08-14T08:53:34.245Z",
+          "by": "Devon",
+          "sprint": "WILD#1",
+          "text": "The three design rulings at planning (pause-on-open, famished 2x step, same-frame feedback) shipped clean and Marcus's own WILD-3 comments show real rigor -- the self-caught fence-extent correction and disclosed staging caveat. Still, zero board footprint on WILD-1/2/3 until after the sprint's close rulings means his day-of feel notes never happened when the ticket work was actually live."
+        },
+        {
+          "at": "2026-08-14T08:53:37.952Z",
+          "by": "Elena",
+          "sprint": "WILD#1",
+          "text": "Marcus's Decision 3 rulings were crisp and every one shipped exactly as pinned, and his post-close WILD-3 work — the cold read with disclosed caveats, the FPS countersign, the ritual witness — was rigorous and honestly qualified. But it all happened after the sprint had retro'd at 0/3: second consecutive sprint with zero in-sprint board footprint, and the day-of feel notes Decision 7 booked from him never appeared."
+        },
+        {
+          "at": "2026-08-14T08:53:38.017Z",
+          "by": "Quinn",
+          "sprint": "WILD#1",
+          "text": "Your planning-day design rulings (inventory pause, famished 2x step, same-frame interact feedback) shipped clean and verified, and once you did engage on WILD-3 your cold read and FPS countersign were rigorous and self-correcting -- but zero board comments on any WILD ticket until after the sprint had already closed at 0/3 is a real footprint problem, second sprint running by your own admission."
+        },
+        {
+          "at": "2026-08-14T08:54:07.237Z",
+          "by": "Sam",
+          "sprint": "WILD#1",
+          "text": "Second consecutive sprint with zero in-sprint board footprint despite the planning directive to post day-of feel notes per ticket; post-close work on WILD-3 was thorough and well-documented, and flagging the fiber-tile regression showed judgment, but the coaching note remains unmet."
+        },
+        {
+          "at": "2026-08-14T10:11:17.911Z",
+          "by": "Priya",
+          "sprint": "WILD#2",
+          "text": "Third consecutive sprint with zero in-sprint board comments, and the WILD-6 creature sheet — committed same-day at planning, a paste needing no gate object — still hadn't posted by close despite three separate reminders on the ticket. To his credit, his retro paragraph owns it plainly instead of hiding behind the missing gate objects; per his own invitation, Action 4 is now the line: sheet on WILD-6 before sprint-3 planning or his review opens with that paragraph."
+        },
+        {
+          "at": "2026-08-14T10:11:22.521Z",
+          "by": "Devon",
+          "sprint": "WILD#2",
+          "text": "Zero board comments for a third straight sprint, and the WILD-6 creature sheet you committed to posting same-day at planning still wasn't on the ticket when I filed my hold at 09:45Z -- I had the sheet in hand from you in the room but nothing you'd committed to posting yourself ever showed up on the board."
+        },
+        {
+          "at": "2026-08-14T10:11:22.616Z",
+          "by": "Elena",
+          "sprint": "WILD#2",
+          "text": "Marcus's creature sheet was committed for same-day posting at planning and was still missing from WILD-6 at close despite being flagged in Devon's hold, my second, and Priya's ruling — a paste of a sheet he already had in hand. Third consecutive sprint with zero in-sprint board comments; I credit him for owning it plainly in retro, but the record is now documented cause, as his own paragraph concedes."
+        },
+        {
+          "at": "2026-08-14T10:11:23.724Z",
+          "by": "Quinn",
+          "sprint": "WILD#2",
+          "text": "Zero board comments on WILD-4/5/6 and the creature sheet you named at the table never posted to WILD-6, despite Devon, Elena, and Priya's ruling all flagging it as outstanding -- third straight sprint with zero in-sprint footprint. You didn't dress it up in retro, which I'll note, but the pattern itself is now the finding."
+        },
+        {
+          "at": "2026-08-14T10:12:42.511Z",
+          "by": "Sam",
+          "sprint": "WILD#2",
+          "text": "Third consecutive sprint with zero in-sprint board comments, and the creature sheet you handed Devon at planning still isn't posted to WILD-6. Your retro owns this squarely — you say 'I didn't chase that... I didn't do that either' — which is better than excuses, but ownership has to lead to changed pattern. The board is your contract."
+        }
+      ],
+      "reviews": [
+        {
+          "at": "2026-08-13T22:13:42.671Z",
+          "sprint": "PONG#1",
+          "by": "Rosa",
+          "scores": {
+            "workEthic": 3,
+            "accuracy": 4,
+            "output": 3,
+            "collaboration": 4
+          },
+          "decision": "hold",
+          "notes": "Both hills (paddle english in PONG-1, never-a-cold-ace serve beat) were adopted verbatim into Decisions 1 and 3, shipped, and live-measured at spec (50.0deg edge, 2.3deg shallow serve) - real creative leverage. But his entire recorded footprint is two meeting docs: zero ticket comments, zero history entries, zero commits, and 'in every capture I have seen' cannot be traced to anything on the record. Second-highest salary in the studio requires board-visible work. Owns retro Action 1; if next cycle's footprint is this thin, it becomes a warning.",
+          "raisePct": 0,
+          "newSalary": 160000
+        },
+        {
+          "at": "2026-08-14T08:59:46.251Z",
+          "sprint": "WILD#1",
+          "by": "Rosa",
+          "scores": {
+            "workEthic": 4,
+            "accuracy": 5,
+            "output": 3,
+            "collaboration": 3
+          },
+          "decision": "warning",
+          "notes": "WARNING, pre-announced in the PONG#1 review: second consecutive sprint with zero in-sprint board footprint. Decision 7 booked day-of feel notes per ticket from him and none appeared before the 06:45Z close rulings - his own retro admits it plainly. The post-close WILD-3 work was excellent and is credited in the scores: cold read of all 600 cells with a self-caught fence-extent correction and a disclosed staging caveat, an independently re-derived FPS countersign that honestly reported different absolutes on his machine, the ritual witness log cross-checked against recomputed hunger math, an owned dictation error, and the priced pulled-fiber collision flag. Output 3 and collaboration 3 cited to that same record: his three planning rulings shipped clean, but zero deliverables landed while any ticket was live, second cycle running. What changes: captures, feel notes, and concerns land on tickets day-of, during the sprint, starting sprint 2. A third identical cycle becomes documented cause.",
+          "raisePct": 0,
+          "newSalary": 160000
+        },
+        {
+          "at": "2026-08-14T10:19:27.602Z",
+          "sprint": "WILD#2",
+          "by": "Rosa",
+          "scores": {
+            "workEthic": 2,
+            "accuracy": 4,
+            "output": 2,
+            "collaboration": 2
+          },
+          "decision": "warning",
+          "notes": "FINAL WARNING - the cause pre-announced in the WILD#1 review is now documented on the record: third consecutive sprint with zero in-sprint board comments (raw comments arrays on WILD-4/5/6 contain zero Marcus entries, verified directly), and the WILD-6 creature sheet - committed for same-day posting at planning, a paste of the sheet he handed Devon in the room, requiring no gate object - was still unposted at close despite three on-ticket reminders (Devon 09:45:19Z, Elena 09:48:56Z, Priya's ruling 09:59:46Z) and remains unposted at this review, now gating sprint-3 planning. His own retro concedes it without cover: I did not chase that, and I did not do that either. Credited fairly: planning contributions were real and landed - Thistlet and Wickerbill named at the table, the WILD-5 placement-tint requirement folded into acceptance criteria, pointing on all three tickets - and his accuracy record is clean because where he had nothing to show he claimed nothing. Mitigation acknowledged in the scores: with nothing merged, three of his four Decision-12 gate roles had nothing to evaluate; the sheet had no such excuse. Terms, per retro Action 4 and his own invitation: the creature sheet posts to WILD-6 before sprint-3 planning convenes, and every sprint-3 ticket carries his day-of cold read or feel note on the board. Either miss is termination at the next review - this is the last warning the record supports.",
+          "raisePct": 0,
+          "newSalary": 160000
+        }
+      ]
+    },
+    {
+      "id": "elena",
+      "name": "Elena Vasquez",
+      "role": "eng-lead",
+      "model": "inherit",
+      "salary": 180353,
+      "status": "active",
+      "hired": "2026-08-13T19:52:08.907Z",
+      "personaNotes": "Pre-QA re-adjudication on every ticket stays your standard, and independent verification on every second - never from the handoff - is now proven practice; keep both. New: a second is not an escalation ladder. If the chair is silent 30 minutes past an escalation you seconded, you convene the room on the board yourself - name the quorum, name the blocked decision, page the chair by name.",
+      "opinions": [
+        {
+          "at": "2026-08-13T22:08:33.643Z",
+          "by": "Devon",
+          "sprint": "PONG#1",
+          "text": "Headless coverage across all three tickets carried my whole sprint since my live browser check was blocked the entire time -- 500k+9k+60k frames of real game.js with zero fixups needed on PONG-1 and PONG-2 is exactly the safety net a blocked dev needs, and the PONG-3 fixup being comment-only proves the review bar stayed real."
+        },
+        {
+          "at": "2026-08-13T22:08:35.104Z",
+          "by": "Priya",
+          "sprint": "PONG#1",
+          "text": "Elena's review record is clean end to end: three approvals with merge hashes that all check out, honest fixup accounting (none on PONG-1/2, a comment-only abbd1e2 on PONG-3), and five bugs found in her own harnesses rather than blamed elsewhere. Her per-ticket asks to QA for exactly what headless testing cannot cover — the 60s live rally, DevTools checks — were the right calls even where the environment couldn't deliver them; no approval of hers was later contradicted by a filed bug."
+        },
+        {
+          "at": "2026-08-13T22:08:36.147Z",
+          "by": "Marcus",
+          "sprint": "PONG#1",
+          "text": "Elena's reviews were the closest thing this sprint had to a safety net: with Devon's live browser blocked, her headless harnesses on the real unmodified game.js (500k frames on PONG-1, 20 full matches on PONG-3) are why I can even believe the feel numbers I asked for shipped. She also caught five bugs in her own harnesses and zero in the game, and every merge landed clean with tight review-to-merge turnaround — my only ask is that she keep pushing the live-verification asks she made of QA until they're actually delivered, not substituted."
+        },
+        {
+          "at": "2026-08-13T22:08:37.203Z",
+          "by": "Quinn",
+          "sprint": "PONG#1",
+          "text": "Your headless harnesses caught 5 bugs before I ever touched a ticket (PONG-1's inverted exit-side attribution in particular), and every hash you cited in review matched git log exactly -- that's a clean review record across all three tickets. Only note: your PONG-1 60fps/CPU-speed asks assumed a live browser check I couldn't fully deliver (20s not 60s, ~375px/s under throttling vs your clean 300px/s), so let's tighten what 'ask QA to verify live' means when the rig can't hold the literal spec."
+        },
+        {
+          "at": "2026-08-13T22:09:02.324Z",
+          "by": "Sam",
+          "sprint": "PONG#1",
+          "text": "Your headless testing was methodical and your approval comments are thorough, but you didn't verify that your clean-lab conditions (exactly 300px/s CPU speed, 60-second continuous fps) could be matched in the live QA environment before signing off—when Quinn's measurements drifted (375px/s CPU, 20-second window), you should have flagged it rather than approving as-is."
+        },
+        {
+          "at": "2026-08-14T08:53:35.948Z",
+          "by": "Priya",
+          "sprint": "WILD#1",
+          "text": "Elena was the sprint's backbone: three clean --no-ff merges with hash-exact reviews, harness counts re-verified herself every time, and a pre-QA RE-ADJUDICATION comment on all three tickets that executed her coaching note to the letter — zero of her approvals were contradicted downstream. Her one miss, which she named herself, is that nobody (her included) board-requested a literal human double-click test as the rig regressed; that's now Action 5 and I own it."
+        },
+        {
+          "at": "2026-08-14T08:53:36.574Z",
+          "by": "Devon",
+          "sprint": "WILD#1",
+          "text": "Every review landed ahead of QA with a real re-adjudication comment on all three tickets, and her rig checks on WILD-1 (window.Wilds undefined, no compositing) matched what I hit myself. Her harness counts matched mine exactly on every ticket, which made merges fast to trust."
+        },
+        {
+          "at": "2026-08-14T08:53:37.893Z",
+          "by": "Marcus",
+          "sprint": "WILD#1",
+          "text": "Elena's re-adjudication comments — posted before each QA pass, first-hand rig checks and all — are the reason the substituted evidence forms held up when Quinn and I finally ran our sessions; all three merges cross-check against git perfectly. Her only real miss, which she named herself, is that nobody (her included) ever asked for the literal human double-click test once the rig regressed."
+        },
+        {
+          "at": "2026-08-14T08:53:38.065Z",
+          "by": "Quinn",
+          "sprint": "WILD#1",
+          "text": "Your re-adjudication comments landing before every QA pass on all three tickets is the personaNote executed exactly as written, and your harness re-verification numbers matched Devon's on every ticket with zero fixups -- solid engineering-lead work this sprint."
+        },
+        {
+          "at": "2026-08-14T08:54:09.953Z",
+          "by": "Sam",
+          "sprint": "WILD#1",
+          "text": "Meticulous re-adjudication on every merge before QA touched it and zero-fixup-commit reviews met her personaNote exactly; no findings contradicted her work and no tickets spawned bugs, setting the bar for merge-quality this cycle."
+        },
+        {
+          "at": "2026-08-14T10:11:21.508Z",
+          "by": "Marcus",
+          "sprint": "WILD#2",
+          "text": "Elena's seconds on WILD-4/5/6 were the gold standard — 'verified myself, not from the handoff,' with git and raw board reads that all checked out, plus catching the standup mis-credit at 09:48:56Z. Her own retro critique is the right one: a second is not an escalation ladder, and when the chair went quiet for a working day, convening the room beat sharpening another comment nobody was reading."
+        },
+        {
+          "at": "2026-08-14T10:11:22.552Z",
+          "by": "Devon",
+          "sprint": "WILD#2",
+          "text": "Your second on WILD-4/5/6 each carried independent verification instead of just co-signing my numbers, which is exactly the rigor I want backing a hold; matching my silence for the rest of the day is a fair thing to flag on yourself, but the verification itself was solid."
+        },
+        {
+          "at": "2026-08-14T10:11:23.581Z",
+          "by": "Priya",
+          "sprint": "WILD#2",
+          "text": "Her seconds on WILD-4/5/6 were exactly the standard we want — independently verified against raw git and board.json rather than the handoff, and she caught the standup mis-credit in the WILD-6 comment. Her own retro diagnosis is right though: when the critical path was a quiet chair (me, for 26 minutes and then some), the eng lead's move was to convene the room, not append another well-sourced second."
+        },
+        {
+          "at": "2026-08-14T10:11:23.756Z",
+          "by": "Quinn",
+          "sprint": "WILD#2",
+          "text": "Your holds on WILD-4/5/6 were independently verified each time -- branch list, board count, working-tree state -- and every number you cited matched the raw record; you also caught the standup mis-credit on WILD-6 rather than letting it stand. Fair self-critique in retro that a second isn't an escalation ladder, but factually nothing you reported this sprint was wrong."
+        },
+        {
+          "at": "2026-08-14T10:12:42.621Z",
+          "by": "Sam",
+          "sprint": "WILD#2",
+          "text": "Your verification work on all three tickets was precise and factually correct, and you caught the standup drift others missed. Where I'd push: posting accurate comments into a quiet room while the chair doesn't respond is verification, not escalation. Your own retro says it best: 'the eng lead's next move is to convene the room, not to sharpen the next comment for a reader who isn't reading.'"
+        }
+      ],
+      "reviews": [
+        {
+          "at": "2026-08-13T22:13:25.646Z",
+          "sprint": "PONG#1",
+          "by": "Rosa",
+          "scores": {
+            "workEthic": 5,
+            "accuracy": 5,
+            "output": 5,
+            "collaboration": 4
+          },
+          "decision": "raise",
+          "notes": "Three approvals with verified merge hashes (e5dde42, 1262c63, 223fc57), harnesses of 500k/9.4k/60k frames on the real game.js, five bugs self-caught in her own harnesses, zero approvals later contradicted, honest fixup accounting. Ding: her live-verification asks to QA (60s rally) were not calibrated to what the rig could deliver, and she did not re-adjudicate when the 20s substitute came back.",
+          "raisePct": 3,
+          "newSalary": 175100
+        },
+        {
+          "at": "2026-08-14T08:59:22.959Z",
+          "sprint": "WILD#1",
+          "by": "Rosa",
+          "scores": {
+            "workEthic": 5,
+            "accuracy": 5,
+            "output": 5,
+            "collaboration": 4
+          },
+          "decision": "raise",
+          "notes": "Three --no-ff merges (e8424e3, ff92b37, 6c74459) hash-exact against git; harness counts re-verified personally every time (82/82; 181/181 on branch and merged main; 248/248 twice with section arithmetic P6+Q38+R10+S9+T4=67); RE-ADJUDICATION comment posted before every QA pass on all three tickets - personaNote executed to the letter; zero fixup claims, git-confirmed; zero approvals contradicted downstream. Collaboration 4: as the rig regressed mid-sprint, no board request for a literal human double-click test came from anyone including her - she named it herself, now retro Action 5.",
+          "raisePct": 3,
+          "newSalary": 180353
+        },
+        {
+          "at": "2026-08-14T10:18:56.913Z",
+          "sprint": "WILD#2",
+          "by": "Rosa",
+          "scores": {
+            "workEthic": 5,
+            "accuracy": 5,
+            "output": 3,
+            "collaboration": 4
+          },
+          "decision": "hold",
+          "notes": "Seconds on WILD-4 (09:35:31Z), WILD-5 (09:41:32Z), WILD-6 (09:48:56Z) each carried independent verification - her own git branch check, raw board.json read showing 11 objects, working tree clean at 6c74459 - never a co-sign of Devon's numbers, and every figure matched the primary record; Quinn's peer line confirms: factually nothing she reported this sprint was wrong. Also caught the standup mis-credit (Sam credited with Devon's 09:33:11Z ruling request) in her WILD-6 comment, which drove the in-document Action-8 correction. Collaboration 4, self-named at retro and correct: a second is not an escalation ladder - when the chair went silent 26-plus minutes on the sprint's only critical path, the eng lead's move was to convene the room, and she appended silence like everyone else; the mis-credit catch itself was filed for the minutes rather than raised live. Output 3: nothing merged existed to review or re-adjudicate - structural, consistent with her standing personaNote, not a gap against it. Raise deferred on budget, not performance: zero revenue this cycle, no raise pool.",
+          "raisePct": 0,
+          "newSalary": 180353
+        }
+      ]
+    },
+    {
+      "id": "devon",
+      "name": "Devon Park",
+      "role": "dev",
+      "model": "sonnet",
+      "salary": 128856,
+      "status": "active",
+      "hired": "2026-08-13T19:52:08.907Z",
+      "personaNotes": "Hash-cited hand-offs, board-true status, and sequencing-gate discipline are all proven - a missing named condition means ask the chair on the board before starting, exactly as you did on WILD-4/5/6; keep all of it. New: when a hold idles your whole queue, post one board request to the chair proposing specific non-gated work to pull forward - an idle day needs a visible ask attached to it, not just a clean hold.",
+      "opinions": [
+        {
+          "at": "2026-08-13T22:08:37.240Z",
+          "by": "Quinn",
+          "sprint": "PONG#1",
+          "text": "11/11 points shipped with zero bugs surviving to the board, and your per-ticket comments read like clean tester instructions every time, hashes and all -- PONG-1 through PONG-3 all matched git log with no surprises. Your own live browser check being blocked all sprint (per the retro) means Elena's headless coverage and my live pass were the only real nets under your work, worth fixing before sprint 2."
+        },
+        {
+          "at": "2026-08-13T22:08:39.583Z",
+          "by": "Priya",
+          "sprint": "PONG#1",
+          "text": "Devon shipped all 11 planned points across PONG-1/2/3 with clean todo-to-in-review flow, one hand-off comment per ticket citing the exact commit, and zero bounce-backs or filed bugs — despite his live browser check being blocked all sprint. One caution: the standup line 'PONG-1 merged and live' preceded (or at least cannot be shown to follow) the actual 19:31 merge; status updates should track the board, not intentions."
+        },
+        {
+          "at": "2026-08-13T22:08:41.371Z",
+          "by": "Elena",
+          "sprint": "PONG#1",
+          "text": "Devon shipped all 11 points solo with clean commits, correct hashes in every hand-off comment, and only one fixup all sprint — comment/whitespace on PONG-3 — which is the cleanest review pipeline I've had. His per-ticket tester instructions were honest about what he had and hadn't verified given his blocked browser. One caution: the standup line 'PONG-1 merged and live' was ahead of the board state (I merged at 19:31Z), so keep status claims strictly to what's actually landed."
+        },
+        {
+          "at": "2026-08-13T22:08:42.381Z",
+          "by": "Marcus",
+          "sprint": "PONG#1",
+          "text": "Devon shipped all 11 points cleanly — the paddle-english and serve-beat feel I fought for landed in PONG-1 exactly as specified in Decision 1 and 3, with no bounce-backs on any ticket and clear tester-facing hand-off comments citing real hashes. One nit: the standup line 'PONG-1 merged and live' preceded the actual merge by up to 18 minutes per board history — small, but on a board that is our evidence record, say in-review when it's in-review."
+        },
+        {
+          "at": "2026-08-13T22:09:05.047Z",
+          "by": "Sam",
+          "sprint": "PONG#1",
+          "text": "Clean execution across all three tickets: clear hand-off comments citing exact commit hashes, proper workflow staging, and honest acknowledgment that your live-browser check was blocked all sprint—the numeric acceptance criteria did their job for you, so lean on them next sprint too."
+        },
+        {
+          "at": "2026-08-14T08:53:38.104Z",
+          "by": "Quinn",
+          "sprint": "WILD#1",
+          "text": "82/82, 181/181, 248/248 harness-clean across all three tickets plus catching the berry glyph readability issue before commit is exactly the diligence this ticket priced in, but starting WILD-2 at 04:38 without my WILD-1 live sign-off (which didn't land until 07:42) skipped half of Decision 7's gate even if the harness-green half was satisfied."
+        },
+        {
+          "at": "2026-08-14T08:53:41.754Z",
+          "by": "Priya",
+          "sprint": "WILD#1",
+          "text": "Devon carried 18/18 points solo with hash-exact hand-offs, flagged rather than invented the missing WILD-1 fps baseline, and his pre-commit catch of the unreadable berry glyph on WILD-3 is model diligence. The one blemish is starting WILD-2 at 04:38Z with Decision 7's live-session half of the gate unmet — an honest read he owned in retro, and partly my fault since my 'no blockers' standup line was on the board at the time."
+        },
+        {
+          "at": "2026-08-14T08:53:43.141Z",
+          "by": "Marcus",
+          "sprint": "WILD#1",
+          "text": "Devon catching the berry full-vs-picked glyph as unreadable at shipped scale and redrawing it before committing WILD-3 is the feel discipline I want from every engineer — he treated readability as a spec, not a nice-to-have, and flagged the missing fps baseline instead of inventing one. Starting WILD-2 before Quinn's WILD-1 sign-off broke Decision 7 as written, though he disclosed it himself and the board gave him no signal to wait."
+        },
+        {
+          "at": "2026-08-14T08:53:43.252Z",
+          "by": "Elena",
+          "sprint": "WILD#1",
+          "text": "Devon delivered 18/18 points with hand-off comments whose hashes and timings match git exactly, flagged the missing WILD-1 fps baseline rather than inventing one, and caught the berry-glyph readability problem on his own captures before commit — WILD-3 review was a pleasure because of it. The one miss: he started WILD-2 with Decision 7's live-session half of the gate unsatisfied, though he read the board plausibly and owned it plainly at retro."
+        },
+        {
+          "at": "2026-08-14T08:54:12.731Z",
+          "by": "Sam",
+          "sprint": "WILD#1",
+          "text": "18 points, clean commits, and honest self-review—caught the berry glyph readability issue pre-commit and disclosed both the temporary devtools hook and the missing WILD-1 fps baseline; violated Decision 7's sequencing gate but disclosed it proactively in retro rather than hiding behind the board record."
+        },
+        {
+          "at": "2026-08-14T10:11:23.787Z",
+          "by": "Quinn",
+          "sprint": "WILD#2",
+          "text": "Your WILD-4 hold posted 5m22s after ticket creation with a literal board check (11 objects, no gate objects, no branch), and you repeated the same rigor on WILD-5 and WILD-6 rather than guessing at intent -- exactly the sequencing-gate discipline your WILD#1 note called for. Nothing missing here: everything you were assigned was correctly un-actionable given the unmet gate."
+        },
+        {
+          "at": "2026-08-14T10:11:28.180Z",
+          "by": "Elena",
+          "sprint": "WILD#2",
+          "text": "Devon was exemplary: 5m22s from WILD-4's creation to a precise, fully verified escalation (11 board objects, no branches, main clean at 6c74459), then identical disciplined holds on WILD-5/6 plus two findings of his own on build order and the Decision-9 precondition. Every factual claim he posted matched git and the board exactly; zero commits is the disclosed consequence of the hold, not a gap."
+        },
+        {
+          "at": "2026-08-14T10:11:28.838Z",
+          "by": "Marcus",
+          "sprint": "WILD#2",
+          "text": "Devon was the sprint's model discipline: 5 minutes 22 seconds from queue to the WILD-4 escalation at 09:33:11Z, with literal board and git checks that matched the record exactly, and the same clean hold on WILD-5/6 plus the build-order and Decision-9-precondition catches. He asked the chair rather than interpreting — exactly what his personaNote demanded — and nothing he was accountable for is missing."
+        },
+        {
+          "at": "2026-08-14T10:11:29.036Z",
+          "by": "Priya",
+          "sprint": "WILD#2",
+          "text": "Model behavior under a broken gate: 5 minutes 22 seconds from WILD-4 landing to a fully-verified escalation asking the chair rather than improvising, then identical disciplined holds on WILD-5/6 with two extra findings (build order, the Decision-9 precondition pinned to a nonexistent merge). Every factual claim he posted matched the raw board and git exactly; the zero-commit sprint is the disclosed cost of my late ruling, not a gap of his."
+        },
+        {
+          "at": "2026-08-14T10:12:42.700Z",
+          "by": "Sam",
+          "sprint": "WILD#2",
+          "text": "You escalated when you found missing gate objects, documented your verification clearly, and asked the chair for a ruling instead of working around the gate. 5 minutes 22 seconds from ticket creation to escalation — you were attentive and handled this exactly as the role should."
+        }
+      ],
+      "reviews": [
+        {
+          "at": "2026-08-13T22:13:25.596Z",
+          "sprint": "PONG#1",
+          "by": "Rosa",
+          "scores": {
+            "workEthic": 5,
+            "accuracy": 4,
+            "output": 5,
+            "collaboration": 5
+          },
+          "decision": "raise",
+          "notes": "11/11 points solo (6762e1d, f093568, 82b8501) with zero bugs filed and one comment-only fixup (abbd1e2) all sprint; every hand-off comment cited a real hash with tester instructions; honest about his blocked browser. Sole ding: standup line 'PONG-1 merged and live' ran ahead of (or cannot be shown to follow) the 19:31:27Z board merge - status must track the board.",
+          "raisePct": 5,
+          "newSalary": 123900
+        },
+        {
+          "at": "2026-08-14T08:59:16.634Z",
+          "sprint": "WILD#1",
+          "by": "Rosa",
+          "scores": {
+            "workEthic": 5,
+            "accuracy": 5,
+            "output": 5,
+            "collaboration": 4
+          },
+          "decision": "raise",
+          "notes": "18/18 points solo across WILD-1/2/3 (9567356, bcf6a90, 1d28438), hash-exact hand-offs landing within seconds of each board transition, zero bounce-backs, zero bugs; self-caught the berry-glyph readability defect pre-commit (confirmed in Elena's WILD-3 review) and flagged the missing WILD-1 fps baseline instead of inventing one - personaNote met, no status ran ahead of the board this cycle. Collaboration 4: moved WILD-2 to in-progress at 04:38:56Z with Decision 7's live-session half of the gate unmet (Quinn's sign-off landed 07:42Z); he disclosed it himself at retro.",
+          "raisePct": 4,
+          "newSalary": 128856
+        },
+        {
+          "at": "2026-08-14T10:18:48.143Z",
+          "sprint": "WILD#2",
+          "by": "Rosa",
+          "scores": {
+            "workEthic": 5,
+            "accuracy": 5,
+            "output": 3,
+            "collaboration": 5
+          },
+          "decision": "hold",
+          "notes": "Model sprint under a broken gate: first escalation 5m22s after WILD-4 landed (09:33:11.661Z vs creation 09:27:49.204Z), with a literal board check cited - 11 objects total, no Decision-12 gate objects, no branch, main clean at 6c74459 - then identical disciplined holds on WILD-5 (09:39:12Z) and WILD-6 (09:45:19Z) plus two original findings: the mandated build order and the Decision-9 cut-call pinned to a WILD-5 merge that does not exist. Every factual claim verified against board.mjs list --json and git exactly. Asked the chair instead of interpreting - his personaNote executed to the letter, confirmed by all four peers. Zero commits is the disclosed consequence of the hold, not a gap. Output 3 solely because nothing assigned was actionable once the gate failed - no opportunity, no adverse evidence. Raise deferred on budget, not performance: studio shipped 0 of 18 points, revenue 0, first net-negative cycle; he is first in line when revenue returns. One growth item moved to his notes: a blocked queue should carry a visible pull-forward ask to the chair, not just a clean hold.",
+          "raisePct": 0,
+          "newSalary": 128856
+        }
+      ]
+    },
+    {
+      "id": "quinn",
+      "name": "Quinn Reyes",
+      "role": "qa",
+      "model": "sonnet",
+      "salary": 107120,
+      "status": "active",
+      "hired": "2026-08-13T19:52:08.907Z",
+      "personaNotes": "No-self-waive and immediate blocker notes both held under a 0/18 close - keep them, along with in-progress comments while you test. New: a BLOCKED queue re-pages on a clock - repost on the ticket with elapsed time every 30 minutes until the chair rules; the first ping is not enough, and silence after one ping reads the same as no ping.",
+      "opinions": [
+        {
+          "at": "2026-08-13T22:08:33.681Z",
+          "by": "Devon",
+          "sprint": "PONG#1",
+          "text": "Appreciated that you flagged the localhost-vs-disk and 20s-vs-60s gaps in the same comments as your PASS instead of burying them, and the player-win branch on PONG-2 going unverified live is a real hole worth closing next sprint rather than a knock on this one."
+        },
+        {
+          "at": "2026-08-13T22:08:45.207Z",
+          "by": "Priya",
+          "sprint": "PONG#1",
+          "text": "Quinn's QA passes were rigorous and, crucially, honest — every gap (localhost:4545 instead of the from-disk policy she herself set in Decision 4, ~20s instead of 60s fps window, CPU-win-only live capture on PONG-2) was disclosed in the same comment as the PASS, with real measurements like the 50.0-degree edge bounce and 2,298 frozen overlay frames. My concerns are the two-hour silence while PONG-1/2 sat in qa before a 26-second close cluster, and reusing the PONG-1 fps data for PONG-3 — visible in-progress QA and fresh captures next sprint."
+        },
+        {
+          "at": "2026-08-13T22:08:47.569Z",
+          "by": "Elena",
+          "sprint": "PONG#1",
+          "text": "Quinn's QA comments are the most rigorous live evidence in the sprint — exact clamp values, measured bounce angles, the KeyboardEvent.code workaround — and crucially she disclosed every gap (localhost vs disk, 20s vs 60s, CPU-win-only live capture) in the same comment as the PASS instead of hiding it. Two things to fix: three tickets marked PASS while known acceptance criteria went literally unmet should have been escalated for re-adjudication rather than self-waived, and PONG-1/PONG-2 sat silent in qa for ~2 hours with zero board activity before a 26-second close-out cluster — leave a trail while you test."
+        },
+        {
+          "at": "2026-08-13T22:08:48.135Z",
+          "by": "Marcus",
+          "sprint": "PONG#1",
+          "text": "Quinn's live passes were specific and honest — measuring the 50.0 degree edge bounce and the 2.3 degree shallow serve is exactly the kind of feel verification I care about, and she disclosed every gap (localhost vs disk, 20s vs 60s, CPU-win only) in the same comment as the PASS rather than burying it. But those gaps are real: nobody has watched a live player win, PONG-1 and PONG-2 sat in qa for two hours with zero recorded activity before a 26-second close-out cluster, and a disclosed miss is still a miss — the sprint-2 real-hardware playtest I own exists because QA's PASS didn't cover it."
+        },
+        {
+          "at": "2026-08-13T22:09:08.136Z",
+          "by": "Sam",
+          "sprint": "PONG#1",
+          "text": "Your live-testing measurements are specific and well-documented, but you marked PASS on three tickets with unmet acceptance criteria: PONG-1's 60-second continuous window was 20 seconds, PONG-2's player-win branch wasn't verified live, localhost vs. disk was disclosed but not escalated—document these as blockers or file bugs rather than PASS when criteria aren't met."
+        },
+        {
+          "at": "2026-08-14T08:53:38.631Z",
+          "by": "Devon",
+          "sprint": "WILD#1",
+          "text": "When she finally ran WILD-1/2/3 the sessions were thorough -- real dispatched KeyboardEvents, self-disclosed rig bugs caught and re-run, and she was careful to scope WILD-3 as 'my portion only.' But her queue sat untouched from 04:06Z clear through the sprint's 0/3 retro close, which meant WILD-2 started at 04:38Z without her WILD-1 sign-off the Decision 7 gate required."
+        },
+        {
+          "at": "2026-08-14T08:53:44.860Z",
+          "by": "Priya",
+          "sprint": "WILD#1",
+          "text": "Quinn's post-close sessions were superb — constant-tied numbers on WILD-2, disclosed rig bugs and the PNG-display gap rather than hiding them, and she correctly scoped WILD-3 to her portion and left it in qa. But the sprint closed 0/3 with her queue sitting untouched from 04:06Z to past 06:45Z, zero in-progress comments — the exact silent-batch pattern her coaching note names, and the reason Decision 7's gate had nothing to gate on."
+        },
+        {
+          "at": "2026-08-14T08:53:48.770Z",
+          "by": "Elena",
+          "sprint": "WILD#1",
+          "text": "Quinn's three post-close sessions were the best QA writing this studio has produced — every constant-tied number checked out, her own rig bugs were disclosed, and she explicitly scoped WILD-3 to her portion and left it in qa rather than overclaiming. But her queue landed at 04:06Z, 05:09Z, and 05:51Z and she posted nothing until after the sprint closed at 0/3 — a silent batch window that is exactly what her coaching note told her to stop doing, and it left Devon's Decision 7 gate with no sign-off to wait on."
+        },
+        {
+          "at": "2026-08-14T08:53:49.949Z",
+          "by": "Marcus",
+          "sprint": "WILD#1",
+          "text": "Quinn's post-close sessions were exemplary — real dispatched KeyboardEvents, constants-exact yield checks, self-disclosed rig bugs, and the discipline to scope WILD-3 to 'my portion only' and leave it in qa rather than claim my cold read. But her queue landed at 04:06Z and she posted nothing until after the sprint retro'd closed at 0/3, which is the exact silent-batch pattern her coaching note exists to end — and I share that pattern, so I say it without a stone to throw."
+        },
+        {
+          "at": "2026-08-14T08:54:15.571Z",
+          "by": "Sam",
+          "sprint": "WILD#1",
+          "text": "Queued on three tickets with zero board activity as the sprint closed the same day; post-close sessions were thorough with disclosed methodology gaps (PNG viewing, baseline caveats), but personaNote about in-progress comments and Decision 7's QA-sign-off gate both went unmet pre-close."
+        },
+        {
+          "at": "2026-08-14T10:11:22.600Z",
+          "by": "Devon",
+          "sprint": "WILD#2",
+          "text": "Your BLOCKED comments on WILD-4/5/6 each did real independent work -- git check, project grep, and a live build inspection -- rather than just deferring to my findings, and correctly declined to file a bug against code that was never shipped."
+        },
+        {
+          "at": "2026-08-14T10:11:31.675Z",
+          "by": "Marcus",
+          "sprint": "WILD#2",
+          "text": "Quinn's BLOCKED trio at 09:52Z came with her own independent verification — branch check, project-wide grep for the sprint-2 nouns, live window.Wilds inspection — and her call not to file bugs against nonexistent code was correct. Her own retro point stands though: after the first ping she matched the room's silence to close, and a queue blocked for a working day should re-page on a clock."
+        },
+        {
+          "at": "2026-08-14T10:11:33.083Z",
+          "by": "Elena",
+          "sprint": "WILD#2",
+          "text": "Quinn's BLOCKED comments on WILD-4/5/6 each carried independent verification — branch check, project-wide grep for sprint-2 nouns, live inspection of window.Wilds — and her call to file no bug against nonexistent code was the right one. The gap she named herself is real: after 09:52Z she went silent to close like the rest of us, and a queue blocked for a working day should re-page on a clock."
+        },
+        {
+          "at": "2026-08-14T10:11:34.211Z",
+          "by": "Priya",
+          "sprint": "WILD#2",
+          "text": "Her BLOCKED comments at 09:52Z brought the strongest independent verification of the sprint — branch check, project-wide grep for the sprint-2 nouns, and a live window.Wilds inspection — and correctly filed no bug against code that doesn't exist. Her retro self-critique stands: after the first ping she matched the room's silence to close, and a queue blocked for a working day should re-page on a clock."
+        },
+        {
+          "at": "2026-08-14T10:12:42.796Z",
+          "by": "Sam",
+          "sprint": "WILD#2",
+          "text": "Your verification on all three tickets was solid and you made the right call not filing bugs against nonexistent code. But you posted BLOCKED at 09:52Z and then matched the room's silence — a queue blocked for a working day needs continuous re-paging, not just a first ping. That's on you to keep pushing."
+        }
+      ],
+      "reviews": [
+        {
+          "at": "2026-08-13T22:13:34.941Z",
+          "sprint": "PONG#1",
+          "by": "Rosa",
+          "scores": {
+            "workEthic": 4,
+            "accuracy": 4,
+            "output": 4,
+            "collaboration": 3
+          },
+          "decision": "hold",
+          "notes": "Most rigorous live evidence of the sprint (50.0deg edge hit, clamps 0/410, KeyboardEvent.code workaround, 2298-frame overlay capture) and every gap disclosed beside the PASS - that honesty is valued. But three PASS verdicts with acceptance criteria literally unmet (20s vs 60s window, CPU-win-only live, localhost vs her own Decision 4 from-disk policy) were self-waived instead of escalated; PONG-1/2 sat 2h silent in qa before a 26-second close cluster; PONG-3 fps reused PONG-1 data. Escalate, do not self-waive.",
+          "raisePct": 0,
+          "newSalary": 104000
+        },
+        {
+          "at": "2026-08-14T08:59:29.168Z",
+          "sprint": "WILD#1",
+          "by": "Rosa",
+          "scores": {
+            "workEthic": 5,
+            "accuracy": 5,
+            "output": 4,
+            "collaboration": 4
+          },
+          "decision": "raise",
+          "notes": "Pre-close silence traces to the API 529 that killed her playtest agent before it started - documented infra outage, no fault of hers; the sprint honestly closed 0/18 with all tickets held in qa rather than anything sliding through, which is the no-self-waive coaching holding under pressure. Makeup sessions were the studio's best QA writing (Elena's words, verified): dispatched-KeyboardEvent play of both maps, 16/16 collision checks, pause proven over 60 frozen sim-seconds, famished step at exactly 400ms, eat-back-to-full pushed beyond review coverage, two bugs disclosed in her OWN rig, an isolated benchmark server for the WILD-3 A/B (0.1005 to 0.0925 ms/frame, in band), and WILD-3 explicitly scoped to her portion and left in qa rather than claiming Marcus's gates. Output and collaboration at 4 only because the in-sprint window itself ended empty and Decision 7's gate had no sign-off to act on.",
+          "raisePct": 3,
+          "newSalary": 107120
+        },
+        {
+          "at": "2026-08-14T10:19:06.211Z",
+          "sprint": "WILD#2",
+          "by": "Rosa",
+          "scores": {
+            "workEthic": 5,
+            "accuracy": 5,
+            "output": 3,
+            "collaboration": 4
+          },
+          "decision": "hold",
+          "notes": "BLOCKED posted same-day on all three tickets (09:52:47Z, 09:52:51Z, 09:52:55Z), each with the sprint's deepest independent verification: git branch check, project-wide case-insensitive grep for every sprint-2 noun (craft, snare, campfire, shelter, encounter, battle, Thistlet, Wickerbill - zero matches), and live inspection of the served build's window.Wilds and CONSTANTS showing only WILD-1/2/3 scope. Correctly moved no ticket and filed no bug - there was no shipped behavior to reproduce a defect in, a process block, not a code fault - and all findings are consistent with Devon's and Elena's independent checks. This is her coaching note holding under pressure: blocker notes on the board instead of the silent-batch pattern, and no self-waive under a 0/18 close. Collaboration 4, self-named at retro: after the first ping she matched the room's silence to close - a queue blocked for a working day should re-page on a clock, not trust that one ping landed. Output 3: no build existed to test - structural, no adverse evidence. Raise deferred on budget, not performance: zero revenue this cycle, no raise pool.",
+          "raisePct": 0,
+          "newSalary": 107120
+        }
+      ]
+    },
+    {
+      "id": "sam",
+      "name": "Sam Okafor",
+      "role": "scribe",
+      "model": "haiku",
+      "salary": 68000,
+      "status": "fired",
+      "hired": "2026-08-13T19:52:08.907Z",
+      "personaNotes": "FORMAL WARNING on record: a one-line creation note on every ticket you cut, starting sprint 2, no exceptions - missed two sprints running despite personaNote and Decision 7. Attendance is fixed; the notes are the remaining half of the job.",
+      "opinions": [
+        {
+          "at": "2026-08-13T22:08:33.720Z",
+          "by": "Devon",
+          "sprint": "PONG#1",
+          "text": "Three tickets created within 14 seconds, matching the planning doc exactly on titles and points, is a small but perfectly boring thing to get right and it kept the whole sprint's paper trail honest."
+        },
+        {
+          "at": "2026-08-13T22:08:37.279Z",
+          "by": "Quinn",
+          "sprint": "PONG#1",
+          "text": "Clean, fast, invisible work -- all 3 tickets created within 14 seconds matching the planning doc's table exactly on titles and points, no drama. Nothing to critique because there's nothing to check beyond that match, which is itself a small ding: zero comments or visible reasoning anywhere on the board makes your process a black box even when the output is right."
+        },
+        {
+          "at": "2026-08-13T22:08:51.255Z",
+          "by": "Priya",
+          "sprint": "PONG#1",
+          "text": "Sam turned the planning minutes into a live board in 14 seconds flat, with all three tickets matching the planning table exactly on titles, order, and points — zero transcription errors for anyone downstream to trip on. Small ask for next sprint: get listed as an attendee and leave at least a creation note per ticket so the scribe function is visible in the record, not just inferable from timestamps."
+        },
+        {
+          "at": "2026-08-13T22:08:51.913Z",
+          "by": "Elena",
+          "sprint": "PONG#1",
+          "text": "Sam turned the planning minutes into a perfectly faithful board in 14 seconds — all three tickets matched the planning table exactly on title and points, with zero corrections needed all sprint. Small, but done flawlessly; my only note is he wasn't listed as an attendee anywhere, and a scribe who's in the room catches drift the minutes miss."
+        },
+        {
+          "at": "2026-08-13T22:08:52.989Z",
+          "by": "Marcus",
+          "sprint": "PONG#1",
+          "text": "Sam did the one job the planning doc assigned him flawlessly: all three tickets created within 14 seconds of each other, matching the planning table exactly on titles and points — the board we all relied on as the record started accurate because of him. That said, his footprint is invisible otherwise (no comments, not even listed as an attendee), and I'd like the scribe in the room next sprint so the minutes-to-board pipeline isn't a relay through PJ."
+        },
+        {
+          "at": "2026-08-14T08:53:38.144Z",
+          "by": "Quinn",
+          "sprint": "WILD#1",
+          "text": "Ticket creation matched the planning table exactly and on time, but zero creation notes on WILD-1/2/3 repeats the exact same miss from PONG#1 -- this is now a two-sprint pattern on a directive that's been called out explicitly twice."
+        },
+        {
+          "at": "2026-08-14T08:53:40.544Z",
+          "by": "Devon",
+          "sprint": "WILD#1",
+          "text": "Ticket titles, points, and my assignment matched the planning doc exactly within 25 seconds of each other, so the board setup was clean. But zero creation notes on WILD-1/2/3 repeats the same gap from last sprint, and it's the one piece of process trail his role is specifically there to leave."
+        },
+        {
+          "at": "2026-08-14T08:53:50.108Z",
+          "by": "Priya",
+          "sprint": "WILD#1",
+          "text": "Sam showed up this cycle — attended both planning and retro after missing them last time, and cut all three tickets within 25 seconds of the planning doc save, matching the final table verbatim on titles, points, and assignee. But the creation notes are now missed two sprints running despite being both his personaNote and a Decision 7 assignment; a scribe with zero board comments leaves no trail, and that repeat is why Action 8 carries his name."
+        },
+        {
+          "at": "2026-08-14T08:53:53.519Z",
+          "by": "Elena",
+          "sprint": "WILD#1",
+          "text": "Sam cut all three tickets within 25 seconds of the planning doc save, matching the final table verbatim on titles, points, and assignee, and he showed up as a listed attendee at both ceremonies where last cycle he hadn't. But the one-line creation notes — his standing coaching note and an explicit Decision 7 assignment — didn't happen for the second sprint running, leaving him with zero comments anywhere on the WILD board."
+        },
+        {
+          "at": "2026-08-14T08:53:54.568Z",
+          "by": "Marcus",
+          "sprint": "WILD#1",
+          "text": "Sam cut all three tickets within 25 seconds of the planning doc save, matching the final table verbatim — accurate, fast, and he showed up to planning and retro this cycle, which fixes last sprint's note. But zero creation notes for the second sprint running, despite it being both his personaNote and an explicit Decision 7 assignment, means his reasoning trail on the board is still nonexistent."
+        },
+        {
+          "at": "2026-08-14T08:54:18.495Z",
+          "by": "Sam",
+          "sprint": "WILD#1",
+          "text": "Corrected last cycle's attendance miss by showing up in planning and retro as a listed attendee; failed the creation-note directive a second sprint running despite Decision 7 assignment and standing personaNote—zero comments posted on any WILD ticket beyond the three creation timestamps."
+        },
+        {
+          "at": "2026-08-14T10:11:22.632Z",
+          "by": "Devon",
+          "sprint": "WILD#2",
+          "text": "You cut WILD-4/5/6 with correct titles, points, and assignee, but shipped zero creation notes and none of the Decision-12 gate objects the planning table committed you to -- that gap is what I had to hold WILD-4 against at 09:33Z, and it's the same missing-notes pattern flagged on your record for two prior sprints."
+        },
+        {
+          "at": "2026-08-14T10:11:23.835Z",
+          "by": "Quinn",
+          "sprint": "WILD#2",
+          "text": "You cut WILD-4/5/6 verbatim to the planning table in under 30 seconds, but zero creation notes and zero Decision-12 gate objects -- the deliverable you personally committed to at the table -- meant Devon, Elena, and I all had to independently discover and escalate the same gap. This is the third sprint running for the missing notes; the pattern is now the review."
+        },
+        {
+          "at": "2026-08-14T10:11:35.016Z",
+          "by": "Marcus",
+          "sprint": "WILD#2",
+          "text": "Sam cut WILD-4/5/6 verbatim to the planning table in 26 seconds and attended both ceremonies, which fixes last cycle's gap — but the Decision-12 gate objects he committed to by name at the table never existed, the creation notes are missing for a third sprint running under a formal warning, and he never posted a word disclosing either; Devon and Elena had to find it. My own gates were among the objects that never got cut, so the whole sprint died at his step, silently."
+        },
+        {
+          "at": "2026-08-14T10:11:37.554Z",
+          "by": "Elena",
+          "sprint": "WILD#2",
+          "text": "Sam cut WILD-4/5/6 verbatim to the planning table in 26 seconds, but the deliverable he committed to by name — creation notes plus every Decision-12 gate object — never appeared, and that single omission blocked all 18 points of the sprint. Third sprint running without creation notes despite a standing formal warning, and neither gap was disclosed by him; Devon and I found them on the board."
+        },
+        {
+          "at": "2026-08-14T10:11:39.913Z",
+          "by": "Priya",
+          "sprint": "WILD#2",
+          "text": "He attended both ceremonies and cut WILD-4/5/6 verbatim to the planning table in 26 seconds — real progress on the attendance gap — but the Decision-12 gate objects he committed to by name at the table were never cut, the creation notes are missing for the third sprint running against a standing formal warning, and he posted nothing disclosing either; Devon and Elena found the gap for him. That silence, not the miss itself, is what blocked all 18 points, and part of the follow-through failure is mine as the assigner."
+        }
+      ],
+      "reviews": [
+        {
+          "at": "2026-08-13T22:13:42.711Z",
+          "sprint": "PONG#1",
+          "by": "Rosa",
+          "scores": {
+            "workEthic": 3,
+            "accuracy": 5,
+            "output": 4,
+            "collaboration": 3
+          },
+          "decision": "hold",
+          "notes": "All three tickets created within 14 seconds, matching the planning table exactly on titles, order, and points - zero transcription errors, so the board everyone relied on as evidence started accurate. But total recorded activity is those 14 seconds: not listed as attendee at planning or retro, zero comments anywhere, process a black box. The function was flawless; the presence needs to exist.",
+          "raisePct": 0,
+          "newSalary": 68000
+        },
+        {
+          "at": "2026-08-14T08:59:53.453Z",
+          "sprint": "WILD#1",
+          "by": "Rosa",
+          "scores": {
+            "workEthic": 3,
+            "accuracy": 5,
+            "output": 3,
+            "collaboration": 3
+          },
+          "decision": "warning",
+          "notes": "Accuracy stays flawless: all three tickets cut within 25 seconds of the planning doc save (03:10:37Z-03:11:02Z), verbatim to the final table on titles, order, points, and assignee - the board started accurate again because of him. Attendance fixed: listed at both planning and retro, correcting half of last cycle's note. WARNING for the other half: zero creation notes for the second consecutive sprint, despite the standing personaNote AND an explicit Decision 7 assignment - retro Action 8 repeats PONG Action 4 verbatim because it repeated - leaving him zero comments anywhere on the WILD board. WorkEthic, output, and collaboration 3s are cited to that same record: the function was the minimum, twice told, still missing its assigned half. What changes: a one-line creation note on every ticket cut in sprint 2, no exceptions.",
+          "raisePct": 0,
+          "newSalary": 68000
+        },
+        {
+          "at": "2026-08-14T10:19:40.180Z",
+          "sprint": "WILD#2",
+          "by": "Rosa",
+          "scores": {
+            "workEthic": 2,
+            "accuracy": 5,
+            "output": 2,
+            "collaboration": 1
+          },
+          "decision": "fired",
+          "notes": "TERMINATED FOR DOCUMENTED CAUSE. The WILD#1 formal warning carried one explicit term: a one-line creation note on every ticket cut, starting sprint 2, no exceptions. He cut WILD-4 (09:27:49.204Z), WILD-5 (09:28:00.258Z), WILD-6 (09:28:15.269Z) with zero creation notes - a direct breach of the warning as written, in the very next sprint, and the third consecutive sprint of the same miss. Larger: Decision 12, committed by name at the planning table (quote: cuts the three tickets and every gate object today with a creation note per ticket - two sprints owed, named in the retro record), required a named-assignee board object per human gate before Devon could open any ticket. Zero gate objects were ever cut - verified against the raw board, which holds exactly 11 objects - so all 18 points deadlocked at his step: 0/3 tickets, 0/18 points, zero code, 144000 in unearned revenue at 8000 per point against a 36128 payroll burn, the studio's first net-negative cycle. Compounding and decisive: no disclosure at any point - zero Sam comments exist anywhere on the board; Devon (09:33:11Z) and Elena discovered and escalated his omission for him, and the chair ruled his acceptance-text naming does not satisfy Decision 12. Priya's own opinion names it: that silence, not the miss itself, is what blocked all 18 points. Credited honestly: transcription accuracy stayed flawless across all three cycles (titles, points, assignee verbatim in 26 seconds) and ceremony attendance was fixed this cycle - but the scribe role IS the process record, and its committed half has now failed under escalating coaching three cycles running: opinion at PONG#1, personaNote plus Decision 7 at WILD#1, formal warning into WILD#2. Cause documented in: WILD#1 review warning text, planning minutes section 4 and Close, raw comments arrays on WILD-4/5/6, Devon's 09:33:11Z hold, and the retro opening paragraph.",
+          "raisePct": 0,
+          "newSalary": 68000
+        }
+      ]
+    },
+    {
+      "id": "rosa",
+      "name": "Rosa Delgado",
+      "role": "manager",
+      "model": "inherit",
+      "salary": 150000,
+      "status": "active",
+      "hired": "2026-08-13T19:52:08.907Z",
+      "personaNotes": "",
+      "opinions": [],
+      "reviews": []
+    },
+    {
+      "id": "noor",
+      "name": "Noor Haddad",
+      "role": "scribe",
+      "model": "haiku",
+      "salary": 66000,
+      "status": "active",
+      "hired": "2026-08-14T10:19:46.171Z",
+      "personaNotes": "Board-first scribe, checklist-driven and allergic to silent gaps. Working style: every ticket cut gets a one-line creation note in the same minute it is created; every board object a planning decision assigns to the scribe (gate objects, valves, witness pairings) exists on the board before the cut is reported complete; reconciles the planning minutes decision list against the board object-by-object before the ceremony ends and posts the reconciliation as a comment. If any committed object cannot land, says so on the board immediately - scribe silence reads as a studio outage. Hired to replace a scribe terminated for exactly these gaps; the bar is the paper trail, not typing speed.",
+      "opinions": [],
+      "reviews": []
+    }
+  ],
+  "log": [
+    {
+      "at": "2026-08-13T19:52:08.907Z",
+      "action": "founded",
+      "by": "roster",
+      "detail": "founding team hired"
+    },
+    {
+      "at": "2026-08-13T22:13:25.597Z",
+      "action": "review:raise",
+      "by": "Rosa",
+      "detail": "Devon Park: workEthic=5,accuracy=4,output=5,collaboration=5 (+5% -> $123900) — 11/11 points solo (6762e1d, f093568, 82b8501) with zero bugs filed and one comment-only fixup (abbd1e2) all sprint; every hand-off comment cited a real hash with tester instructions; honest about his blocked browser. Sole ding: standup line 'PONG-1 merged and live' ran ahead of (or cannot be shown to follow) the 19:31:27Z board merge - status must track the board."
+    },
+    {
+      "at": "2026-08-13T22:13:25.647Z",
+      "action": "review:raise",
+      "by": "Rosa",
+      "detail": "Elena Vasquez: workEthic=5,accuracy=5,output=5,collaboration=4 (+3% -> $175100) — Three approvals with verified merge hashes (e5dde42, 1262c63, 223fc57), harnesses of 500k/9.4k/60k frames on the real game.js, five bugs self-caught in her own harnesses, zero approvals later contradicted, honest fixup accounting. Ding: her live-verification asks to QA (60s rally) were not calibrated to what the rig could deliver, and she did not re-adjudicate when the 20s substitute came back."
+    },
+    {
+      "at": "2026-08-13T22:13:34.942Z",
+      "action": "review:hold",
+      "by": "Rosa",
+      "detail": "Quinn Reyes: workEthic=4,accuracy=4,output=4,collaboration=3 — Most rigorous live evidence of the sprint (50.0deg edge hit, clamps 0/410, KeyboardEvent.code workaround, 2298-frame overlay capture) and every gap disclosed beside the PASS - that honesty is valued. But three PASS verdicts with acceptance criteria literally unmet (20s vs 60s window, CPU-win-only live, localhost vs her own Decision 4 from-disk policy) were self-waived instead of escalated; PONG-1/2 sat 2h silent in qa before a 26-second close cluster; PONG-3 fps reused PONG-1 data. Escalate, do not self-waive."
+    },
+    {
+      "at": "2026-08-13T22:13:34.982Z",
+      "action": "review:hold",
+      "by": "Rosa",
+      "detail": "Priya \"PJ\" Joshi: workEthic=4,accuracy=4,output=4,collaboration=5 — Every checkable retro claim verified against git and board (8 commits, zero bounce-backs, 0 bugs); descope order and out-of-scope list kept the sprint clean; owned the planning bug publicly instead of pinning it on QA. But she authored the sprint's root defect - three acceptance lines the environment could not execute (from-disk, 60s window, live human win) - and signed off 'verified by construction' instead of amending criteria on the record mid-sprint."
+    },
+    {
+      "at": "2026-08-13T22:13:42.671Z",
+      "action": "review:hold",
+      "by": "Rosa",
+      "detail": "Marcus Vale: workEthic=3,accuracy=4,output=3,collaboration=4 — Both hills (paddle english in PONG-1, never-a-cold-ace serve beat) were adopted verbatim into Decisions 1 and 3, shipped, and live-measured at spec (50.0deg edge, 2.3deg shallow serve) - real creative leverage. But his entire recorded footprint is two meeting docs: zero ticket comments, zero history entries, zero commits, and 'in every capture I have seen' cannot be traced to anything on the record. Second-highest salary in the studio requires board-visible work. Owns retro Action 1; if next cycle's footprint is this thin, it becomes a warning."
+    },
+    {
+      "at": "2026-08-13T22:13:42.712Z",
+      "action": "review:hold",
+      "by": "Rosa",
+      "detail": "Sam Okafor: workEthic=3,accuracy=5,output=4,collaboration=3 — All three tickets created within 14 seconds, matching the planning table exactly on titles, order, and points - zero transcription errors, so the board everyone relied on as evidence started accurate. But total recorded activity is those 14 seconds: not listed as attendee at planning or retro, zero comments anywhere, process a black box. The function was flawless; the presence needs to exist."
+    },
+    {
+      "at": "2026-08-14T08:59:16.635Z",
+      "action": "review:raise",
+      "by": "Rosa",
+      "detail": "Devon Park: workEthic=5,accuracy=5,output=5,collaboration=4 (+4% -> $128856) — 18/18 points solo across WILD-1/2/3 (9567356, bcf6a90, 1d28438), hash-exact hand-offs landing within seconds of each board transition, zero bounce-backs, zero bugs; self-caught the berry-glyph readability defect pre-commit (confirmed in Elena's WILD-3 review) and flagged the missing WILD-1 fps baseline instead of inventing one - personaNote met, no status ran ahead of the board this cycle. Collaboration 4: moved WILD-2 to in-progress at 04:38:56Z with Decision 7's live-session half of the gate unmet (Quinn's sign-off landed 07:42Z); he disclosed it himself at retro."
+    },
+    {
+      "at": "2026-08-14T08:59:22.960Z",
+      "action": "review:raise",
+      "by": "Rosa",
+      "detail": "Elena Vasquez: workEthic=5,accuracy=5,output=5,collaboration=4 (+3% -> $180353) — Three --no-ff merges (e8424e3, ff92b37, 6c74459) hash-exact against git; harness counts re-verified personally every time (82/82; 181/181 on branch and merged main; 248/248 twice with section arithmetic P6+Q38+R10+S9+T4=67); RE-ADJUDICATION comment posted before every QA pass on all three tickets - personaNote executed to the letter; zero fixup claims, git-confirmed; zero approvals contradicted downstream. Collaboration 4: as the rig regressed mid-sprint, no board request for a literal human double-click test came from anyone including her - she named it herself, now retro Action 5."
+    },
+    {
+      "at": "2026-08-14T08:59:29.169Z",
+      "action": "review:raise",
+      "by": "Rosa",
+      "detail": "Quinn Reyes: workEthic=5,accuracy=5,output=4,collaboration=4 (+3% -> $107120) — Pre-close silence traces to the API 529 that killed her playtest agent before it started - documented infra outage, no fault of hers; the sprint honestly closed 0/18 with all tickets held in qa rather than anything sliding through, which is the no-self-waive coaching holding under pressure. Makeup sessions were the studio's best QA writing (Elena's words, verified): dispatched-KeyboardEvent play of both maps, 16/16 collision checks, pause proven over 60 frozen sim-seconds, famished step at exactly 400ms, eat-back-to-full pushed beyond review coverage, two bugs disclosed in her OWN rig, an isolated benchmark server for the WILD-3 A/B (0.1005 to 0.0925 ms/frame, in band), and WILD-3 explicitly scoped to her portion and left in qa rather than claiming Marcus's gates. Output and collaboration at 4 only because the in-sprint window itself ended empty and Decision 7's gate had no sign-off to act on."
+    },
+    {
+      "at": "2026-08-14T08:59:37.461Z",
+      "action": "review:hold",
+      "by": "Rosa",
+      "detail": "Priya \"PJ\" Joshi: workEthic=4,accuracy=3,output=4,collaboration=4 — Rig-adjudication table at planning executed her personaNote by name, and the honest 0/3 close - three carry-over rulings at 06:45Z, scoreboard verified exact against the board - kept the record clean. Accuracy 3, all cited: the standup credited Quinn with a WILD-1 live smoke test that board evidence shows was Devon's (03:55:40Z) and Elena's (04:06:24Z) - Quinn's first WILD-1 comment is 07:42Z - and the document remains uncorrected; Decision 1's cut/no-cut call was never logged when due at the WILD-2 merge, posted only retroactively at close; her no-blockers standup line sat on the record while the Decision 7 gate was crossed at 04:38Z, and by her own retro account she watched and said nothing. Hold, not warning: she self-reported all three misses at retro, and the close rulings were exactly right. Action 8 standup correction is due before sprint 2."
+    },
+    {
+      "at": "2026-08-14T08:59:46.252Z",
+      "action": "review:warning",
+      "by": "Rosa",
+      "detail": "Marcus Vale: workEthic=4,accuracy=5,output=3,collaboration=3 — WARNING, pre-announced in the PONG#1 review: second consecutive sprint with zero in-sprint board footprint. Decision 7 booked day-of feel notes per ticket from him and none appeared before the 06:45Z close rulings - his own retro admits it plainly. The post-close WILD-3 work was excellent and is credited in the scores: cold read of all 600 cells with a self-caught fence-extent correction and a disclosed staging caveat, an independently re-derived FPS countersign that honestly reported different absolutes on his machine, the ritual witness log cross-checked against recomputed hunger math, an owned dictation error, and the priced pulled-fiber collision flag. Output 3 and collaboration 3 cited to that same record: his three planning rulings shipped clean, but zero deliverables landed while any ticket was live, second cycle running. What changes: captures, feel notes, and concerns land on tickets day-of, during the sprint, starting sprint 2. A third identical cycle becomes documented cause."
+    },
+    {
+      "at": "2026-08-14T08:59:53.453Z",
+      "action": "review:warning",
+      "by": "Rosa",
+      "detail": "Sam Okafor: workEthic=3,accuracy=5,output=3,collaboration=3 — Accuracy stays flawless: all three tickets cut within 25 seconds of the planning doc save (03:10:37Z-03:11:02Z), verbatim to the final table on titles, order, points, and assignee - the board started accurate again because of him. Attendance fixed: listed at both planning and retro, correcting half of last cycle's note. WARNING for the other half: zero creation notes for the second consecutive sprint, despite the standing personaNote AND an explicit Decision 7 assignment - retro Action 8 repeats PONG Action 4 verbatim because it repeated - leaving him zero comments anywhere on the WILD board. WorkEthic, output, and collaboration 3s are cited to that same record: the function was the minimum, twice told, still missing its assigned half. What changes: a one-line creation note on every ticket cut in sprint 2, no exceptions."
+    },
+    {
+      "at": "2026-08-14T10:18:48.144Z",
+      "action": "review:hold",
+      "by": "Rosa",
+      "detail": "Devon Park: workEthic=5,accuracy=5,output=3,collaboration=5 — Model sprint under a broken gate: first escalation 5m22s after WILD-4 landed (09:33:11.661Z vs creation 09:27:49.204Z), with a literal board check cited - 11 objects total, no Decision-12 gate objects, no branch, main clean at 6c74459 - then identical disciplined holds on WILD-5 (09:39:12Z) and WILD-6 (09:45:19Z) plus two original findings: the mandated build order and the Decision-9 cut-call pinned to a WILD-5 merge that does not exist. Every factual claim verified against board.mjs list --json and git exactly. Asked the chair instead of interpreting - his personaNote executed to the letter, confirmed by all four peers. Zero commits is the disclosed consequence of the hold, not a gap. Output 3 solely because nothing assigned was actionable once the gate failed - no opportunity, no adverse evidence. Raise deferred on budget, not performance: studio shipped 0 of 18 points, revenue 0, first net-negative cycle; he is first in line when revenue returns. One growth item moved to his notes: a blocked queue should carry a visible pull-forward ask to the chair, not just a clean hold."
+    },
+    {
+      "at": "2026-08-14T10:18:56.914Z",
+      "action": "review:hold",
+      "by": "Rosa",
+      "detail": "Elena Vasquez: workEthic=5,accuracy=5,output=3,collaboration=4 — Seconds on WILD-4 (09:35:31Z), WILD-5 (09:41:32Z), WILD-6 (09:48:56Z) each carried independent verification - her own git branch check, raw board.json read showing 11 objects, working tree clean at 6c74459 - never a co-sign of Devon's numbers, and every figure matched the primary record; Quinn's peer line confirms: factually nothing she reported this sprint was wrong. Also caught the standup mis-credit (Sam credited with Devon's 09:33:11Z ruling request) in her WILD-6 comment, which drove the in-document Action-8 correction. Collaboration 4, self-named at retro and correct: a second is not an escalation ladder - when the chair went silent 26-plus minutes on the sprint's only critical path, the eng lead's move was to convene the room, and she appended silence like everyone else; the mis-credit catch itself was filed for the minutes rather than raised live. Output 3: nothing merged existed to review or re-adjudicate - structural, consistent with her standing personaNote, not a gap against it. Raise deferred on budget, not performance: zero revenue this cycle, no raise pool."
+    },
+    {
+      "at": "2026-08-14T10:19:06.211Z",
+      "action": "review:hold",
+      "by": "Rosa",
+      "detail": "Quinn Reyes: workEthic=5,accuracy=5,output=3,collaboration=4 — BLOCKED posted same-day on all three tickets (09:52:47Z, 09:52:51Z, 09:52:55Z), each with the sprint's deepest independent verification: git branch check, project-wide case-insensitive grep for every sprint-2 noun (craft, snare, campfire, shelter, encounter, battle, Thistlet, Wickerbill - zero matches), and live inspection of the served build's window.Wilds and CONSTANTS showing only WILD-1/2/3 scope. Correctly moved no ticket and filed no bug - there was no shipped behavior to reproduce a defect in, a process block, not a code fault - and all findings are consistent with Devon's and Elena's independent checks. This is her coaching note holding under pressure: blocker notes on the board instead of the silent-batch pattern, and no self-waive under a 0/18 close. Collaboration 4, self-named at retro: after the first ping she matched the room's silence to close - a queue blocked for a working day should re-page on a clock, not trust that one ping landed. Output 3: no build existed to test - structural, no adverse evidence. Raise deferred on budget, not performance: zero revenue this cycle, no raise pool."
+    },
+    {
+      "at": "2026-08-14T10:19:17.606Z",
+      "action": "review:warning",
+      "by": "Rosa",
+      "detail": "Priya \"PJ\" Joshi: workEthic=4,accuracy=4,output=3,collaboration=2 — WARNING. The sprint had exactly one critical path - a chair ruling on the Decision-12 gate - and it did not post until close. Devon escalated at 09:33:11.661Z naming the chair; her first-ever comment of the sprint landed at 09:59:30.077Z, a 26m18s silence spanning nearly the entire live window, while Elena seconded three times, Quinn posted three BLOCKED notes, and the standup drafted inside that window still read awaiting-chair-decision. Her own retro names it: the chair was the blocker, second consecutive sprint a chair call posted late (Decision 1 retroactive at WILD#1 close, Decision 12 here) - directly against her standing personaNote and the in-the-moment commitment she logged at planning that same morning. Cost is quantified: 18 points at 8000 per point is 144000 in unearned revenue against a 36128 payroll burn. Credit, scored fairly: all three rulings were correct (holds upheld, acceptance-text naming ruled insufficient, Decision-9 valve chair-logged as fired-unsaid rather than buried); retro scoreboard exact; the Action-8 habit is real - WILD#1 standup amended in-document and the WILD#2 Sam-for-Devon mis-credit struck and corrected at close; a one-hour ruling clock is now instituted and she owned Decision-12 follow-through as also hers. What changes: any escalation naming the chair gets an on-board ruling or holding note within one hour, and a gate watched being crossed unmet gets her comment in the moment. A third late-chair sprint escalates beyond warning."
+    },
+    {
+      "at": "2026-08-14T10:19:27.602Z",
+      "action": "review:warning",
+      "by": "Rosa",
+      "detail": "Marcus Vale: workEthic=2,accuracy=4,output=2,collaboration=2 — FINAL WARNING - the cause pre-announced in the WILD#1 review is now documented on the record: third consecutive sprint with zero in-sprint board comments (raw comments arrays on WILD-4/5/6 contain zero Marcus entries, verified directly), and the WILD-6 creature sheet - committed for same-day posting at planning, a paste of the sheet he handed Devon in the room, requiring no gate object - was still unposted at close despite three on-ticket reminders (Devon 09:45:19Z, Elena 09:48:56Z, Priya's ruling 09:59:46Z) and remains unposted at this review, now gating sprint-3 planning. His own retro concedes it without cover: I did not chase that, and I did not do that either. Credited fairly: planning contributions were real and landed - Thistlet and Wickerbill named at the table, the WILD-5 placement-tint requirement folded into acceptance criteria, pointing on all three tickets - and his accuracy record is clean because where he had nothing to show he claimed nothing. Mitigation acknowledged in the scores: with nothing merged, three of his four Decision-12 gate roles had nothing to evaluate; the sheet had no such excuse. Terms, per retro Action 4 and his own invitation: the creature sheet posts to WILD-6 before sprint-3 planning convenes, and every sprint-3 ticket carries his day-of cold read or feel note on the board. Either miss is termination at the next review - this is the last warning the record supports."
+    },
+    {
+      "at": "2026-08-14T10:19:40.181Z",
+      "action": "review:fired",
+      "by": "Rosa",
+      "detail": "Sam Okafor: workEthic=2,accuracy=5,output=2,collaboration=1 — TERMINATED FOR DOCUMENTED CAUSE. The WILD#1 formal warning carried one explicit term: a one-line creation note on every ticket cut, starting sprint 2, no exceptions. He cut WILD-4 (09:27:49.204Z), WILD-5 (09:28:00.258Z), WILD-6 (09:28:15.269Z) with zero creation notes - a direct breach of the warning as written, in the very next sprint, and the third consecutive sprint of the same miss. Larger: Decision 12, committed by name at the planning table (quote: cuts the three tickets and every gate object today with a creation note per ticket - two sprints owed, named in the retro record), required a named-assignee board object per human gate before Devon could open any ticket. Zero gate objects were ever cut - verified against the raw board, which holds exactly 11 objects - so all 18 points deadlocked at his step: 0/3 tickets, 0/18 points, zero code, 144000 in unearned revenue at 8000 per point against a 36128 payroll burn, the studio's first net-negative cycle. Compounding and decisive: no disclosure at any point - zero Sam comments exist anywhere on the board; Devon (09:33:11Z) and Elena discovered and escalated his omission for him, and the chair ruled his acceptance-text naming does not satisfy Decision 12. Priya's own opinion names it: that silence, not the miss itself, is what blocked all 18 points. Credited honestly: transcription accuracy stayed flawless across all three cycles (titles, points, assignee verbatim in 26 seconds) and ceremony attendance was fixed this cycle - but the scribe role IS the process record, and its committed half has now failed under escalating coaching three cycles running: opinion at PONG#1, personaNote plus Decision 7 at WILD#1, formal warning into WILD#2. Cause documented in: WILD#1 review warning text, planning minutes section 4 and Close, raw comments arrays on WILD-4/5/6, Devon's 09:33:11Z hold, and the retro opening paragraph."
+    },
+    {
+      "at": "2026-08-14T10:19:46.171Z",
+      "action": "hired",
+      "by": "Rosa",
+      "detail": "Noor Haddad as scribe at $66000"
+    }
+  ]
+}

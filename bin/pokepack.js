@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // pokepack -- build, inspect, resolve and validate gen1recomp modpack recipes.
 
-import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs';
+import { readFileSync, writeFileSync, existsSync, mkdirSync, readSync } from 'node:fs';
 import { resolve as resolvePath, join, dirname } from 'node:path';
 import * as pack from '../src/packformat.js';
 import { readSaveDir, releasesFromCache, indexFromCache, indexFromFeeds } from '../src/state.js';
@@ -17,8 +17,23 @@ const MARK = {
   [UNAVAILABLE]: ' x  ', [BLOCKED]: ' -  ',
 };
 
+// Set once the arguments are known: true when this is the packaged build and
+// nobody passed any, which is what a double-click looks like from in here.
+let doubleClicked = false;
+
+// A double-clicked program gets a console window of its own, and that window
+// closes the instant the process does -- so an error printed and exited is a
+// black flash and nothing else.  Hold it open long enough to be read.
+function holdWindow() {
+  process.stderr.write('\nPress Enter to close this window.\n');
+  try {
+    readSync(0, Buffer.alloc(1), 0, 1, null);
+  } catch { /* no console attached; nothing to hold open */ }
+}
+
 function die(msg) {
   process.stderr.write(`pokepack: ${msg}\n`);
+  if (doubleClicked) holdWindow();
   process.exit(1);
 }
 
@@ -435,10 +450,14 @@ async function cmdGallery({ positional, flags }) {
 
 async function cmdUi({ flags }) {
   const { serve } = await import('../src/ui.js');
+  const { defaultPacksDir } = await import('../src/packaged.js');
   let started;
   try {
     started = await serve({
-      packsDir: resolvePath(flags.packs ?? 'packs'),
+      // A checkout resolves this against the working directory; the exe
+      // resolves it against itself, because a double-clicked program has no
+      // working directory anybody chose.
+      packsDir: resolvePath(flags.packs ?? defaultPacksDir()),
       saveDir: flags.save ? resolvePath(flags.save) : null,
       indexFile: flags.index ? resolvePath(flags.index) : null,
       port: Number(flags.port ?? 7666),
@@ -522,6 +541,166 @@ async function cmdInstance({ positional, flags }) {
     : 'This instance has no game data, so the game will ask for your ROM the first time.');
 }
 
+async function cmdSaves({ positional, flags }) {
+  const saves = await import('../src/saves.js');
+  const cfg = await import('../src/config.js');
+  const { homeDir } = await import('../src/packaged.js');
+  const [sub, ...rest] = positional;
+
+  const show = (dir) => {
+    const found = saves.describe(resolvePath(dir));
+    if (found.versions.length === 0) return say(`${dir}: no saves`);
+    say(dir);
+    for (const v of found.versions) {
+      for (const s of v.slots) {
+        const note = s.missingFile ? '  LISTED BUT THE FILE IS GONE'
+          : s.orphanFile ? '  on disk but not listed, so the game will not show it' : '';
+        say(`  ${v.version}/${s.name}${s.active ? ' *' : '  '}  ${String(s.size).padStart(6)} bytes`
+          + `  ${s.modified ? s.modified.toISOString().slice(0, 16) : '-'}${note}`);
+      }
+    }
+    say('  (* is the one the game loads)');
+  };
+
+  // `saves <dir>` and `saves list <dir>` both read naturally, and only two
+  // words are reserved, so anything else is a path rather than a typo.
+  if (!sub || sub === 'list' || !['backup', 'backups', 'restore', 'copy'].includes(sub)) {
+    const dirs = sub && sub !== 'list' ? [sub, ...rest] : rest;
+    if (dirs.length) return dirs.forEach(show);
+    const { findSaveDirs } = await import('../src/discover.js');
+    for (const i of findSaveDirs()) {
+      if (saves.describe(i.path).total > 0) show(i.path);
+    }
+    return;
+  }
+
+  if (sub === 'backup') {
+    const dir = rest[0] ?? die('usage: pokepack saves backup <saveDir> [--out DIR]');
+    const out = saves.backup(resolvePath(dir), {
+      outDir: resolvePath(flags.out ?? join(homeDir(), 'save-backups')),
+    });
+    say(`wrote ${out.file}`);
+    say(`  ${out.slots} save(s), ${(out.bytes / 1024).toFixed(1)} KB, with the slot list beside them`);
+    return;
+  }
+
+  if (sub === 'backups') {
+    const dir = resolvePath(flags.out ?? join(homeDir(), 'save-backups'));
+    const found = saves.listBackups(dir);
+    if (found.length === 0) return say(`no backups in ${dir}`);
+    say(dir);
+    for (const b of found) {
+      if (b.error) say(`  ${b.name}  UNREADABLE -- ${b.error}`);
+      else say(`  ${b.name}\n      ${b.setup ?? '?'}  ${b.takenAt ?? '?'}  ${b.slots.join(', ')}`);
+    }
+    return;
+  }
+
+  if (sub === 'restore') {
+    const zipFile = rest[0];
+    const to = rest[1];
+    if (!zipFile || !to) die('usage: pokepack saves restore <backup.zip> <toSaveDir>');
+    if (!existsSync(resolvePath(zipFile))) die(`no such backup: ${zipFile}`);
+
+    const dest = resolvePath(to);
+    // Restoring is the operation people reach for when something already went
+    // wrong. Taking a copy of whatever is there first costs a few KB and means
+    // a restore into the wrong setup is undoable.
+    if (saves.describe(dest).total > 0) {
+      const b = saves.backup(dest, { outDir: resolvePath(flags.out ?? join(homeDir(), 'save-backups')) });
+      say(`backed the destination up first: ${b.file}`);
+    }
+
+    const out = saves.restore({
+      buffer: readFileSync(resolvePath(zipFile)),
+      to: dest,
+      exePath: cfg.read().gamePath ?? null,
+    });
+    say(`from ${out.setup ?? 'a backup'}${out.takenAt ? `, taken ${out.takenAt}` : ''}`);
+    for (const r of out.restored) {
+      say(`  ${r.version}/${r.fromSlot} -> ${r.toSlot}  (${r.bytes} bytes)`
+        + `${r.renamed ? '  renamed, that name was taken' : ''}${r.active ? '  now the one that loads' : ''}`);
+    }
+    say(`updated ${out.options}`);
+    return;
+  }
+
+  if (sub === 'copy') {
+    const from = rest[0];
+    const to = rest[1];
+    if (!from || !to) die('usage: pokepack saves copy <fromSaveDir> <toSaveDir> [--version red] [--slot slot1]');
+
+    // The destination's saves are somebody's hours. Back them up before adding
+    // to them, even though nothing here overwrites -- the cost is a few KB and
+    // the alternative is finding out the hard way.
+    const dest = resolvePath(to);
+    if (saves.describe(dest).total > 0) {
+      const b = saves.backup(dest, { outDir: resolvePath(flags.out ?? join(homeDir(), 'save-backups')) });
+      say(`backed the destination up first: ${b.file}`);
+    }
+
+    const out = saves.transfer({
+      from: resolvePath(from),
+      to: dest,
+      version: flags.version ?? null,
+      slot: flags.slot ?? null,
+      makeActive: !flags['keep-active'],
+      exePath: cfg.read().gamePath ?? null,
+    });
+    for (const c of out.copied) {
+      say(`${c.version}: ${c.fromSlot} -> ${c.toSlot}  (${c.bytes} bytes)${c.active ? ', now the one that loads' : ''}`);
+      if (c.keptAlongside.length) say(`  kept alongside ${c.keptAlongside.join(', ')}`);
+    }
+    say(`updated ${out.options}`);
+    return;
+  }
+
+  die(`unknown: pokepack saves ${sub}. try: list, backup, copy`);
+}
+
+async function cmdGame({ flags }) {
+  const game = await import('../src/game.js');
+  const cfg = await import('../src/config.js');
+  const { checkGameExe } = await import('../src/instance.js');
+  const { homeDir } = await import('../src/packaged.js');
+
+  const existing = cfg.read().gamePath;
+  if (existing && !flags.force) {
+    const check = checkGameExe(existing);
+    if (check.ok) {
+      say(`already set up: ${check.path}`);
+      say('pass --force to download the latest anyway.');
+      return;
+    }
+  }
+
+  const dir = resolvePath(flags.dir ?? join(homeDir(), 'game'));
+  const mb = (n) => `${(n / 1048576).toFixed(1)} MB`;
+
+  const out = await game.install({
+    dir,
+    onEvent: (ev) => {
+      if (ev.type === 'found') {
+        say(`gen1recomp ${ev.version} -- ${ev.name}${ev.size ? ` (${mb(ev.size)})` : ''}`);
+        say(ev.sha256 ? `  the author publishes a checksum for it, so it will be verified`
+          : `  no checksum published for this release -- it will install unverified`);
+        say('  downloading...');
+      } else if (ev.type === 'downloaded') say(`  got ${mb(ev.size)}, sha256 ${ev.sha256.slice(0, 12)}`);
+      else if (ev.type === 'installed') say(`  unpacked ${ev.files} files`);
+    },
+  });
+
+  const check = checkGameExe(out.exePath);
+  if (!check.ok) die(`downloaded, but it does not look right: ${check.reason}`);
+  cfg.write({ gamePath: check.path });
+
+  say('');
+  say(`${check.path}`);
+  say(out.verified ? 'verified against the published checksum.' : 'installed, but nothing to verify it against.');
+  say('');
+  say('It has no ROM yet -- start the hub and it will ask for yours.');
+}
+
 async function cmdAndroid({ positional, flags }) {
   const dir = positional[0];
   if (!dir) die('usage: pokepack android <saveDir> [--out FILE] [--name "Pack name"]');
@@ -567,6 +746,11 @@ function cmdHelp() {
   instance <name>      make an isolated copy of the game  --pack P --exe PATH
                        --seed-from ID  copy game data from that instance
                        --no-seed       start with no game data
+  saves ...            move a save to another setup, or keep a copy of it
+                       list | backup | backups | restore <zip> <to> | copy <from> <to>
+                       copy <from> <to> --version red --slot slot1 --keep-active
+  game                 download gen1recomp itself, verified against its checksum
+                       --dir DIR       --force  replace what is configured
   android <saveDir>    zip a setup's mods and settings for an Android handheld
                        --out FILE      --name "Pack name"
   feed [packsDir]      generate packs.json for a gallery  --out FILE
@@ -584,13 +768,35 @@ const args = parseArgs(rest);
 const commands = {
   build: cmdBuild, resolve: cmdResolve, fetch: cmdFetch, install: cmdInstall,
   validate: cmdValidate, inspect: cmdInspect, hash: cmdHash, feed: cmdFeed, ui: cmdUi,
-  instance: cmdInstance, gallery: cmdGallery, android: cmdAndroid,
+  instance: cmdInstance, gallery: cmdGallery, android: cmdAndroid, game: cmdGame, saves: cmdSaves,
 };
 
-try {
-  if (!cmd || cmd === 'help' || cmd === '--help' || cmd === '-h') cmdHelp();
-  else if (commands[cmd]) await commands[cmd](args);
-  else die(`unknown command ${cmd}. try: pokepack help`);
-} catch (e) {
-  die(e.message);
+// Wrapped in a function rather than run at the top level, because a top-level
+// await cannot be bundled into the single executable (build/exe.mjs), and the
+// exe is how most people will meet this.  Identical behaviour either way.
+async function main() {
+  // No arguments means two different things depending on how you got here.
+  // At a prompt you typed a name and want to know what it does, so: help.
+  // Double-clicked, there is no prompt to read help at and the window shuts
+  // before you could -- what you wanted was the program.  So the packaged
+  // build with no arguments starts the hub, and `pokepack help` still prints
+  // help for anyone who asks for it by name.
+  const { isPackaged } = await import('../src/packaged.js');
+  doubleClicked = isPackaged() && !cmd;
+
+  try {
+    if (doubleClicked) await cmdUi({ flags: {} });
+    else if (!cmd || cmd === 'help' || cmd === '--help' || cmd === '-h') cmdHelp();
+    else if (cmd === 'version' || cmd === '--version' || cmd === '-v') {
+      // Matters more for the exe than the checkout: a file somebody was handed
+      // months ago cannot be identified by looking at the folder it came in.
+      const { currentVersion } = await import('../src/update.js');
+      say(currentVersion() ?? 'unknown');
+    } else if (commands[cmd]) await commands[cmd](args);
+    else die(`unknown command ${cmd}. try: pokepack help`);
+  } catch (e) {
+    die(e.message);
+  }
 }
+
+main();

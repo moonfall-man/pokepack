@@ -122,6 +122,17 @@ button:disabled { opacity:.4; cursor:not-allowed; }
 .pack-acts { display:flex; gap:4px; align-items:center;
   padding-left:12px; margin-left:4px; border-left:1px solid var(--line); }
 .pack-acts button { padding:5px 10px; font-size:12.5px; }
+
+/* Save sources: every one visible at once, because a collapsed control here
+   reads as "there is only one". Scrolls rather than growing the dialog. */
+.sv-list { display:flex; flex-direction:column; gap:2px; max-height:190px; overflow-y:auto;
+  border:1px solid var(--line); border-radius:6px; padding:4px; }
+.sv-row { display:flex; align-items:center; gap:8px; padding:6px 8px; border-radius:4px;
+  cursor:pointer; }
+.sv-row:hover { background:var(--panel); }
+.sv-row input { width:auto; flex:none; margin:0; }
+.sv-name { font-weight:600; font-size:13px; }
+.sv-row .why { margin:0; margin-left:auto; text-align:right; }
 @media (max-width:700px) { .pack-acts { display:none; } }
 
 /* ---- main */
@@ -400,6 +411,7 @@ function renderPackActions() {
         + '<button class="quiet" data-publish="' + esc(inst.identity) + '">Publish</button>'
         + '<button class="quiet" data-android="' + esc(inst.identity) + '">To Android</button>'
       : '')
+    + '<button class="quiet" data-saves="' + esc(inst.identity) + '">Saves\\u2026</button>'
     + (inst.isDefault ? ''
       : '<button class="quiet danger" data-del-inst="' + esc(inst.identity) + '">Delete</button>');
 }
@@ -723,6 +735,122 @@ function exportInstance(identity) {
   });
 }
 
+// Saves.  A new pack means a new setup, which means a fresh game -- fine when
+// you wanted a fresh game, and the reason people stop trying packs when they
+// did not.  Bringing the save across is the whole feature; the rest of this
+// dialog exists to make it obvious that nothing gets overwritten doing it.
+async function manageSaves(identity) {
+  let data;
+  try {
+    data = await (await fetch(api('saves'))).json();
+  } catch (e) {
+    return toast('could not read the saves: ' + e.message, true);
+  }
+  if (data.error) return toast(data.error, true);
+  const setups = data.setups ?? [];
+  let backups = [];
+  try {
+    backups = (await (await fetch(api('saves/backups'))).json()).backups ?? [];
+  } catch { /* the restore half simply does not appear */ }
+  const mine = setups.find(s => s.identity === identity);
+  const others = setups.filter(s => s.identity !== identity);
+
+  const listOf = (s) => (s.versions ?? []).flatMap(v => v.slots.map(sl =>
+    v.version + '/' + sl.name + (sl.active ? ' \\u2605' : '')
+    + (sl.missingFile ? ' (file missing)' : sl.orphanFile ? ' (not listed in game)' : ''))).join(', ');
+
+  dialog({
+    title: 'Saves \\u2014 "' + identity + '"',
+    sub: mine ? listOf(mine) : 'This setup has no saves yet.',
+    // A <select> was here and it lied: collapsed, it shows one row, so three
+    // setups with saves read as "it only found one". Every choice stays on
+    // screen now, and the count says so out loud.
+    body: (others.length
+      ? '<div><div class="why" style="margin-bottom:6px">Bring a save here from another setup '
+        + '\\u2014 <b>' + others.length + '</b> ' + (others.length === 1 ? 'has' : 'have') + ' one</div>'
+        + '<div class="sv-list">' + others.map((s, i) =>
+          '<label class="sv-row"><input type="radio" name="sv-from" value="' + esc(s.identity) + '"'
+          + (i === 0 ? ' checked' : '') + '>'
+          + '<span class="sv-name">' + esc(s.identity) + '</span>'
+          + '<span class="why">' + esc(listOf(s)) + '</span></label>').join('')
+        + '</div>'
+        + '<div class="why" style="margin-top:8px">It arrives in a new slot and becomes the one that '
+        + 'loads. Nothing here is replaced \\u2014 whatever this setup already had stays, and a backup '
+        + 'is written first.</div></div>'
+      : '<div class="why">No other setup has a save to bring across yet. This list skips '
+        + 'the one you are on, so a setup only appears here when it has a save and is not this one.</div>')
+      // The half that matters on the worst day. A backup nobody can put back
+      // is worth about as much as no backup.
+      + (backups.length
+        ? '<div style="border-top:1px solid var(--line);padding-top:12px;margin-top:12px">'
+          + '<div class="why" style="margin-bottom:6px">Or put a backup back here '
+          + '\\u2014 <b>' + backups.length + '</b> saved</div>'
+          + '<div class="sv-list">' + backups.map(b =>
+            '<label class="sv-row"><input type="radio" name="sv-bak" value="' + esc(b.name) + '"'
+            + (b.error ? ' disabled' : '') + '>'
+            + '<span class="sv-name">' + esc(b.setup ?? b.name) + '</span>'
+            + '<span class="why">' + esc(b.error ? 'unreadable \\u2014 ' + b.error
+              : (b.takenAt ?? '').replace('T', ' ').slice(0, 16) + '  ' + b.slots.join(', ')) + '</span></label>').join('')
+          + '</div>'
+          + '<div class="bar" style="margin:8px 0 0"><button class="sm" id="sv-restore">Restore it</button>'
+          + '<span class="why">arrives beside what is here, never on top of it</span></div></div>'
+        : '')
+      + '<div id="sv-out"></div>',
+    go: others.length ? 'Bring it across' : null,
+    alt: mine ? { label: 'Back these up', onClick: async () => {
+      const r = await post('saves/backup', { identity });
+      const out = document.getElementById('sv-out');
+      out.innerHTML = r.ok
+        ? '<pre class="log">wrote ' + esc(r.data.file) + '\\n' + r.data.slots + ' save(s)</pre>'
+        : '<pre class="log">' + esc(r.data.error) + '</pre>';
+    } } : null,
+    onGo: async () => {
+      const b = document.getElementById('d-go');
+      b.disabled = true; b.textContent = 'Copying\\u2026';
+      const picked = document.querySelector('input[name="sv-from"]:checked');
+      if (!picked) { b.disabled = false; b.textContent = 'Bring it across'; return; }
+      const { ok: k, data: d } = await post('saves/transfer', { from: picked.value, to: identity });
+      const out = document.getElementById('sv-out');
+      if (!k) {
+        out.innerHTML = '<pre class="log">' + esc(d.error)
+          + (d.backedUp ? '\\n\\nnothing was changed; the backup taken first is at\\n' + esc(d.backedUp) : '') + '</pre>';
+        b.disabled = false; b.textContent = 'Bring it across';
+        return;
+      }
+      out.innerHTML = '<pre class="log">'
+        + d.copied.map(c => c.version + ': ' + c.fromSlot + ' \\u2192 ' + c.toSlot
+          + (c.active ? ', now the one that loads' : '')
+          + (c.keptAlongside.length ? '\\nkept alongside ' + esc(c.keptAlongside.join(', ')) : '')).join('\\n')
+        + (d.backedUp ? '\\n\\nbacked up first: ' + esc(d.backedUp) : '') + '</pre>';
+      b.textContent = 'Done';
+      load();
+    },
+  });
+
+  const restoreBtn = document.getElementById('sv-restore');
+  if (restoreBtn) {
+    restoreBtn.onclick = async () => {
+      const picked = document.querySelector('input[name="sv-bak"]:checked');
+      const out = document.getElementById('sv-out');
+      if (!picked) { out.innerHTML = '<pre class="log">pick a backup first</pre>'; return; }
+      restoreBtn.disabled = true; restoreBtn.textContent = 'Restoring\\u2026';
+      const { ok: k, data: d } = await post('saves/restore', { name: picked.value, to: identity });
+      restoreBtn.disabled = false; restoreBtn.textContent = 'Restore it';
+      if (!k) {
+        out.innerHTML = '<pre class="log">' + esc(d.error) + '</pre>';
+        return;
+      }
+      out.innerHTML = '<pre class="log">from ' + esc(d.setup ?? 'a backup')
+        + (d.takenAt ? ', taken ' + esc(d.takenAt.replace('T', ' ').slice(0, 16)) : '') + '\\n'
+        + d.restored.map(r => '  ' + r.version + '/' + r.fromSlot + ' \\u2192 ' + r.toSlot
+          + (r.renamed ? '  (that name was taken)' : '')
+          + (r.active ? '  now the one that loads' : '')).join('\\n')
+        + (d.backedUp ? '\\n\\nbacked up first: ' + esc(d.backedUp) : '') + '</pre>';
+      load();
+    };
+  }
+}
+
 // The handheld route.  The game runs on Android already; what it has no way to
 // do is receive a setup built here, because POKEPORT_IDENTITY is an environment
 // variable and an app has no environment.  So this is a copy job, and the
@@ -738,8 +866,9 @@ function sendToAndroid(identity) {
     sub: plural(on, 'mod') + ' and every tested setting, zipped for the device.',
     body: '<div class="why">Your ROM data and your save files stay here. The device '
       + 'imports its own ROM, and its saves are its own.</div>'
-      + '<div class="why" style="margin-top:8px">Android has no per-pack isolation, so '
-      + 'extracting this replaces the mods and settings on the device.</div>'
+      + '<div class="why" style="margin-top:8px">It travels as a profile, so the game\\u2019s '
+      + 'mod manager can switch to it on the device. Sending another pack adds another '
+      + 'profile rather than replacing this one.</div>'
       + '<div id="an-out"></div>',
     go: 'Build the zip',
     onGo: async () => {
@@ -1114,7 +1243,10 @@ async function openSettings() {
     sub: 'Two paths, set once.',
     body: '<div><div class="why" style="margin-bottom:5px">gen1recomp.exe \\u2014 needed to Play</div>'
       + '<div style="display:flex;gap:8px"><input id="s-exe" value="' + esc(s.gamePath ?? '') + '">'
-      + '<button id="s-exe-b" style="flex:none">Browse\\u2026</button></div>'
+      + '<button id="s-exe-b" style="flex:none">Browse\\u2026</button>'
+      // "Where is your copy" is a fine question for somebody who has one.
+      // Everybody else was stuck on it.
+      + '<button id="s-exe-get" style="flex:none">Download\\u2026</button></div>'
       + '<div class="why" id="s-exe-msg"></div></div>'
       + '<div><div class="why" style="margin-bottom:5px">Your ROM (.gb) \\u2014 copied into each new setup</div>'
       + '<div style="display:flex;gap:8px"><input id="s-rom" value="' + esc(s.romPath ?? '') + '">'
@@ -1150,6 +1282,24 @@ async function openSettings() {
   };
   wire('s-exe-b', 'exe', 's-exe', 's-exe-msg');
   wire('s-rom-b', 'rom', 's-rom', 's-rom-msg');
+
+  document.getElementById('s-exe-get').onclick = async () => {
+    const b = document.getElementById('s-exe-get');
+    const m = document.getElementById('s-exe-msg');
+    const had = document.getElementById('s-exe').value;
+    if (had && !confirm('This downloads the latest gen1recomp and points pokepack at it, '
+      + 'instead of:\\n\\n' + had + '\\n\\nYour setups, mods and saves are not touched. Continue?')) return;
+    b.disabled = true; b.textContent = 'Downloading\\u2026';
+    m.style.color = ''; m.textContent = 'Fetching the release and checking it against the author\\u2019s checksum\\u2026';
+    const { ok, data } = await post('game/install', { force: Boolean(had) });
+    b.disabled = false; b.textContent = 'Download\\u2026';
+    if (!ok) { m.style.color = 'var(--bad)'; m.textContent = data.error; return; }
+    document.getElementById('s-exe').value = data.exePath;
+    m.style.color = 'var(--ok)';
+    m.textContent = 'gen1recomp ' + data.version + ' installed'
+      + (data.verified ? ', and it matched the published checksum.' : ' \\u2014 no checksum was published to check it against.');
+    load();
+  };
 }
 document.getElementById('settings').onclick = openSettings;
 
@@ -1165,6 +1315,8 @@ document.getElementById('pack-acts').addEventListener('click', (e) => {
   if (exp) return exportInstance(exp.dataset.exportInst);
   const dro = e.target.closest('[data-android]');
   if (dro) return sendToAndroid(dro.dataset.android);
+  const sv = e.target.closest('[data-saves]');
+  if (sv) return manageSaves(sv.dataset.saves);
 });
 
 document.getElementById('rail').addEventListener('click', async (e) => {

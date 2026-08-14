@@ -8,14 +8,41 @@ one to the exact bytes that were tested, and carries the settings those mods
 were tested at. Same reason the game ships no ROM: this distributes
 instructions, not other people's work.
 
-**Start it** by double-clicking `start-pokepack.cmd` on Windows, or running
-`./start-pokepack.sh` on macOS and Linux. All you need installed is
-[Node.js](https://nodejs.org) 18 or newer — pokepack has no dependencies, so
-there is no install step and nothing to build.
+**Get it** either way:
+
+- **One file.** Download `pokepack-windows-x64.exe` from
+  [Releases](https://github.com/moonfall-man/pokepack/releases) and double-click
+  it. Nothing to install — the runtime is inside. It keeps its packs in a
+  `packs` folder beside itself, so the whole thing moves as a unit. Unsigned, so
+  Windows warns the first time; there is a `.sha256` published next to it.
+- **From source.** Double-click `start-pokepack.cmd` on Windows, or run
+  `./start-pokepack.sh` on macOS and Linux. Needs [Node.js](https://nodejs.org)
+  18 or newer and nothing else — pokepack has no runtime dependencies, so there
+  is no install step.
 
 ```bash
 node bin/pokepack.js ui   # the same thing, if you would rather type it
 ```
+
+## Getting the game
+
+```bash
+node bin/pokepack.js game
+```
+
+or **Download…** beside the game path in Settings. It takes the latest release
+from [the author's own repo](https://github.com/bryanthaboi/gen1recomp), checks
+it against the `sha256sums.txt` they publish beside it, and points pokepack at
+the result. Nothing is hosted here — the game is one more pinned download, on
+the same terms as every mod.
+
+Latest rather than pinned, deliberately: a mod is pinned because a pack was
+tested against those exact bytes, while the engine is the thing packs are tested
+*on*, and an old one is a bug nobody else can reproduce. The hash still comes
+from the release being installed, so this is "whichever version, verified" and
+not "whatever arrives".
+
+You still supply your own ROM. That part is not automatable and should not be.
 
 ## Why not just a list of mods
 
@@ -389,9 +416,18 @@ this repo does not mirror it, for the same reason it ships no ROM.
 
 What could not travel is a pack, because the two things pokepack leans on do
 not exist there. `POKEPORT_IDENTITY` is an environment variable and an app has
-no environment, so `conf.lua` always falls back to `pokemon-love2d` — one setup
-on the device, no per-pack isolation. And the hub is a Node program serving a
-local page; there is no version of that which is an APK.
+no environment, so `conf.lua` always falls back to `pokemon-love2d` — one save
+folder, where a desktop gets one per pack. And the hub is a Node program
+serving a local page; there is no version of that which is an APK.
+
+Switching between packs on the device goes through the engine's own profiles
+instead. A `.g1rmodlist` is a named snapshot — enabled mods, each mod's
+options, the save slot per game version — and the mod manager imports every one
+it finds in `profiles/`, an import built folder-based specifically so it works
+where there is no file picker. pokepack has always written that format
+(`writeProfile`), so a pack arrives as a profile you switch to in-game rather
+than a state you overwrite. What the shared folder still costs you: two packs
+pinning different versions of the same mod cannot both be right at once.
 
 So the transfer is a file copy, and it works because the layout is already the
 same everywhere: `Loader` reads `mods` relative to the save directory, and
@@ -412,11 +448,48 @@ The game shows you that exact path on its ROM import screen. It is the app's
 external-files folder — writable over USB with no permission granted, which
 `conf.lua` arranges on purpose so players can push a ROM in the same way.
 
-**What stays behind, and why.** The archive carries `mods/`, `options.lua` and
-`pokepack-installed.json`, and nothing else. Not your ROM data, which is yours
+**What stays behind, and why.** The archive carries `mods/`, `options.lua`,
+`profiles/` and `pokepack-installed.json`, and nothing else. Not your ROM data, which is yours
 and which the device imports for itself. Not your save files, which would
 overwrite the ones already on it. This is an allowlist rather than a skip-list
 so that a folder the engine grows later cannot join by default.
+
+## Saves
+
+A new pack means a new setup, which means a fresh game. That is right when you
+wanted one and wrong when you did not, so a save can move:
+
+```bash
+node bin/pokepack.js saves copy <fromSetup> <toSetup>
+```
+
+or **Saves…** in the top bar. It arrives in a free slot and becomes the one that
+loads; whatever the destination already had is still there, still listed, still
+loadable. The destination is backed up first regardless.
+
+**A save is two things**, and that is the part that catches you out. The data
+lives in `saves/<version>/<slot>.lua`, and the list of which slots exist lives
+in `options.lua` under `saveSlots`. Copy only the folder and the file is there
+while the game never mentions it, because nothing lists it. Both halves travel
+together or the transfer is a silent no-op.
+
+`saves backup` writes every slot to a zip with that list beside it, which is
+what makes it restorable rather than a pile of files, and `saves restore` puts
+one back:
+
+```bash
+node bin/pokepack.js saves backups                  # what you have
+node bin/pokepack.js saves restore <zip> <setup>    # put one back
+```
+
+A restored slot keeps its original name where that name is free, so a restore
+into an empty setup comes out looking exactly like the original — same names,
+same one active. Where the name is taken it lands beside, never on top. A zip
+that is not one of ours, or that names a path climbing out of the folder, is
+refused before anything is written.
+
+Same rules as the rest of this file: the game must be closed, `options.lua` is
+merged and never templated, and the previous copy is kept under our own name.
 
 ## Known limits
 
@@ -469,8 +542,27 @@ rather than a broken boot.
 node test/run.js
 ```
 
-147 tests, no network, no dependencies. `fixtures/index.json` is a real published
+173 tests, no network, no dependencies. `fixtures/index.json` is a real published
 feed; `fixtures/save/` is a save directory shaped like a real one.
+
+### Building the single file
+
+```bash
+npm install && npm run build:exe
+```
+
+`esbuild` and `postject` are the only dependencies in the project and they are
+build-time only — a checkout runs with neither installed. Node's own
+single-executable support does the work: the ES modules are bundled into one
+CommonJS file, turned into a blob, and injected into a copy of `node` itself.
+About 90MB out, nearly all of it the runtime.
+
+Three things in the source exist because of this and look arbitrary otherwise:
+`bin/pokepack.js` ends in `main()` rather than a top-level `await`, which
+CommonJS cannot express; `src/packaged.js` answers the questions
+`import.meta.url` used to, because that does not survive the bundle; and the
+build refuses to finish unless the binary it just made reports the right
+version when run.
 
 `engine-src/` (gitignored) is the game's Lua source, unpacked from the shipped
 `gen1recomp.exe`, kept locally for reference. Re-extract it with:

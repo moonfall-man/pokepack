@@ -1,0 +1,55 @@
+{
+  "studio": "Moonfall Interactive",
+  "balance": 625065,
+  "log": [
+    {
+      "at": "2026-08-13T19:52:08.947Z",
+      "kind": "funding",
+      "amount": 500000,
+      "balance": 500000,
+      "note": "seed funding from the studio head"
+    },
+    {
+      "at": "2026-08-13T22:00:24.114Z",
+      "kind": "payroll",
+      "amount": -35192,
+      "balance": 464808,
+      "note": "payroll for 7 staff (sprint PONG#1)"
+    },
+    {
+      "at": "2026-08-13T22:00:29.043Z",
+      "kind": "revenue",
+      "amount": 88000,
+      "balance": 552808,
+      "note": "sprint PONG#1 shipped points"
+    },
+    {
+      "at": "2026-08-14T08:43:10.158Z",
+      "kind": "payroll",
+      "amount": -35615,
+      "balance": 517193,
+      "note": "payroll for 7 staff (sprint WILD#1)"
+    },
+    {
+      "at": "2026-08-14T08:43:14.906Z",
+      "kind": "revenue",
+      "amount": 144000,
+      "balance": 661193,
+      "note": "sprint WILD#1 shipped points"
+    },
+    {
+      "at": "2026-08-14T10:03:06.861Z",
+      "kind": "payroll",
+      "amount": -36128,
+      "balance": 625065,
+      "note": "payroll for 7 staff (sprint WILD#2)"
+    },
+    {
+      "at": "2026-08-14T10:03:12.048Z",
+      "kind": "revenue",
+      "amount": 0,
+      "balance": 625065,
+      "note": "sprint WILD#2 shipped points"
+    }
+  ]
+}

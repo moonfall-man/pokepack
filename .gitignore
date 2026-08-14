@@ -20,6 +20,11 @@ downloads/
 # unpacked. It is a transfer, not a release.
 android/
 
+# Save backups. Somebody's actual game, and the one thing in here that exists
+# in no other copy -- which is exactly why it must never be swept into a commit
+# by a careless `git add -A`.
+save-backups/
+
 # Deleted packs. The tool never erases anything -- it moves it here -- but a
 # thing you deleted is the last thing that should come back in a commit.
 .trash/
@@ -36,9 +41,21 @@ android/
 # staging everything, and drafts you are still working on stay out on their own.
 
 node_modules/
+
+# The packaged build. ~90MB of Node runtime with pokepack injected into it --
+# a release artefact, built by CI, never a thing in the tree.
+dist/
+
 *.log
 .cache/
 .test-tmp*/
 
 # Local-only: which game folder and executable this machine uses.
 config.json
+
+# game-studio skill: per-project game repos are their own git repos, never
+# nested in this one. Board state, briefs and meeting minutes ARE committed.
+studio/projects/
+studio/.*.lock/
+studio/*.tmp
+studio/board-snapshot.html
