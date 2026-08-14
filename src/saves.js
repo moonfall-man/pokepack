@@ -32,6 +32,7 @@ import { parse } from './luadata.js';
 import { encode } from './luawrite.js';
 import { OPTIONS, isGameRunning } from './liveapply.js';
 import * as zip from './zip.js';
+import { safeEntryName } from './zip.js';
 
 export const SAVES = 'saves';
 export const EXT = '.lua';
@@ -203,6 +204,164 @@ export function transfer({
   if (copied.length === 0) throw new Error(`${basename(from)} has no save to copy`);
   writeOptions(to, options);
   return { copied, options: optPath };
+}
+
+/**
+ * readBackup(buffer) -> { setup, takenAt, saveSlots, slots: [{ version, name, data() }] }
+ *
+ * Open one of ours without restoring it, so "which of these has my save" is a
+ * question you can answer before committing to an answer.
+ *
+ * Validated rather than trusted.  A zip on disk is a file anybody could have
+ * put there, and this one is about to be written into a save directory: entry
+ * names are checked for the usual escape, and a zip with no saves.json is
+ * refused outright rather than half-restored, because without the slot list the
+ * files would go back invisible.
+ */
+export function readBackup(buffer) {
+  let entries;
+  try {
+    entries = zip.read(buffer);
+  } catch (e) {
+    return { error: `that is not a readable zip (${e.message})` };
+  }
+
+  const meta = entries.find((e) => e.name === 'saves.json');
+  if (!meta) {
+    return { error: 'that zip has no saves.json, so it is not a pokepack save backup' };
+  }
+
+  let doc;
+  try {
+    doc = JSON.parse(meta.data().toString('utf8'));
+  } catch (e) {
+    return { error: `its saves.json did not parse (${e.message})` };
+  }
+
+  const slots = [];
+  for (const entry of entries) {
+    if (entry.name === 'saves.json' || entry.isDirectory) continue;
+    if (!safeEntryName(entry.name)) {
+      return { error: `it contains an unsafe path and was not opened: ${entry.name}` };
+    }
+    const m = /^saves\/([^/]+)\/([^/]+)\.lua$/.exec(entry.name.replace(/\\/g, '/'));
+    if (!m) continue;
+    slots.push({ version: m[1], name: m[2], size: entry.size, data: entry.data });
+  }
+  if (slots.length === 0) return { error: 'that backup has no save files in it' };
+
+  return {
+    setup: typeof doc.setup === 'string' ? doc.setup : null,
+    takenAt: typeof doc.takenAt === 'string' ? doc.takenAt : null,
+    saveSlots: doc.saveSlots && typeof doc.saveSlots === 'object' ? doc.saveSlots : {},
+    slots,
+  };
+}
+
+/**
+ * restore({ buffer, to, ... }) -> { restored, options }
+ *
+ * Put a backup back.  The counterpart to backup(), and the half that matters:
+ * an archive nobody can unpack is worth about as much as no archive.
+ *
+ * Same rule as transfer -- nothing is overwritten.  A slot keeps its original
+ * name when that name is free, which makes a restore into an empty setup come
+ * out looking exactly like the original; where it is taken, the save lands
+ * beside the one already there rather than on it.  Whichever slot the backup
+ * recorded as active becomes active again, if it came back.
+ */
+export function restore({
+  buffer, to, exePath = null, running: runningOverride,
+} = {}) {
+  if (!to || !existsSync(to)) throw new Error(`no such setup: ${to}`);
+
+  const read = readBackup(buffer);
+  if (read.error) throw new Error(read.error);
+
+  const running = runningOverride === undefined ? isGameRunning(exePath) : runningOverride;
+  if (running === true) throw new Error('the game is running -- close it first');
+  if (running === null) throw new Error('could not tell whether the game is running, so nothing was changed');
+
+  let options = {};
+  const optPath = join(to, OPTIONS);
+  if (existsSync(optPath)) {
+    try {
+      options = parse(readFileSync(optPath, 'utf8')) ?? {};
+    } catch (e) {
+      throw new Error(`the destination's options.lua did not parse (${e.message}), so nothing was changed`);
+    }
+  }
+  options.saveSlots = options.saveSlots ?? {};
+
+  const restored = [];
+  for (const slot of read.slots) {
+    const existing = slotsFor(options, slot.version);
+    const dir = join(to, SAVES, slot.version);
+    mkdirSync(dir, { recursive: true });
+
+    // Keep the name it had if nothing is using it; otherwise beside, never on.
+    const taken = new Set(existing.list);
+    if (existsSync(dir)) for (const n of readdirSync(dir)) taken.add(basename(n.replace(/\.bak$/, ''), EXT));
+    const name = taken.has(slot.name) ? freeSlot(to, slot.version, options) : slot.name;
+
+    writeFileSync(join(dir, `${name}${EXT}`), slot.data());
+
+    const list = [...existing.list, name];
+    const wasActive = read.saveSlots?.[slot.version]?.active === slot.name;
+    options.saveSlots[slot.version] = {
+      ...(options.saveSlots[slot.version] ?? {}),
+      active: wasActive ? name : (existing.active ?? name),
+      list: Object.fromEntries(list.map((s, i) => [String(i + 1), s])),
+    };
+    restored.push({
+      version: slot.version,
+      fromSlot: slot.name,
+      toSlot: name,
+      renamed: name !== slot.name,
+      bytes: slot.size,
+    });
+  }
+
+  // Decided after the loop, not inside it.  Restoring slot1 into an empty
+  // setup makes it active for lack of anything else, and then slot2 arrives
+  // and takes it -- so a flag written per slot claims two winners.
+  for (const r of restored) r.active = options.saveSlots[r.version]?.active === r.toSlot;
+
+  writeOptions(to, options);
+  return { restored, options: optPath, setup: read.setup, takenAt: read.takenAt };
+}
+
+/**
+ * listBackups(dir) -> [{ file, setup, takenAt, slots, error? }]
+ *
+ * Every backup in a folder, opened far enough to say what is in it.  A file
+ * that will not open is listed with its reason rather than dropped -- a backup
+ * you cannot see is one you will not know is broken until you need it.
+ */
+export function listBackups(dir) {
+  if (!dir || !existsSync(dir)) return [];
+  const out = [];
+  for (const name of readdirSync(dir).sort().reverse()) {
+    if (!name.endsWith('.zip')) continue;
+    const file = join(dir, name);
+    try {
+      const read = readBackup(readFileSync(file));
+      if (read.error) out.push({ file, name, error: read.error });
+      else {
+        out.push({
+          file,
+          name,
+          setup: read.setup,
+          takenAt: read.takenAt,
+          bytes: statSync(file).size,
+          slots: read.slots.map((s) => `${s.version}/${s.name}`),
+        });
+      }
+    } catch (e) {
+      out.push({ file, name, error: e.message });
+    }
+  }
+  return out;
 }
 
 /**

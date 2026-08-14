@@ -898,6 +898,47 @@ export function serve({ packsDir, saveDir, indexFile, port = 7666, host = '127.0
       }
     }
 
+    if (url.pathname === '/api/saves/backups') {
+      const saves = await import('./saves.js');
+      const { homeDir } = await import('./packaged.js');
+      const dir = join(homeDir(), 'save-backups');
+      return json(res, 200, { dir, backups: saves.listBackups(dir) });
+    }
+
+    if (url.pathname === '/api/saves/restore' && req.method === 'POST') {
+      const opts = await readBody(req);
+      if (!opts) return json(res, 400, { error: 'bad request body' });
+      const saves = await import('./saves.js');
+      const { homeDir } = await import('./packaged.js');
+
+      const to = findSaveDirs().find((i) => i.identity === opts.to);
+      if (!to) return json(res, 400, { error: `no setup called ${opts.to}` });
+
+      // A name from the listing, resolved here -- never a path from the page.
+      // The hub writes files, so "which file" is not a question the browser
+      // gets to answer freely.
+      const dir = join(homeDir(), 'save-backups');
+      const pick = saves.listBackups(dir).find((b) => b.name === opts.name);
+      if (!pick) return json(res, 400, { error: `no backup called ${opts.name}` });
+      if (pick.error) return json(res, 400, { error: `that backup cannot be read: ${pick.error}` });
+
+      let backedUp = null;
+      try {
+        if (saves.describe(to.path).total > 0) {
+          backedUp = saves.backup(to.path, { outDir: dir }).file;
+        }
+      } catch { /* nothing there to protect */ }
+
+      try {
+        const out = saves.restore({
+          buffer: readFileSync(pick.file), to: to.path, exePath: config.read().gamePath ?? null,
+        });
+        return json(res, 200, { ...out, backedUp });
+      } catch (e) {
+        return json(res, 400, { error: e.message, backedUp });
+      }
+    }
+
     if (url.pathname === '/api/saves/transfer' && req.method === 'POST') {
       const opts = await readBody(req);
       if (!opts) return json(res, 400, { error: 'bad request body' });

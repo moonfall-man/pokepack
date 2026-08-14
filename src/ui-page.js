@@ -748,6 +748,10 @@ async function manageSaves(identity) {
   }
   if (data.error) return toast(data.error, true);
   const setups = data.setups ?? [];
+  let backups = [];
+  try {
+    backups = (await (await fetch(api('saves/backups'))).json()).backups ?? [];
+  } catch { /* the restore half simply does not appear */ }
   const mine = setups.find(s => s.identity === identity);
   const others = setups.filter(s => s.identity !== identity);
 
@@ -775,6 +779,22 @@ async function manageSaves(identity) {
         + 'is written first.</div></div>'
       : '<div class="why">No other setup has a save to bring across yet. This list skips '
         + 'the one you are on, so a setup only appears here when it has a save and is not this one.</div>')
+      // The half that matters on the worst day. A backup nobody can put back
+      // is worth about as much as no backup.
+      + (backups.length
+        ? '<div style="border-top:1px solid var(--line);padding-top:12px;margin-top:12px">'
+          + '<div class="why" style="margin-bottom:6px">Or put a backup back here '
+          + '\\u2014 <b>' + backups.length + '</b> saved</div>'
+          + '<div class="sv-list">' + backups.map(b =>
+            '<label class="sv-row"><input type="radio" name="sv-bak" value="' + esc(b.name) + '"'
+            + (b.error ? ' disabled' : '') + '>'
+            + '<span class="sv-name">' + esc(b.setup ?? b.name) + '</span>'
+            + '<span class="why">' + esc(b.error ? 'unreadable \\u2014 ' + b.error
+              : (b.takenAt ?? '').replace('T', ' ').slice(0, 16) + '  ' + b.slots.join(', ')) + '</span></label>').join('')
+          + '</div>'
+          + '<div class="bar" style="margin:8px 0 0"><button class="sm" id="sv-restore">Restore it</button>'
+          + '<span class="why">arrives beside what is here, never on top of it</span></div></div>'
+        : '')
       + '<div id="sv-out"></div>',
     go: others.length ? 'Bring it across' : null,
     alt: mine ? { label: 'Back these up', onClick: async () => {
@@ -806,6 +826,29 @@ async function manageSaves(identity) {
       load();
     },
   });
+
+  const restoreBtn = document.getElementById('sv-restore');
+  if (restoreBtn) {
+    restoreBtn.onclick = async () => {
+      const picked = document.querySelector('input[name="sv-bak"]:checked');
+      const out = document.getElementById('sv-out');
+      if (!picked) { out.innerHTML = '<pre class="log">pick a backup first</pre>'; return; }
+      restoreBtn.disabled = true; restoreBtn.textContent = 'Restoring\\u2026';
+      const { ok: k, data: d } = await post('saves/restore', { name: picked.value, to: identity });
+      restoreBtn.disabled = false; restoreBtn.textContent = 'Restore it';
+      if (!k) {
+        out.innerHTML = '<pre class="log">' + esc(d.error) + '</pre>';
+        return;
+      }
+      out.innerHTML = '<pre class="log">from ' + esc(d.setup ?? 'a backup')
+        + (d.takenAt ? ', taken ' + esc(d.takenAt.replace('T', ' ').slice(0, 16)) : '') + '\\n'
+        + d.restored.map(r => '  ' + r.version + '/' + r.fromSlot + ' \\u2192 ' + r.toSlot
+          + (r.renamed ? '  (that name was taken)' : '')
+          + (r.active ? '  now the one that loads' : '')).join('\\n')
+        + (d.backedUp ? '\\n\\nbacked up first: ' + esc(d.backedUp) : '') + '</pre>';
+      load();
+    };
+  }
 }
 
 // The handheld route.  The game runs on Android already; what it has no way to

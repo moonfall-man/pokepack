@@ -1908,6 +1908,105 @@ it('backs up the slot list along with the files', () => {
   rmSync(out, { recursive: true, force: true });
 });
 
+it('puts a backup back, both halves, keeping the slot names when it can', () => {
+  const root = tmpSaveDir('.test-tmp-sv-r1', { slots: ['slot1', 'slot2'], active: 'slot2' });
+  const out = join(HERE, '..', '.test-tmp-sv-r1-bak');
+  rmSync(out, { recursive: true, force: true });
+  const made = saves.backup(root, { outDir: out, stamp: '2026-08-14T10:00:00.000Z' });
+
+  // The case that matters: the setup is gone and a fresh one is standing in.
+  const fresh = join(HERE, '..', '.test-tmp-sv-r1-new');
+  rmSync(fresh, { recursive: true, force: true });
+  mkdirSync(fresh, { recursive: true });
+  writeFileSync(join(fresh, 'options.lua'), 'return { musicVol = 7 }');
+
+  const back = saves.restore({ buffer: readFileSync(made.file), to: fresh, running: false });
+  eq(back.restored.map((r) => r.toSlot).sort(), ['slot1', 'slot2'], 'names kept, nothing was using them');
+  eq(back.restored.every((r) => !r.renamed), true);
+
+  const after = saves.describe(fresh);
+  eq(after.versions[0].slots.map((s) => s.name), ['slot1', 'slot2']);
+  eq(after.versions[0].active, 'slot2', 'and the one that was live is live again');
+  // Exactly one winner. Restoring slot1 into an empty setup makes it active
+  // for want of anything else, and then slot2 arrives and takes it.
+  eq(back.restored.filter((r) => r.active).map((r) => r.toSlot), ['slot2']);
+  ok(after.versions[0].slots.every((s) => s.listed && s.file), 'listed AND on disk, or the game cannot see it');
+  // A restore is a merge like everything else here.
+  eq(parse(readFileSync(join(fresh, 'options.lua'), 'utf8')).musicVol, 7, 'the rest of the file survived');
+
+  rmSync(root, { recursive: true, force: true });
+  rmSync(out, { recursive: true, force: true });
+  rmSync(fresh, { recursive: true, force: true });
+});
+
+it('restores beside a save rather than onto it', () => {
+  const root = tmpSaveDir('.test-tmp-sv-r2', { body: 'backed-up' });
+  const out = join(HERE, '..', '.test-tmp-sv-r2-bak');
+  rmSync(out, { recursive: true, force: true });
+  const made = saves.backup(root, { outDir: out, stamp: '2026-08-14T10:00:00.000Z' });
+
+  const busy = tmpSaveDir('.test-tmp-sv-r2-busy', { body: 'playing-now' });
+  const back = saves.restore({ buffer: readFileSync(made.file), to: busy, running: false });
+  eq(back.restored[0].renamed, true, 'slot1 was taken');
+  eq(back.restored[0].toSlot, 'slot2');
+  eq(readFileSync(join(busy, 'saves', 'red', 'slot1.lua'), 'utf8'), 'return { who = "playing-now-slot1" }',
+    'the save being played is untouched');
+
+  rmSync(root, { recursive: true, force: true });
+  rmSync(out, { recursive: true, force: true });
+  rmSync(busy, { recursive: true, force: true });
+});
+
+it('refuses a zip that is not one of ours, or that climbs out of the folder', () => {
+  const to = tmpSaveDir('.test-tmp-sv-r3');
+  const notOurs = zip.write([{ name: 'hello.txt', data: Buffer.from('hi') }]);
+  eq(saves.readBackup(notOurs).error.includes('no saves.json'), true);
+  throws(() => saves.restore({ buffer: notOurs, to, running: false }), 'not a pokepack save backup');
+
+  const escaping = zip.write([
+    { name: 'saves.json', data: Buffer.from('{"saveSlots":{}}') },
+    { name: '../escaped.lua', data: Buffer.from('return {}') },
+  ]);
+  eq(saves.readBackup(escaping).error.includes('unsafe path'), true);
+  eq(existsSync(join(HERE, '..', '..', 'escaped.lua')), false, 'and nothing was written');
+
+  eq(saves.readBackup(Buffer.from('not a zip at all')).error.includes('readable zip'), true);
+  throws(() => saves.restore({ buffer: readFileSync(join(HERE, 'run.js')), to, running: false }), 'readable zip');
+  rmSync(to, { recursive: true, force: true });
+});
+
+it('will not restore into a running game either', () => {
+  const root = tmpSaveDir('.test-tmp-sv-r4');
+  const out = join(HERE, '..', '.test-tmp-sv-r4-bak');
+  rmSync(out, { recursive: true, force: true });
+  const made = saves.backup(root, { outDir: out, stamp: '2026-08-14T10:00:00.000Z' });
+  throws(() => saves.restore({ buffer: readFileSync(made.file), to: root, running: true }), 'the game is running');
+  rmSync(root, { recursive: true, force: true });
+  rmSync(out, { recursive: true, force: true });
+});
+
+it('lists what is in a folder of backups, including the broken ones', () => {
+  // A backup you cannot see is one you will not know is broken until the day
+  // it is the only copy left.
+  const root = tmpSaveDir('.test-tmp-sv-r5');
+  const out = join(HERE, '..', '.test-tmp-sv-r5-bak');
+  rmSync(out, { recursive: true, force: true });
+  saves.backup(root, { outDir: out, stamp: '2026-08-14T10:00:00.000Z' });
+  writeFileSync(join(out, 'corrupt-saves-2026.zip'), 'this is not a zip');
+
+  const listed = saves.listBackups(out);
+  eq(listed.length, 2);
+  const bad = listed.find((b) => b.name.startsWith('corrupt'));
+  ok(bad.error, 'reported rather than dropped');
+  const good = listed.find((b) => !b.error);
+  eq(good.setup, '.test-tmp-sv-r5');
+  eq(good.slots, ['red/slot1']);
+  eq(saves.listBackups(join(HERE, '..', '.test-tmp-nope')), []);
+
+  rmSync(root, { recursive: true, force: true });
+  rmSync(out, { recursive: true, force: true });
+});
+
 // ------- fetching the game itself
 
 describe('game download');

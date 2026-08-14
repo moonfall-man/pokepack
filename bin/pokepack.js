@@ -564,7 +564,7 @@ async function cmdSaves({ positional, flags }) {
 
   // `saves <dir>` and `saves list <dir>` both read naturally, and only two
   // words are reserved, so anything else is a path rather than a typo.
-  if (!sub || sub === 'list' || !['backup', 'copy'].includes(sub)) {
+  if (!sub || sub === 'list' || !['backup', 'backups', 'restore', 'copy'].includes(sub)) {
     const dirs = sub && sub !== 'list' ? [sub, ...rest] : rest;
     if (dirs.length) return dirs.forEach(show);
     const { findSaveDirs } = await import('../src/discover.js');
@@ -581,6 +581,47 @@ async function cmdSaves({ positional, flags }) {
     });
     say(`wrote ${out.file}`);
     say(`  ${out.slots} save(s), ${(out.bytes / 1024).toFixed(1)} KB, with the slot list beside them`);
+    return;
+  }
+
+  if (sub === 'backups') {
+    const dir = resolvePath(flags.out ?? join(homeDir(), 'save-backups'));
+    const found = saves.listBackups(dir);
+    if (found.length === 0) return say(`no backups in ${dir}`);
+    say(dir);
+    for (const b of found) {
+      if (b.error) say(`  ${b.name}  UNREADABLE -- ${b.error}`);
+      else say(`  ${b.name}\n      ${b.setup ?? '?'}  ${b.takenAt ?? '?'}  ${b.slots.join(', ')}`);
+    }
+    return;
+  }
+
+  if (sub === 'restore') {
+    const zipFile = rest[0];
+    const to = rest[1];
+    if (!zipFile || !to) die('usage: pokepack saves restore <backup.zip> <toSaveDir>');
+    if (!existsSync(resolvePath(zipFile))) die(`no such backup: ${zipFile}`);
+
+    const dest = resolvePath(to);
+    // Restoring is the operation people reach for when something already went
+    // wrong. Taking a copy of whatever is there first costs a few KB and means
+    // a restore into the wrong setup is undoable.
+    if (saves.describe(dest).total > 0) {
+      const b = saves.backup(dest, { outDir: resolvePath(flags.out ?? join(homeDir(), 'save-backups')) });
+      say(`backed the destination up first: ${b.file}`);
+    }
+
+    const out = saves.restore({
+      buffer: readFileSync(resolvePath(zipFile)),
+      to: dest,
+      exePath: cfg.read().gamePath ?? null,
+    });
+    say(`from ${out.setup ?? 'a backup'}${out.takenAt ? `, taken ${out.takenAt}` : ''}`);
+    for (const r of out.restored) {
+      say(`  ${r.version}/${r.fromSlot} -> ${r.toSlot}  (${r.bytes} bytes)`
+        + `${r.renamed ? '  renamed, that name was taken' : ''}${r.active ? '  now the one that loads' : ''}`);
+    }
+    say(`updated ${out.options}`);
     return;
   }
 
@@ -705,7 +746,8 @@ function cmdHelp() {
   instance <name>      make an isolated copy of the game  --pack P --exe PATH
                        --seed-from ID  copy game data from that instance
                        --no-seed       start with no game data
-  saves list|backup|copy   move a save to another setup, or keep a copy of it
+  saves ...            move a save to another setup, or keep a copy of it
+                       list | backup | backups | restore <zip> <to> | copy <from> <to>
                        copy <from> <to> --version red --slot slot1 --keep-active
   game                 download gen1recomp itself, verified against its checksum
                        --dir DIR       --force  replace what is configured

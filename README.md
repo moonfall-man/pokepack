@@ -474,9 +474,22 @@ while the game never mentions it, because nothing lists it. Both halves travel
 together or the transfer is a silent no-op.
 
 `saves backup` writes every slot to a zip with that list beside it, which is
-what makes it restorable rather than a pile of files. Same rules as the rest of
-this file: the game must be closed, `options.lua` is merged and never
-templated, and the previous copy is kept under our own name.
+what makes it restorable rather than a pile of files, and `saves restore` puts
+one back:
+
+```bash
+node bin/pokepack.js saves backups                  # what you have
+node bin/pokepack.js saves restore <zip> <setup>    # put one back
+```
+
+A restored slot keeps its original name where that name is free, so a restore
+into an empty setup comes out looking exactly like the original — same names,
+same one active. Where the name is taken it lands beside, never on top. A zip
+that is not one of ours, or that names a path climbing out of the folder, is
+refused before anything is written.
+
+Same rules as the rest of this file: the game must be closed, `options.lua` is
+merged and never templated, and the previous copy is kept under our own name.
 
 ## Known limits
 
@@ -529,7 +542,7 @@ rather than a broken boot.
 node test/run.js
 ```
 
-168 tests, no network, no dependencies. `fixtures/index.json` is a real published
+173 tests, no network, no dependencies. `fixtures/index.json` is a real published
 feed; `fixtures/save/` is a save directory shaped like a real one.
 
 ### Building the single file
