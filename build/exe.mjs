@@ -30,6 +30,7 @@ import { fileURLToPath } from 'node:url';
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const DIST = join(ROOT, 'dist');
 const WIN = process.platform === 'win32';
+const MAC = process.platform === 'darwin';
 const NAME = WIN ? 'pokepack.exe' : 'pokepack';
 
 // Node's own fuse string.  Not a secret and not ours to choose -- postject
@@ -131,7 +132,25 @@ if (WIN) {
   }
 }
 
+// macOS is stricter than a warning: every Mach-O is signed, injecting a section
+// invalidates that signature, and the kernel then refuses to run the binary at
+// all -- the build's own `--version` check came back "Command failed" with no
+// output, because the process was killed before it started. Strip, inject,
+// re-sign ad-hoc.
+if (MAC) {
+  try {
+    run('codesign', ['--remove-signature', out], { stdio: 'ignore' });
+  } catch { /* an unsigned copy is fine to inject into */ }
+}
+
 runTool('postject', [out, 'NODE_SEA_BLOB', blob, '--sentinel-fuse', FUSE], { stdio: 'ignore' });
+
+if (MAC) {
+  // "-" is the ad-hoc identity: no certificate, no authority, just a signature
+  // valid enough for the loader. Unsigned is the goal; unrunnable is not.
+  run('codesign', ['--sign', '-', out], { stdio: 'ignore' });
+  say('re-signed ad-hoc, which macOS requires before it will run the result');
+}
 
 // ------- 4. prove it runs
 

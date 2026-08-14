@@ -6,6 +6,18 @@
 # interpreter called "/bin/sh\r", does not find one, and reports the confusing
 # "bad interpreter: No such file or directory".  On a Windows clone with
 # autocrlf=true that is exactly what would happen to start-pokepack.sh.
+# Everything is LF in the working tree, on every machine.
+#
+# Not a style preference -- src/luawrite.js writes options.lua with \n, and a
+# test asserts the writer is byte-compatible with the engine by re-encoding a
+# fixture and comparing it to itself. Check that fixture out with CRLF and the
+# comparison fails on line endings nobody typed, which is exactly what happened
+# on the Windows runner: it clones with autocrlf on, so a file that is LF in the
+# repo and LF everywhere the code looks arrived as CRLF and failed a byte test.
+#
+# text=auto still lets git detect and skip real binaries.
+* text=auto eol=lf
+
 *.sh text eol=lf
 
 # Batch files are the mirror image: cmd.exe is happiest with CRLF, and can
