@@ -56,8 +56,10 @@ and endpoints are served from the running process.
 ## Run a sprint (the agency itself)
 
 1. Make sure the dashboard server is up (QA playtests through it).
-2. Invoke the Workflow tool with the script file and args (this exact call ran clean:
-   15 agents, 0 errors, ~3h wall clock, all tickets shipped):
+2. Invoke the Workflow tool with the script file and args. Verified twice: sprint 1
+   (15 agents, 0 errors, ~3h, 3/3 tickets shipped) and sprint 2 with the same
+   projectKey and maxTickets 2 (14 agents, 0 errors, ~2.6h, roster-driven cast,
+   closed with one honest qa carry-over):
 
 ```
 Workflow {
@@ -74,6 +76,10 @@ Workflow {
 
 - Same `projectKey` again = next sprint on that game (sprint number increments, the
   brief builds on what shipped). New key/slug = new game.
+- A sprint may close with tickets honestly held in `qa` (QA refuses to self-waive
+  missing evidence). Only `done` tickets bank points — and only banked points earn
+  revenue in the next performance cycle. Carry-overs surface in the retro as entry
+  gates for the next sprint's planning.
 - The return value carries the producer's report, cast, tickets, QA verdict, and the
   play URL. Relay the report to the user.
 - Senior roles (producer/creative/eng-lead) inherit the session's top model — sprints
@@ -185,7 +191,16 @@ inherits the session model); the workflows read it per seat.
   (gitignored, as are `.board.lock`/`*.tmp`), and stray user files (e.g. a
   `.pokepack` in packs/) must not be swept into commits. Stage explicit paths.
 - **Meeting/retro filenames carry `-s<sprintNumber>`** from sprint 2 on; sprint 1
-  predates the suffix.
+  predates the suffix. Sprint 2's producer hit the same-day brief collision and
+  preserved the old brief as `…-sprint1.md` on her own; planning minutes are now
+  written with the suffix from the start.
+- **Your browser tabId can go stale after a QA phase** — QA agents open/replace
+  tabs (including a `file://` tab for the double-click-from-disk check). If
+  `navigate` says "denied or failed" while the server curls fine, list tabs
+  (preview_list / tabs_context) and use the live tabId.
+- **The team grows its own tooling**: sprint 2's dev checked `tests/harness.mjs`
+  regression harnesses into the project repo unprompted. That's the project's own
+  git repo — let them.
 
 ## Troubleshooting (errors actually hit)
 

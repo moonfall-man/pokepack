@@ -245,9 +245,9 @@ const seed = await agent(
   `${persona.scribe(cast.scribe)}
 
 Execute these steps exactly, in order, using Bash and Write.
-1. Write the minutes (verbatim, given below) to ${ROOT}/studio/meetings/${A.date}-${KEY.toLowerCase()}-sprint-planning.md (if a file for an earlier sprint exists there, append "-s<sprintNumber>" before ".md" instead of overwriting).
-2. Run: ${BOARD} init ${KEY} "${A.projectName}"
-3. Run: ${BOARD} sprint-start ${KEY} "<sprint goal below, quotes escaped>"  — note the sprint number it prints.
+1. Run: ${BOARD} init ${KEY} "${A.projectName}"
+2. Run: ${BOARD} sprint-start ${KEY} "<sprint goal below, quotes escaped>"  — note the sprint number it prints.
+3. Write the minutes (verbatim, given below) to ${ROOT}/studio/meetings/${A.date}-${KEY.toLowerCase()}-sprint-planning-s<sprintNumber>.md using that number.
 4. For each ticket below IN ORDER run:
    ${BOARD} add ${KEY} "<title>" --type <type or story> --points <points> --sprint <sprintNumber> --assignee "${cast.dev.name}" --desc "<desc>" --acceptance "<acceptance criteria joined with ;>" --by "${cast.scribe.firstName}"
    Capture each printed id (format: "created ${KEY}-N") in order.
