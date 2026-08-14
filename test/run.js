@@ -22,6 +22,7 @@ import * as packaged from '../src/packaged.js';
 import * as gamedl from '../src/game.js';
 import * as saves from '../src/saves.js';
 import * as modopts from '../src/modoptions.js';
+import * as probe from '../src/probe.js';
 import * as packfeed from '../src/packfeed.js';
 import { applyToOptions, setModEnabled } from '../src/liveapply.js';
 import { uninstall, planUninstall } from '../src/uninstall.js';
@@ -1797,6 +1798,64 @@ it('computes the CRC every unzipper will check', () => {
   // The check value from the zip spec's own test vector.
   eq(zip.crc32(Buffer.from('123456789')), 0xcbf43926);
   eq(zip.crc32(Buffer.alloc(0)), 0);
+});
+
+// ------- asking the game what it can see
+
+describe('controller probe');
+
+it('reads a pad report back out of the game\'s own output', () => {
+  const M = probe.MARK;
+  const out = probe.parse([
+    '[info] game loaded',
+    `${M} driver started`,
+    `${M} count=2`,
+    `${M} #1 name="Controller (Xbox One For Windows)" guid=0300938d5e040000ff02000000007200 gamepad=true connected=true axes=6 buttons=11 hats=1`,
+    `${M} #2 name="Generic   USB  Joystick" guid=03000000790000000600000000000000 gamepad=false connected=true axes=4 buttons=12 hats=1`,
+    `${M} #2 has no SDL gamepad mapping, so love.gamepadpressed will never fire for it`,
+    '[info] display: 1024x768',
+  ].join('\n'));
+
+  eq(out.available, true);
+  eq(out.count, 2);
+  eq(out.pads[0].name, 'Controller (Xbox One For Windows)');
+  eq(out.pads[0].gamepad, true);
+  eq(out.pads[0].buttons, 11);
+  eq(out.pads[1].gamepad, false, 'a stick with no mapping is not a gamepad');
+  ok(out.notes.some((n) => n.includes('never fire')), 'and the consequence is spelled out');
+});
+
+it('says nothing rather than guessing when the probe never ran', () => {
+  // The difference between "the game sees no pads" and "the game never
+  // answered" is the whole point; collapsing them would have cost another
+  // afternoon.
+  const out = probe.parse('[info] game loaded\n[info] display: 1024x768');
+  eq(out.available, false);
+  eq(out.count, null);
+  eq(out.pads, []);
+  eq(probe.parse('').available, false);
+  eq(probe.parse(null).available, false);
+});
+
+it('pulls the USB ids out of an SDL guid', () => {
+  // This is how "the game sees a pad" and "the game sees the pad in your hand"
+  // stop being the same claim: 045E:02FF is Steam's virtual gamepad, not the
+  // Xbox pad plugged into the machine.
+  eq(probe.usbIds('0300938d5e040000ff02000000007200'), { vendor: '045E', product: '02FF' });
+  eq(probe.usbIds('03000000790000000600000000000000'), { vendor: '0079', product: '0006' });
+  eq(probe.usbIds('not a guid'), null);
+  eq(probe.usbIds(null), null);
+});
+
+it('writes a driver the engine can actually load', () => {
+  ok(probe.DRIVER.includes('return function(Game)'), 'main.lua calls the file for a function');
+  ok(probe.DRIVER.includes('coroutine.yield()'), 'and resumes it as a coroutine');
+  ok(probe.DRIVER.includes('love.event.quit()'), 'a probe that does not quit is a launch');
+  ok(probe.DRIVER.includes('__OUT__'), 'the report path is substituted per run');
+  // Every line goes to a file as well as stdout, because Windows buffers a GUI
+  // process's stdout until exit and a killed probe would otherwise say nothing.
+  ok(probe.DRIVER.includes('io.open(OUT, "a")'));
+  ok(!probe.DRIVER.includes('local function print('), 'the helper must not shadow print');
 });
 
 // ------- a mod's own settings, from outside the game
