@@ -323,13 +323,15 @@ function uiHtml(inlineJson) {
 <title>Moonfall Interactive — Studio Dashboard</title>
 <style>
   :root { --bg:#0b0e14; --col:#141a24; --card:#1d2534; --line:#2a3446; --text:#e6edf3; --dim:#8b98ab;
-          --story:#3fb950; --bug:#f85149; --task:#58a6ff; --accent:#c9a4ff; --gold:#e3b341; --red:#f85149; }
+          --story:#3fb950; --bug:#f85149; --task:#58a6ff; --accent:#c9a4ff; --gold:#e3b341; --red:#f85149; --live:#3fb950; }
   * { box-sizing:border-box; margin:0; }
   body { background:var(--bg); color:var(--text); font:14px/1.45 "Segoe UI", system-ui, sans-serif; padding:18px; }
   header { display:flex; align-items:baseline; gap:14px; flex-wrap:wrap; }
   h1 { font-size:20px; letter-spacing:.4px; }
   h1 .moon { color:var(--accent); }
   h1 small { color:var(--dim); font-size:13px; font-weight:normal; }
+  .live { display:none; align-items:center; gap:6px; color:var(--live); font-size:11px; letter-spacing:1.4px; font-weight:600; }
+  .live i { width:8px; height:8px; border-radius:50%; background:var(--live); animation:pulse 1.6s ease-in-out infinite; }
   #sprints { color:var(--dim); font-size:13px; }
   #sprints b { color:var(--text); }
   .secttl { margin:16px 0 8px; font-size:11px; text-transform:uppercase; letter-spacing:1.4px; color:var(--dim); }
@@ -341,54 +343,99 @@ function uiHtml(inlineJson) {
   .spark { display:flex; align-items:flex-end; gap:2px; height:26px; margin-top:6px; }
   .spark i { flex:1; background:var(--accent); opacity:.55; border-radius:1px 1px 0 0; min-width:3px; }
   #team { display:flex; gap:10px; flex-wrap:wrap; }
-  .emp { background:var(--col); border:1px solid var(--line); border-radius:10px; padding:8px 12px; min-width:150px; }
-  .emp.fired { opacity:.45; }
+  .emp { background:var(--col); border:1px solid var(--line); border-radius:10px; padding:9px 12px; min-width:170px;
+         display:flex; gap:10px; align-items:center; transition:transform .15s ease, box-shadow .15s ease; }
+  .emp:hover { transform:translateY(-1px); box-shadow:0 4px 14px rgba(0,0,0,.35); }
+  .emp.fired { opacity:.45; filter:grayscale(1); }
   .emp .n { font-weight:600; font-size:13px; }
   .emp .r { color:var(--dim); font-size:11px; }
-  .emp .s { font-size:12px; margin-top:3px; }
+  .emp .s { font-size:12px; margin-top:2px; }
   .emp .stars { color:var(--gold); font-size:11px; }
   .emp .tag { font-size:10px; border-radius:4px; padding:0 5px; margin-left:6px; vertical-align:1px; }
   .emp .tag.fired { background:#3d1d20; color:var(--red); }
+  .av { border-radius:6px; flex:none; image-rendering:pixelated; background:#10151f; }
   #board { display:grid; grid-template-columns:repeat(6, minmax(170px, 1fr)); gap:10px; }
   .col { background:var(--col); border:1px solid var(--line); border-radius:10px; padding:8px; min-height:130px; }
   .col h2 { font-size:11px; text-transform:uppercase; letter-spacing:1px; color:var(--dim);
             display:flex; justify-content:space-between; padding:2px 4px 8px; }
   .card { background:var(--card); border:1px solid var(--line); border-left:3px solid var(--task);
-          border-radius:8px; padding:8px 9px; margin-bottom:8px; }
+          border-radius:8px; padding:8px 9px; margin-bottom:8px; transition:transform .15s ease, box-shadow .15s ease; }
+  .card:hover { transform:translateY(-1px); box-shadow:0 4px 14px rgba(0,0,0,.35); }
   .card.story { border-left-color:var(--story); }
   .card.bug { border-left-color:var(--bug); }
-  .card .id { font:11px ui-monospace, monospace; color:var(--dim); display:flex; justify-content:space-between; }
+  .card .id { font:11px ui-monospace, monospace; color:var(--dim); display:flex; justify-content:space-between; align-items:center; }
   .card .t { margin:3px 0 6px; font-size:13px; }
-  .chips { display:flex; gap:6px; flex-wrap:wrap; font-size:11px; color:var(--dim); }
+  .chips { display:flex; gap:6px; flex-wrap:wrap; font-size:11px; color:var(--dim); align-items:center; }
+  .chips .who { display:inline-flex; gap:4px; align-items:center; }
   .pt { background:#2a3446; border-radius:9px; padding:0 7px; color:var(--text); }
+  .ring { width:10px; height:10px; border:2px solid #2a3446; border-top-color:var(--accent); border-radius:50%;
+          animation:spin .9s linear infinite; display:inline-block; flex:none; }
+  .dot { width:8px; height:8px; border-radius:50%; background:var(--gold); animation:pulse 1.6s ease-in-out infinite; display:inline-block; flex:none; }
   .done-col .card { opacity:.72; }
   #feed { color:var(--dim); font-size:12px; }
   #feed div { padding:2px 0; border-bottom:1px dotted #1c2330; }
   #feed b { color:var(--text); font-weight:600; }
   footer { margin-top:14px; color:var(--dim); font-size:12px; }
+  .tick { display:inline-block; width:7px; height:7px; border-radius:50%; background:var(--accent); opacity:.2;
+          transition:opacity .25s; vertical-align:-1px; margin-right:7px; }
+  .tick.on { opacity:1; }
+  .skel { background:linear-gradient(90deg,#141a24 25%,#1d2534 50%,#141a24 75%); background-size:200px 100%;
+          animation:shimmer 1.2s infinite linear; border-radius:10px; min-height:64px; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
+  @keyframes spin { to { transform:rotate(360deg) } }
+  @keyframes shimmer { 0%{background-position:-200px 0} 100%{background-position:200px 0} }
 </style>${dataScript}</head>
 <body>
 <header>
   <h1><span class="moon">&#9790;</span> MOONFALL INTERACTIVE <small>studio dashboard</small></h1>
+  <span class="live" id="live"><i></i>LIVE</span>
   <div id="sprints"></div>
 </header>
 <div class="secttl">Vitals</div>
-<div id="vitals"></div>
+<div id="vitals"><div class="skel"></div><div class="skel"></div><div class="skel"></div><div class="skel"></div></div>
 <div class="secttl">Team</div>
-<div id="team"></div>
+<div id="team"><div class="skel" style="width:100%"></div></div>
 <div class="secttl">Board</div>
-<div id="board"></div>
+<div id="board"><div class="skel"></div><div class="skel"></div><div class="skel"></div><div class="skel"></div><div class="skel"></div><div class="skel"></div></div>
 <div class="secttl">Activity</div>
-<div id="feed"></div>
+<div id="feed"><div class="skel" style="min-height:40px"></div></div>
 <footer id="foot"></footer>
 <script>
 var COLS = [["backlog","Backlog"],["todo","To Do"],["in-progress","In Progress"],["in-review","In Review"],["qa","QA"],["done","Done"]];
+var ROLE_EMOJI = {producer:"\\uD83C\\uDFAC", creative:"\\uD83C\\uDFA8", "eng-lead":"\\uD83D\\uDEE0\\uFE0F", dev:"\\uD83D\\uDCBB", qa:"\\uD83D\\uDD0E", scribe:"\\uD83D\\uDCCB", manager:"\\uD83D\\uDCCA"};
+var KIND_EMOJI = {payroll:"\\uD83D\\uDCB0", revenue:"\\uD83D\\uDCC8", funding:"\\uD83C\\uDFE6", adjustment:"\\uD83E\\uDDFE", hired:"\\uD83C\\uDF89", fired:"\\uD83D\\uDD25", raise:"\\uD83D\\uDCB5", founded:"\\uD83C\\uDFDB\\uFE0F"};
 function esc(s){ return String(s==null?"":s).replace(/[&<>"]/g, function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;","\\"":"&quot;"}[c]; }); }
 function money(n){ var neg=n<0; n=Math.abs(Math.round(n)); var s=n>=1000?Math.round(n/1000)+"k":String(n); return (neg?"-$":"$")+s; }
+function djb2(s){ var h=5381; for(var i=0;i<s.length;i++){ h=((h<<5)+h+s.charCodeAt(i))>>>0; } return h; }
+function avatar(name, size){
+  var h = djb2(String(name||"?"));
+  var hue = h % 360;
+  var cells = "";
+  for (var r=0; r<5; r++) for (var c=0; c<3; c++) if ((h >> (r*3+c)) & 1) {
+    cells += "<rect x='"+c+"' y='"+r+"' width='1' height='1'/>";
+    if (c<2) cells += "<rect x='"+(4-c)+"' y='"+r+"' width='1' height='1'/>";
+  }
+  return "<svg class='av' width='"+size+"' height='"+size+"' viewBox='-0.6 -0.6 6.2 6.2'>"+
+    "<rect x='-0.6' y='-0.6' width='6.2' height='6.2' fill='#10151f'/>"+
+    "<g fill='hsl("+hue+",62%,60%)'>"+cells+"</g></svg>";
+}
+function statusIcon(st){
+  if (st==="in-progress") return "<span class='ring' title='in progress'></span>";
+  if (st==="in-review"||st==="qa") return "<span class='dot' title='"+st+"'></span>";
+  return "";
+}
+function feedIcon(l){
+  if (l.kind) return KIND_EMOJI[l.kind]||"\\uD83E\\uDDFE";
+  var a = l.action||"";
+  if (a.indexOf("review")===0) return "\\u2B50";
+  return KIND_EMOJI[a]||"\\uD83D\\uDCCC";
+}
 function render(board, roster, econ){
   var head = [];
-  (board.sprints||[]).forEach(function(s){ if(!s.closed) head.push("<b>"+esc(s.project)+" &middot; Sprint "+s.number+"</b> &mdash; "+esc(s.goal)); });
+  var anyOpen = false;
+  (board.sprints||[]).forEach(function(s){ if(!s.closed){ anyOpen=true; head.push("<b>"+esc(s.project)+" &middot; Sprint "+s.number+"</b> &mdash; "+esc(s.goal)); } });
   document.getElementById("sprints").innerHTML = head.join(" &nbsp;&middot;&nbsp; ") || "no open sprint";
+  document.getElementById("live").style.display = anyOpen ? "inline-flex" : "none";
 
   // vitals
   var actives = (roster.employees||[]).filter(function(e){ return e.status==="active"; });
@@ -420,9 +467,11 @@ function render(board, roster, econ){
       var m = vals.reduce(function(a,b){return a+b;},0)/vals.length;
       avg = "<span class='stars'>&#9733; "+m.toFixed(1)+"</span> &middot; ";
     }
-    return "<div class='emp "+(e.status==="fired"?"fired":"")+"'><div class='n'>"+esc(e.name)+
-      (e.status==="fired"?"<span class='tag fired'>FIRED</span>":"")+"</div><div class='r'>"+esc(e.role)+" &middot; "+esc(e.model)+"</div>"+
-      "<div class='s'>"+avg+money(e.salary)+"/yr &middot; &#128172;"+((e.opinions||[]).length)+"</div></div>";
+    return "<div class='emp "+(e.status==="fired"?"fired":"")+"'>"+avatar(e.name, 34)+"<div>"+
+      "<div class='n'>"+esc(e.name)+(e.status==="fired"?"<span class='tag fired'>FIRED</span>":"")+"</div>"+
+      "<div class='r'>"+(ROLE_EMOJI[e.role]||"")+" "+esc(e.role)+" &middot; "+esc(e.model)+"</div>"+
+      "<div class='s'>"+avg+money(e.salary)+"/yr &middot; &#128172;"+((e.opinions||[]).length)+"</div>"+
+      "</div></div>";
   }).join("") || "<span style='color:var(--dim)'>no roster yet — node .claude/skills/game-studio/roster.mjs init</span>";
 
   // kanban
@@ -435,10 +484,10 @@ function render(board, roster, econ){
     var pts = list.reduce(function(n,t){ return n+(t.points||0); },0);
     return "<div class='col "+(c[0]==="done"?"done-col":"")+"'><h2><span>"+c[1]+"</span><span>"+list.length+(pts?" &middot; "+pts+"pt":"")+"</span></h2>"+
       list.map(function(t){
-        return "<div class='card "+esc(t.type)+"'><div class='id'><span>"+esc(t.id)+"</span><span>"+esc(t.type)+"</span></div>"+
+        return "<div class='card "+esc(t.type)+"'><div class='id'><span>"+esc(t.id)+"</span>"+statusIcon(t.status)+"<span>"+esc(t.type)+"</span></div>"+
           "<div class='t'>"+esc(t.title)+"</div><div class='chips'>"+
           (t.points?"<span class='pt'>"+t.points+"pt</span>":"")+
-          (t.assignee?"<span>"+esc(t.assignee)+"</span>":"")+
+          (t.assignee?"<span class='who'>"+avatar(t.assignee,14)+esc(t.assignee.split(" ")[0])+"</span>":"")+
           (t.sprint?"<span>S"+t.sprint+"</span>":"")+
           (t.comments&&t.comments.length?"<span>&#128172;"+t.comments.length+"</span>":"")+
           "</div></div>";
@@ -447,14 +496,21 @@ function render(board, roster, econ){
 
   // activity feed: roster log + economy log, newest first
   var feed = [];
-  (roster.log||[]).forEach(function(l){ feed.push({at:l.at, txt:"<b>"+esc(l.action)+"</b> "+esc(l.detail)+(l.by&&l.by!=="roster"?" <i>("+esc(l.by)+")</i>":"")}); });
-  (econ.log||[]).forEach(function(l){ feed.push({at:l.at, txt:"<b>"+esc(l.kind)+"</b> "+money(l.amount)+" &mdash; "+esc(l.note)}); });
+  (roster.log||[]).forEach(function(l){ feed.push({at:l.at, txt:feedIcon(l)+" <b>"+esc(l.action)+"</b> "+esc(l.detail)+(l.by&&l.by!=="roster"?" <i>("+esc(l.by)+")</i>":"")}); });
+  (econ.log||[]).forEach(function(l){ feed.push({at:l.at, txt:feedIcon(l)+" <b>"+esc(l.kind)+"</b> "+money(l.amount)+" &mdash; "+esc(l.note)}); });
   feed.sort(function(a,z){ return a.at<z.at?1:-1; });
   document.getElementById("feed").innerHTML = feed.slice(0,14).map(function(f){
     return "<div>"+esc((f.at||"").slice(0,16).replace("T"," "))+" &middot; "+f.txt+"</div>";
   }).join("") || "<div>quiet so far</div>";
 
-  document.getElementById("foot").textContent = (board.tickets||[]).length+" tickets"+(window.INLINE_DATA?" (static snapshot)":" (live, refreshes every 2s)");
+  document.getElementById("foot").innerHTML = "<span class='tick' id='tick'></span>"+
+    (board.tickets||[]).length+" tickets"+(window.INLINE_DATA?" (static snapshot)":" (live, refreshes every 2s)");
+}
+function blip(){
+  var t = document.getElementById("tick");
+  if (!t) return;
+  t.classList.add("on");
+  setTimeout(function(){ t.classList.remove("on"); }, 350);
 }
 function tick(){
   if (window.INLINE_DATA) { render(window.INLINE_DATA.board, window.INLINE_DATA.roster, window.INLINE_DATA.economy); return; }
@@ -462,7 +518,7 @@ function tick(){
     fetch("/board.json",{cache:"no-store"}).then(function(r){return r.json();}),
     fetch("/roster.json",{cache:"no-store"}).then(function(r){return r.json();}).catch(function(){return {employees:[],log:[]};}),
     fetch("/economy.json",{cache:"no-store"}).then(function(r){return r.json();}).catch(function(){return {balance:0,log:[]};})
-  ]).then(function(d){ render(d[0], d[1], d[2]); }).catch(function(){});
+  ]).then(function(d){ render(d[0], d[1], d[2]); blip(); }).catch(function(){});
   setTimeout(tick, 2000);
 }
 tick();

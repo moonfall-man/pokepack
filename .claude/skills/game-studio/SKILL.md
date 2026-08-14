@@ -202,6 +202,13 @@ inherits the session model); the workflows read it per seat.
   regression harnesses into the project repo unprompted. That's the project's own
   git repo — let them.
 
+- **Transient API failures (529 Overloaded) can kill an agent mid-sprint** — one
+  killed a QA agent and the sprint honestly banked 0/18. Both workflows now retry
+  any empty agent result once (`ragent`). If a phase is still lost: the tickets hold
+  in qa with chair rulings, and you close them evidence-only afterward by spawning
+  the right persona directly (Agent tool, `studio-qa` / `studio-creative`) with the
+  board CLI and the rulings — verified pattern, all 18 points recovered that way.
+
 ## Troubleshooting (errors actually hit)
 
 - `Error: args must include task, ...` on workflow launch → args reached the script

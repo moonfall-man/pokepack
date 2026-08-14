@@ -33,12 +33,20 @@ const ROSTER_HOWTO = `Roster CLI (run with the Bash tool; escape double quotes i
   ${ROSTER} hire "<Full Name>" --role dev|qa|scribe|producer|creative|eng-lead [--model sonnet] [--salary N] [--notes "persona notes"] --by "Rosa"
   ${ROSTER} set-notes <id> "<note carried into their future sprint prompts>"`
 
+// One retry on empty results (transient API failures like 529 Overloaded).
+async function ragent(prompt, opts) {
+  const first = await agent(prompt, opts)
+  if (first) return first
+  log(`${(opts && opts.label) || 'agent'} returned nothing (likely transient API failure) — retrying once`)
+  return agent(prompt, opts)
+}
+
 // ---------- Bookkeeping ----------
 
 phase('Bookkeeping')
 log(`Settling the books for sprint ${REF}`)
 
-const books = await agent(
+const books = await ragent(
   `You are Sam Okafor, studio coordinator at Moonfall Interactive — fast, literal, precise. Execute exactly these steps in order with the Bash tool and report only the requested fields.
 1. ${ROSTER} init        (idempotent — ensures the founding team exists)
 2. ${ECON} init          (idempotent — seed funding)
@@ -53,7 +61,7 @@ Return donePoints and balance (balance as a plain number, negative if in the red
 if (!books) throw new Error('bookkeeping failed')
 log(`Books settled: ${books.donePoints} points shipped, balance $${books.balance}`)
 
-const evidence = await agent(
+const evidence = await ragent(
   `You are compiling the evidence file for Moonfall Interactive's sprint ${REF} performance cycle. Facts only, no judgments — the studio manager judges.
 Sources (Bash + Read):
 - ${ROSTER} list --json   (who is active, their roles)
@@ -91,7 +99,7 @@ await parallel(evidence.employees.map((e) => () => {
   const colleagues = evidence.employees.filter((c) => c.id !== e.id)
   const opts = { label: `peer:${e.id}`, effort: 'low', schema: { type: 'object', required: ['submitted'], properties: { submitted: { type: 'number' } } } }
   if (MODEL_FOR[e.role]) opts.model = MODEL_FOR[e.role]
-  return agent(
+  return ragent(
     `You are ${e.name}, ${ROLE_LINE[e.role] || e.role} at Moonfall Interactive. ${STAKES}
 It is peer review time for sprint ${REF}. The evidence file (shared with everyone):
 ---
@@ -109,7 +117,7 @@ Run each command with Bash (escape inner double quotes). Return submitted: <coun
 phase('Decisions')
 log('Rosa Delgado is making the calls')
 
-const decisions = await agent(
+const decisions = await ragent(
   `You are Rosa Delgado, studio manager (HR & operations) at Moonfall Interactive. You are fair, unsentimental, and allergic to vibes-based management; your paper trail is immaculate. ${STAKES}
 Performance cycle for sprint ${REF}. Studio balance: $${books.balance}. Shipped: ${books.donePoints} points. ${A.sprintReport ? `Producer's sprint report: ${A.sprintReport}` : ''}
 The evidence file:

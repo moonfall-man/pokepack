@@ -64,6 +64,15 @@ function tier(e, extra) {
   return e.model && e.model !== 'inherit' ? { ...extra, model: e.model } : extra
 }
 
+// One retry on empty results (transient API failures like 529 Overloaded) —
+// a lost QA agent cost sprint WILD#1 all 18 of its points.
+async function ragent(prompt, opts) {
+  const first = await agent(prompt, opts)
+  if (first) return first
+  log(`${(opts && opts.label) || 'agent'} returned nothing (likely transient API failure) — retrying once`)
+  return agent(prompt, opts)
+}
+
 // ---------- schemas ----------
 
 const EMP_SCHEMA = {
@@ -171,7 +180,7 @@ const RETRO_SCHEMA = { type: 'object', required: ['report'], properties: { repor
 phase('Kickoff')
 log(`Studio head handed us: ${A.task}`)
 
-const cast = await agent(
+const cast = await ragent(
   `You staff the sprint from the live roster. With Bash:
 1. ${ROSTER} init    (idempotent — ensures a founding team exists)
 2. ${ROSTER} list --json
@@ -183,7 +192,7 @@ firstName = first word of their name, quotes stripped. Return exactly the reques
 if (!cast) throw new Error('could not staff the sprint from the roster')
 log(`Cast: ${['producer', 'creative', 'engLead', 'dev', 'qa', 'scribe'].map((r) => `${r}=${cast[r].firstName}`).join(', ')}`)
 
-const brief = await agent(
+const brief = await ragent(
   `${persona.producer(cast.producer)}
 
 Task from the studio head, ${A.date}: "${A.task}"
@@ -206,7 +215,7 @@ const seats = [
   { e: cast.qa, p: persona.qa, seat: 'QA Lead' },
 ]
 // Barrier is deliberate: the producer's synthesis needs every voice from the room.
-const takes = (await parallel(seats.map((s) => () => agent(
+const takes = (await parallel(seats.map((s) => () => ragent(
   `${s.p(s.e)}
 
 Sprint planning meeting at Moonfall Interactive, ${A.date}. You are ${s.e.name}, ${s.seat}.
@@ -221,7 +230,7 @@ Do not touch any files or the board; this is a meeting.`,
 )))).filter(Boolean)
 if (!takes.length) throw new Error('nobody showed up to planning')
 
-const plan = await agent(
+const plan = await ragent(
   `${persona.producer(cast.producer)}
 
 You are running sprint planning synthesis for ${A.projectName} (${KEY}).
@@ -241,7 +250,7 @@ Do NOT touch the board or write files; the scribe handles that.`,
 if (!plan || !plan.tickets.length) throw new Error('planning produced no tickets')
 log(`Sprint goal: ${plan.sprintGoal} (${plan.tickets.length} tickets)`)
 
-const seed = await agent(
+const seed = await ragent(
   `${persona.scribe(cast.scribe)}
 
 Execute these steps exactly, in order, using Bash and Write.
@@ -275,7 +284,7 @@ for (let i = 0; i < count; i++) {
   const id = seed.ticketIds[i]
   const t = plan.tickets[i]
 
-  const dev = await agent(
+  const dev = await ragent(
     `${persona.dev(cast.dev)}
 
 You are shipping ticket ${id} — "${t.title}" — for ${A.projectName}, sprint ${seed.sprintNumber}.
@@ -298,7 +307,7 @@ Return id, branch, commit, summary, howToTest.`,
   )
   if (!dev) { log(`${id}: dev agent lost; ticket stays on the board`); continue }
 
-  const review = await agent(
+  const review = await ragent(
     `${persona.engLead(cast.engLead)}
 
 You are reviewing ticket ${id} — "${t.title}" — branch ${dev.branch} in ${PROJ}.
@@ -316,7 +325,7 @@ Return id, merged, notes.`,
   log(`${id} ${review && review.merged ? `merged by ${cast.engLead.firstName}` : 'NOT merged'} — ${t.title}`)
 
   if (i === 0 && count > 1) {
-    await agent(
+    await ragent(
       `${persona.scribe(cast.scribe)}
 
 Write a short standup note (markdown, in-character bullets: ${cast.dev.firstName} shipping, ${cast.engLead.firstName} reviewing, ${cast.qa.firstName} prepping the test plan, ${cast.producer.firstName} watching the board) to ${ROOT}/studio/meetings/${A.date}-${KEY.toLowerCase()}-standup-s${seed.sprintNumber}.md
@@ -338,7 +347,7 @@ const ticketFacts = seed.ticketIds.slice(0, count).map((id, i) => ({
   merged: !!(shipped.find((s) => s.id === id) || {}).merged,
 }))
 
-const qa = await agent(
+const qa = await ragent(
   `${persona.qa(cast.qa)}
 
 You are QA-ing sprint ${seed.sprintNumber} of ${A.projectName}.
@@ -360,7 +369,7 @@ Return verdict, playtested, passedIds, bugs [{id,title,severity}].`,
 let qaFinal = qa
 if (qa && qa.bugs.length) {
   log(`${cast.qa.firstName} filed ${qa.bugs.length} bug(s) — ${cast.dev.firstName} is on fix duty`)
-  await agent(
+  await ragent(
     `${persona.dev(cast.dev)}
 
 Bug duty for ${A.projectName} sprint ${seed.sprintNumber}. Repo: ${PROJ} (work directly on main for these fixes).
@@ -370,7 +379,7 @@ For each bug: move it in-progress --by "${cast.dev.firstName}", fix minimally on
 Return done, notes.`,
     tier(cast.dev, { label: 'dev:bugfix', schema: DONE_SCHEMA }),
   )
-  qaFinal = await agent(
+  qaFinal = await ragent(
     `${persona.qa(cast.qa)}
 
 Re-verification pass, ${A.projectName} sprint ${seed.sprintNumber}, build at ${GAME_URL} (main of ${PROJ}).
@@ -387,7 +396,7 @@ Return verdict, playtested, passedIds (everything you moved to done this pass), 
 // ---------- Retro ----------
 
 phase('Retro')
-const retro = await agent(
+const retro = await ragent(
   `${persona.producer(cast.producer)}
 
 Close out sprint ${seed.sprintNumber} of ${A.projectName} (${KEY}), ${A.date}.
