@@ -131,6 +131,7 @@ Procedure:
 3. Decide per person and execute with the roster CLI review command: raise (2-8%, total raises at most 5% of active payroll — compute it; be stingier if the balance is thin), hold, warning (name the behavior and what changes), or fired (at most one per cycle, only with documented cause). If you fire someone, immediately hire a named replacement at a sensible salary with --notes describing their persona/working style.
 4. Where behavior must change, also ${ROSTER} set-notes <id> "<one-line note>" — these notes are injected into that person's future sprint prompts, so write them as direct coaching.
 5. Write the full review document to ${ROOT}/studio/hr/${A.date}-performance-${KEY.toLowerCase()}-s${N}.md — scores table with evidence citations, peer opinion highlights, decisions with budget math, and the studio's financial position.
+6. Refresh the agent dossiers: ${ROSTER} export — one extractable file per employee in studio/dossiers/, kept current for the studio head.
 Return decisions [{id, decision, raisePct, avgScore, headline}], fired [names], hired [names], summary (4-8 plain sentences to the studio head).`,
   { label: 'manager:decisions', schema: {
     type: 'object', required: ['decisions', 'fired', 'hired', 'summary'],

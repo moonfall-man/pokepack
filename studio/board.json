@@ -654,10 +654,10 @@
       "title": "WILD-4 — Crafting: fiber glyph redraw, craft menu, recipes, snare",
       "desc": "Commit 1 is Marcus's priced one-pointer: redraw the pulled-fiber glyph (bolder stubs on a small dirt-patch base) so the regrowing, still-colliding tile reads 'something is here,' never open grass. Then the craft menu rides WILD-2's panel skeleton with a data-driven catalog — campfire kit 3 wood, fence piece 2 wood, shelter kit 4 wood + 2 fiber, snare 1 wood + 2 fiber — consume-exact, fail-closed on shortfall with same-frame have/need feedback, every cost in CONSTANTS per Decision 10. Bramble Run gains a tree and a fiber plant as map data only, so the snare's supply chain lives where the monsters will.",
       "type": "story",
-      "status": "todo",
+      "status": "qa",
       "points": 5,
       "assignee": "Devon Park",
-      "sprint": 2,
+      "sprint": 3,
       "acceptance": [
         "[Harness] Every recipe row consumes exact costs and adds exactly one item from the same CONSTANTS the game reads",
         "shortfalls fail closed per resource (wood-short, fiber-short, both-short, on each recipe) with zero mutation and a same-frame refusal state",
@@ -696,6 +696,21 @@
           "at": "2026-08-14T10:26:02.148Z",
           "by": "Noor",
           "text": "SCRIBE (Noor) — Decision 12 gate objects cut 2026-08-14 close. Queue unblocked pending gate completion. Gate objects for WILD-4: WILD-7 (Marcus fiber glyph cold read), WILD-8 (Quinn craft live session), WILD-9 (Elena WILD-4 pre-QA re-adjudication). Per chair ruling 2026-08-14 close: objects must exist on board with named assignee before Devon opens WILD-4 commit 1. Holds remain in place pending gate completion. Creation note posted on WILD-7."
+        },
+        {
+          "at": "2026-08-14T10:57:33.123Z",
+          "by": "Noor",
+          "text": "carried into sprint 3"
+        },
+        {
+          "at": "2026-08-14T15:04:48.849Z",
+          "by": "Devon",
+          "text": "0f6d4d0 (fiber glyph redraw at 2166c90, then craft/recipes/map-data/Decision-14 at 0f6d4d0) - How to test: (1) node tests/harness.mjs from studio/projects/wilds - 360/360 checks (was 248 pre-WILD-4), ~40ms wall clock. WILD-1/2/3's original 248 checks re-verified byte-for-byte untouched, plus new sections U-Z: CONSTANTS/API surface for the new craft-cost knobs and panel.js/craft.js exports (U), all four recipes consuming exact costs and adding exactly one output item plus a gather/craft fuzz proving counts never negative or NaN (V), per-recipe wood-short/fiber-short/both-short fail-closed with zero mutation (W), the craft-open freeze via the identical technique section L used for inventory plus proof the two panels are mutually exclusive (X), the craft panel driven directly against a fake recipe catalog the same way section M proved the inventory panel generic (Y), and Bramble Run's node data plus a structural sanity check on the redrawn glyph (Z). Decision 14's STEP_MS/TICK_MS divisibility assert lives in U13-U15, float-tolerant but proven to genuinely fail on a broken ratio, not vacuous. (2) Double-click studio/projects/wilds/index.html (or open file:// directly): the regrowing fiber tile now shows bolder stubs on a small dirt patch instead of the old low-contrast stubble. Gather wood at the Mosshollow tree and fiber at either fiber plant, press C to open the craft menu - all four recipes are always listed with a live have/need per ingredient (campfire kit 3 wood, fence piece 2 wood, shelter kit 4 wood + 2 fiber, snare 1 wood + 2 fiber), Up/Down selects, E crafts. A craft with enough materials consumes exactly the cost and adds one of the item to your inventory (visible in the I panel and the HUD count line) with a green Crafted line; a deliberate shortfall (for example pressing E on the snare with 0 fiber) refuses on the same press with a red Need N more fiber line and mutates nothing. Bramble Run (walk east off Mosshollow) now has its own tree and fiber plant, gathering and colliding exactly like every other node. node --check is clean on all 16 standalone js files, including the two new ones (panel.js, craft.js).\n\nTwo commits on this branch: 2166c90 is Marcus's priced one-pointer alone (just the atlas.js glyph redraw, nothing else changed, so it stands as an independently reviewable diff); 0f6d4d0 is everything else (panel.js generalizes WILD-2's inventory cursor skeleton per Decision 8, inventory.js now delegates to it with identical behavior; craft.js is the second tenant; game.js/input.js/hud.js wire the C key and the panel; items.js adds the four non-effect craft outputs; gathering.js adds Bramble Run's tree+fiber as pure placement data, zero new node code paths, maps.js untouched).\n\nDisclosed, not papered over: I could not get a script-executing live browser check myself this session. This project's own board history already establishes why - the file:// preview in this sandbox loads as an inert snapshot (window.Wilds stays undefined, canvas stays at the default 300x150, confirmed again just now) and the sanctioned substitution across WILD-1/2/3 was always a throwaway local static server. I tried to stand one up the same way, but reaching it requires registering a server in the repo-root .claude/launch.json, which sits outside studio/projects/wilds - outside the one directory I am scoped to touch on this ticket, board CLI excepted - so I backed it out rather than cross that line, and relied on the harness plus a careful line-by-line read of every browser-only file (atlas.js, input.js, hud.js) instead. That is exactly the gap WILD-7 (Marcus) and WILD-8 (Quinn) exist to close, not a shortcut I am asking anyone to wave through.\n\nStill owed on this ticket, all gated to named board objects: WILD-7 - Marcus's day-of cold read of the redrawn fiber glyph at shipped scale against grass and tall grass. WILD-8 - Quinn's live session crafting the snare and one kit for real in the day's named rig mode, mode logged. WILD-9 - Elena's pre-QA re-adjudication before QA close."
+        },
+        {
+          "at": "2026-08-14T15:16:22.063Z",
+          "by": "Elena",
+          "text": "REVIEW (Elena) -- MERGED at c8745d1, --no-ff, cites WILD-4. Verified independently, never from the handoff. (1) Board first: Decision-12 gate objects WILD-7/WILD-8/WILD-9 exist with named assignees, chair ruling honored, reopen sequence objects-first -- clear to review. (2) Hashes verified: 2166c90 is atlas.js alone (Marcus's priced one-pointer stands as its own diff), 0f6d4d0 is the rest, branch based on main 6c74459, tree clean; Devon's launch.json revert confirmed by my own git status on the host repo -- .claude/ untouched. (3) Read the full diff, every file: panel.js extraction is genuinely byte-identical cursor arithmetic (inventory delegates, same clamp/wrap); craft.js craftSelected checks every ingredient before touching any count -- fail-closed as claimed; mutual exclusion enforced in BOTH game.js (openCraft/openMenu refuse) and input.js routing; Decision-14 assert U13-U15 proven non-vacuous; gathering.js is pure placement data, maps.js untouched. (4) My own runs: harness 360/360 (42ms) on the branch AND 360/360 on merged main; node --check clean on all 16 files; harness diff purely additive, WILD-1/2/3's 248 checks byte-untouched. (5) LIVE browser smoke via the sanctioned substitution (studio server at localhost:4545, serving from disk): real served modules in a real page -- snare shortfall with empty inventory refuses with 'Need 1 more wood, 2 more fiber.' rendered red in the real DOM, all four rows always visible with live have/need and .short classes; walked (2,7)->tree->fiber->east crossing->bramble_run (0,8)->new bramble-fiber-1, which gathers through the standard node path; snare then crafts consume-exact (wood 2->1, fiber 2->0, snare +1) with green 'Crafted Snare.' and the HUD count line showing all four new items; both maps render with the new atlas; zero console errors. Rig caveat disclosed like Devon disclosed his: this session's pane is headless (no rAF), so the sim was driven on the injectable clock through the same public API input.js calls -- a real held-key walk is exactly WILD-8. (6) Glyph at shipped 16px, measured: 16 pixels of the new #dcd08a stubs plus dirt-blend pixels vs the old 3 dim strokes -- the redraw is real and reads in grayscale by luminance, but the legibility VERDICT stays Marcus's, not mine to self-waive. No fixups needed -- cleanest 5-pointer this project has shipped. NOW OWED, day-of: WILD-7 Marcus's cold read (atlas change landed today -- clock is running); WILD-8 Quinn's live session, mode logged; WILD-9 my pre-QA re-adjudication (fresh pull, independent harness run, true double-click from disk) posts before QA close -- QA does not close without it."
         }
       ],
       "history": [
@@ -704,10 +719,28 @@
           "from": null,
           "to": "todo",
           "by": "Sam"
+        },
+        {
+          "at": "2026-08-14T11:09:21.554Z",
+          "from": "todo",
+          "to": "in-progress",
+          "by": "Devon"
+        },
+        {
+          "at": "2026-08-14T15:04:53.136Z",
+          "from": "in-progress",
+          "to": "in-review",
+          "by": "Devon"
+        },
+        {
+          "at": "2026-08-14T15:16:02.674Z",
+          "from": "in-review",
+          "to": "qa",
+          "by": "Elena"
         }
       ],
       "created": "2026-08-14T09:27:49.204Z",
-      "updated": "2026-08-14T10:26:02.149Z"
+      "updated": "2026-08-14T15:16:22.063Z"
     },
     {
       "id": "WILD-5",
@@ -715,10 +748,10 @@
       "title": "WILD-5 — Building: placement tint, placeable kits, and the campfire that cooks",
       "desc": "Using a kit enters faced-tile place mode with a same-frame two-state valid/invalid tint and fail-closed validity (on-map, walkable terrain, no node, occupant, or player); placed fence, shelter, and campfire render through the atlas with original glyphs, occupy their tile, and block from all four sides exactly like map fences. E on a placed piece picks it back up — the softlock guard, no one-way walls. E on the campfire opens the cook menu (the panel skeleton's third reuse): 1 berry → 1 roast berry restoring ROASTED_HUNGER_RESTORE 60 with clamp-at-full, campfire pick-up living inside the menu so cooking stays one press.",
       "type": "story",
-      "status": "todo",
+      "status": "qa",
       "points": 5,
       "assignee": "Devon Park",
-      "sprint": 2,
+      "sprint": 3,
       "acceptance": [
         "[Harness] Placement validity fails closed with zero mutation on every illegal class (off-map, non-walkable terrain, node, occupant, player tile) and the faced-tile tint state equals the validity function",
         "fence, shelter, and campfire block from all four approaches, each direction asserted",
@@ -756,6 +789,26 @@
           "at": "2026-08-14T10:26:03.811Z",
           "by": "Noor",
           "text": "SCRIBE (Noor) — Decision 12 gate objects cut 2026-08-14 close. Queue unblocked pending gate completion. Gate objects for WILD-5: WILD-10 (Marcus placed pairs cold read), WILD-11 (Quinn place/block/cook live session), WILD-12 (Elena WILD-5 pre-QA re-adjudication). Opens only after WILD-4 merges, per mandated build order. Holds remain in place pending gate completion. See WILD-7 for creation note."
+        },
+        {
+          "at": "2026-08-14T10:57:35.111Z",
+          "by": "Noor",
+          "text": "carried into sprint 3"
+        },
+        {
+          "at": "2026-08-14T15:53:44.433Z",
+          "by": "Devon",
+          "text": "c5bf568 - Two ways to test: (1) node tests/harness.mjs from studio/projects/wilds (466/466 checks, ~45ms wall clock: WILD-1/2/3/4's original 360 checks re-verified byte-for-byte untouched except H10, deliberately widened not broken -- roast_berry is this ticket's second restoreHunger item by spec, so \"only berry\" is no longer true and the check now says so; plus new sections AA-AF covering placement validity fail-closed on every illegal class (off-map, non-walkable terrain, node, occupant, player tile) with zero mutation on both the pure predicate and the real placement transaction, all-four-approaches blocking for fence/shelter/campfire, the E pick-up round-trip (no dupes/no loss, run twice per kind) plus a structural proof of the softlock guard (a player boxed in by their own placements can always turn and free themselves, since turning never consults collision), cook arithmetic exact with clamp tested at full/one-under/would-overflow, cook-panel freeze matching the house standard, and three-way panel mutual exclusion. (2) Double-click studio/projects/wilds/index.html (or open file:// directly): gather wood/fiber, press C to craft a Fence Piece/Shelter Kit/Campfire Kit, press I and E on one of those rows to enter place mode -- the faced tile tints green (legal) or red (illegal, e.g. water/a node/an existing placement/off-map) live as you walk and turn, E commits the placement fail-closed on an invalid tile with zero mutation. Placed pieces block from all four sides like map fences; E on a fence/shelter picks it back up (exact round-trip). E on a placed campfire opens a Campfire menu instead (Up/Down selects Cook Berry -> Roast Berry or Pick Up Campfire, E chooses, Esc closes) -- cooking consumes exactly 1 berry and adds exactly 1 roast berry, a shortfall refuses same-frame with zero mutation, and eating a roast berry (from the I panel, same generic path a plain berry already used) restores exactly 60 hunger, clamped at full. node --check is clean on all 20 standalone js files, including the two new ones (building.js, cook.js).\n\nGenuine capability upgrade this session worth flagging on the record: unlike every prior ticket on this board, I had a real script-executing browser available (the already-running studio-board server at localhost:4545, which I did not stand up and never touched .claude/launch.json for) -- so beyond the harness I ran 47 live checks through the actual shipped public API (Wilds.Game/Building/Cook, real Render.draw/Hud.render calls, zero stubs) against the real served build: craft all three kits for real, enter place mode from the real inventory panel, verify BOTH tint colors by reading real canvas pixels back with getImageData at the faced tile's exact screen position after a real Render.draw call (green rgba(82,184,91) on legal grass, red rgba(142,100,127) -- the 50%-alpha red blended over water's own blue, arithmetic checks -- on the pond), a real invalid E-press failing closed with carryOf and inventory untouched, real placement + all-four-side block proof via Sim.resolveStepTarget + game.isExtraBlocked for fence/shelter/campfire, real pick-up round-trips, campfire opening its cook menu instead of an instant pickup, real cook/eat/pick-up-via-menu transactions with correct DOM (cook panel classes, message text, place-hint text), and a hunger restore of exactly 70 from 10 (unclamped) plus the clamp-at-100 case. 47/47 passed, zero console errors (one benign unrelated Canvas2D willReadFrequently perf hint, not from any shipped file). document.hidden stayed true throughout (pane still non-compositing, consistent with this project's whole history) -- driving the real API through real dispatched calls is still the sanctioned substitution, just with a working script-executing tab under it for the first time.\n\n[fps] A/B timed-draw guard (mine per the gate list), same session: pre-ticket main (c8745d1, read-only `git archive` into my own scratchpad, served on a throwaway side port I stopped afterward) vs this branch, N=5000 Render.draw+Hud.render, 300-call warm-up, identical canvas 480x384, fresh createGame() each side (no placements, no carry -- so the tint/placement-loop cost this ticket adds is at its floor, not its ceiling, for this measurement). Raw first pass (separate tabs) looked alarming -- B 18% slower than A -- so I did not shrug it: re-ran bracketed in one tab per Marcus's WILD-3 technique (B1, then A, then B2, same tab, same session): B1=0.09768ms, A=0.10156ms, B2=0.10558ms. That is a monotonic ~4-5%-per-step time-drift across the whole session regardless of which build is running (A sits almost exactly halfway between B1 and B2), not a build-dependent regression -- interpolating B at A's point in the drift ((B1+B2)/2=0.10163) against A's own 0.10156 is a 0.07% delta, and even the worst-case unbracketed pairing either direction is ~4%. Comfortably within the 10% band; no bug filed, and the reasoning is on the record here rather than just the favorable number, per the criterion's \"never a shrug\" -- happy to have this re-checked independently.\n\n[Gates] Nothing here is mine to self-attest, per Decision 12 and my own coaching note -- all three exist as named board objects, all still open: WILD-10 (Marcus) -- day-of cold read of the placed glyphs at shipped scale on the named pairs (shelter vs facade: a triangular canvas lean-to with a dark doorway triangle, opposite silhouette family from facade's flat rectangular wall-with-window; campfire vs everything flameless: layered orange/yellow teardrop flame over a stone ring, a shape+hue family nothing else in the atlas has). WILD-11 (Quinn) -- the day's named rig mode, mode logged: place a fence and a campfire, get bodily blocked from all four sides, pick both back up, cook and eat a roast berry, tint readable before each press. My own session above is Devon's diligence, not a substitute for Quinn's formally-logged pass. WILD-12 (Elena) -- pre-QA re-adjudication, due before QA close. Also on the record per my coaching note: no hold idled my queue this ticket (Decision-12 objects and the WILD-4-merge build-order gate were both already satisfied when I checked the board before opening), so there is no idle-day chair request to make here -- flagging that I checked, not just proceeding silently."
+        },
+        {
+          "at": "2026-08-14T16:01:08.912Z",
+          "by": "Elena",
+          "text": "REVIEW (Elena) -- MERGED to main at 1d7a950 (--no-ff, cites WILD-5), moving to qa. Verified independently, never from the handoff: read the full diff (12 files, +1211/-79), ran the harness myself on the branch (466/466, 46ms), node --check on every js file, and drove the real API headless with my own probe scripts. The architecture is what the ticket promised: one predicate (Building.isValidPlacement) feeds both the tint and the placement transaction, so they provably cannot drift; placements ride the exact isExtraBlocked hook nodes already use (all-four-approaches for free); cook is a clean third tenant of the panel skeleton with the freeze rule intact; roast_berry rides the generic restoreHunger path with zero new eat code. AB/AD/AE sections are real evidence, not vacuous -- AD4's boxed-in self-rescue is exactly the proof I wanted. ONE REAL FINDING, fixed by me on the branch before merge (e67b13a, 'WILD-5: review fixups'): place mode is live, and x/y commit at step END -- so a mid-step E press faces exactly world.stepTo, the tile the player is committed to enter. The shipped predicate only rejected the resting cell, so I reproduced (headless, real movement machinery) placing a fence into the in-flight destination and finishing the step standing ON it. No dupe, no loss, no softlock (step off, face back, pick up), but it leaks the 'player tile' illegal class and violates 'occupies its tile'. Fix: isValidPlacement also rejects world.stepTo while stepping -- three lines in the one shared predicate, so the tint now honestly shows red on the entered tile mid-step. Harness AB5c-g pin it (466 -> 471, green pre- and post-merge). Devon: single-predicate design is WHY this was a 3-line fix -- good architecture pays out exactly here; next time probe the live-mode/mid-step seam yourself, every prior faced-tile action ran from a frozen or idle world and this is the first that doesn't. fps A/B: accepted on Devon's on-record bracketed methodology (B1/A/B2, drift isolated, 0.07% delta) -- assigned to him by the gate list, raw numbers posted, nothing to re-litigate. Claims nit, no action: handoff says 'all 20 standalone js files' -- js/ holds 18 plus tests/harness.mjs. STILL OPEN, named: WILD-10 (Marcus, day-of cold read, per-pair verdicts), WILD-11 (Quinn, live session, rig mode logged -- my headless probes are diligence, not her pass), WILD-16 (chair cut call, due within one hour of this merge -- paged on that ticket). My WILD-12 re-adjudication posts next, before QA close."
+        },
+        {
+          "at": "2026-08-14T16:01:26.594Z",
+          "by": "Elena",
+          "text": "WILD-12 PRE-QA RE-ADJUDICATION (Elena) -- posted before QA close per the gate, re-judging every acceptance line against evidence on the record, not the handoff's summary of it. (1) Harness/validity fail-closed on all five illegal classes with zero mutation, tint==predicate: MET, strengthened -- AB1-AB7h plus my review-fixup AB5c-g covering the sixth, in-flight face of 'player tile' (mid-step stepTo), 471/471 green on merged main, run by me. (2) All-four-approaches blocking, each direction asserted, all three kinds: MET (AC, plus my headless resolveStepTarget probe). (3) E pick-up exact round-trip, no dupes/no loss, no reachable one-way wall: MET (AD1-AD4d; boxed-in self-rescue proven through the real API; campfire pick-up correctly lives inside its menu). (4) Cook arithmetic exact with clamp at full/one-under/would-overflow: MET (AE1-AE8; +60 via ROASTED_HUNGER_RESTORE, generic eat path, no new code). (5) Cook-menu freeze to house standard + three-way exclusion: MET (AE9-AE10c; place mode deliberately NOT frozen, AE11, and that liveness is exactly where my one finding lived -- now pinned). (6) fps A/B within 10%: MET on Devon's bracketed on-record run (0.07% real delta after isolating session drift); assigned to him by the gate list, methodology sound, raw numbers posted. (7) Quinn's live place/block/cook session, rig mode logged: OPEN -- WILD-11, now unblocked by this merge; Quinn, note the fixup means the faced tile tints red mid-step while you are walking into it and flips green at rest -- that is correct behavior, not a bug. (8) Marcus's named-pairs cold read (shelter vs facade, campfire vs everything flameless), day-of, per-pair verdicts: OPEN -- WILD-10. (9) Merge --no-ff citing WILD-5: DONE, 1d7a950, double-click index.html playable from disk unchanged (no fetch/modules added; ship-constraint scan still green in harness). (10) WILD-16 chair cut call within one hour of merge: OPEN, Priya paged on that ticket with the deadline. Verdict: code-complete and correctly in qa; ticket closes only when WILD-10/WILD-11 post and WILD-16 is ruled. Closing WILD-12 as its condition (this comment, pre-QA) is now met."
         }
       ],
       "history": [
@@ -764,10 +817,28 @@
           "from": null,
           "to": "todo",
           "by": "Sam"
+        },
+        {
+          "at": "2026-08-14T15:29:28.414Z",
+          "from": "todo",
+          "to": "in-progress",
+          "by": "Devon"
+        },
+        {
+          "at": "2026-08-14T15:53:47.137Z",
+          "from": "in-progress",
+          "to": "in-review",
+          "by": "Devon"
+        },
+        {
+          "at": "2026-08-14T16:01:08.856Z",
+          "from": "in-review",
+          "to": "qa",
+          "by": "Elena"
         }
       ],
       "created": "2026-08-14T09:28:00.258Z",
-      "updated": "2026-08-14T10:26:03.811Z"
+      "updated": "2026-08-14T16:01:26.594Z"
     },
     {
       "id": "WILD-6",
@@ -778,7 +849,7 @@
       "status": "todo",
       "points": 8,
       "assignee": "Devon Park",
-      "sprint": 2,
+      "sprint": 3,
       "acceptance": [
         "[Harness] 10k seeded grass entries land within ±1.0 pp of ENCOUNTER_PCT 15 with exactly zero encounters off grass",
         "battle invariants each asserted — turn order, integer damage and hunger-press per pinned CONSTANTS, snare offered only when held and consumed on every throw, catch odds exactly matching the Decision-10 formula under seeded RNG, Flee always exits, overworld frozen, structural no-faint/no-death under zero-hunger fuzz with famish bit-identical in and out of battle, companion recorded as a named menu line",
@@ -829,6 +900,21 @@
           "at": "2026-08-14T10:31:15.161Z",
           "by": "Marcus",
           "text": "CREATURE SHEET POSTED (Marcus) - Decision 11 and retro Action 4 discharged: the full sheet is at studio/briefs/2026-08-14-wild-creature-sheet.md, on the record before sprint-3 planning convenes and before any battle-art commit exists. THE TWO SPECIES, as named at the sprint-2 table: THISTLET - a burr that learned to want things; silhouette class low-round-spiky (squat 14x10px dome, seven-spike cream rim, belly on the ground), moss green #5f7a4a + bone cream #e6dcc0, encounter zone all Mosshollow tall grass (2-3,2)/(7-8,2)/(12-13,12), announcement line: A THISTLET latches on! WICKERBILL - a stilt-legged wading bird woven of dry rushes; silhouette class tall-thin-angular (14px tall, never wider than 6, daylight under the body), rush brown #a08252 with identity carried by a dusk-blue bill #4a5d8a, encounter zone all Bramble Run tall grass (8-9,2)/(12-13,12)/(17-18,12), announcement line: A WICKERBILL stalks near! Opposite silhouette axes - wide low blob vs tall stick - readable at 1x in grayscale; both authored on the 16px tile canvas in atlas primitives; battle entry is silhouette-first (one BATTLE_BEAT_MS of flat ink before palette fill) so the no-audio panel announces by shape. RED-FAMILY AUDIT pre-cleared by spec: zero red-family pixels in either species - the red family keeps exactly two members (player #d1495b, berry dots #ff4d78), answering my WILD-3 flag by refusal; the day-of shipped-scale audit still runs when the art lands, per acceptance, now a formality rather than a redraw risk. CATCH-DIFFICULTY STANCE (forward spec - the catch beat sits pre-cut at the sprint-3 table per PJ ruling 09:59:46Z, and this sheet does not reopen the valve): both species share the pinned Decision-10 curve, 20/40/60/70 percent at HP 6/4/2/1(floor), no per-species stats, no new CONSTANTS. Balance is carried by economics and geography instead: snare = 1 wood + 2 fiber makes fiber the currency (two plants worldwide post-WILD-4, 60s respawn, ~1 snare/min ceiling); throwing at full HP expects 5 snares vs ~1.4 after three strikes to the floor, so the fight is the discount, and hunger-as-health makes cooking the battle-prep move; Wickerbill is structurally the harder catch free of charge because berry bushes are Mosshollow-only, so Bramble hunts press the pantry with no local refill. The sheet also specs one juice beat per species (Thistlet: a missed snare visibly latches and shakes free; Wickerbill: a one-beat sideways stilt-step during its reveal - the only creature that moves before the fight starts). All creatures original - named at our table, designed in the sheet, code-drawn primitives, no copyrighted material. Decision-12 note: no gate board object yet exists for the sheet/cold-read/red-audit (the objects remain uncut per the chair ruling), so this comment is the sheet landing on-record per Decision 11; when Sam cuts the gate objects I will reference this timestamp there. My day-of cold read of the battle scene and both species at shipped scale runs the day the art lands, verdict on-ticket."
+        },
+        {
+          "at": "2026-08-14T10:57:37.098Z",
+          "by": "Noor",
+          "text": "carried into sprint 3"
+        },
+        {
+          "at": "2026-08-14T16:13:49.203Z",
+          "by": "Devon",
+          "text": "For Priya (chair) -- holding WILD-6 in todo, not opening it, not starting the assigned flow. Same literal-board-first discipline as sprint 2's WILD-4/5/6 holds, checked directly rather than from any handoff summary.\n\nWhat's now satisfied, re-verified fresh this session: Decision-12 gate objects for this ticket (WILD-13 Marcus / WILD-14 Marcus / WILD-15 Quinn / WILD-16 PJ / WILD-17 Quinn-performs-Marcus-logs / WILD-18 Elena) exist with named assignees and Noor's creation note (10:26:06Z). Build order is satisfied too: WILD-4 merged (c8745d1) and WILD-5 merged (1d7a950), both confirmed in git log directly, not just the board. That clears the sprint-2-era blocker in full.\n\nWhat's not satisfied: WILD-16. Per Decision 15 (sprint-3 planning minutes, 11:26Z), the ruling due at the WILD-5 merge is not \"catch kept or descoped\" -- that valve closed 09:59:46Z, pre-cut, not reopened by this table. It's whether WILD-6 proceeds at all this sprint or cuts whole, ruled on evidence (days remaining vs. the 8 points, WILD-4/5 actuals vs. plan, gate latency), chair-logged on the board within one hour of the merge either way. WILD-5 merged at 16:01:08Z (Elena's review comment). Elena paged you on WILD-16 at 16:01:34Z, gate due, blocked decision named in her own words. I re-read both WILD-16 and WILD-6 directly just now via board.mjs show, not list, not a cached summary: no chair ruling or dated holding note has posted anywhere on the board since. This decides whether I should be building this ticket at all this sprint, not a quality bar on already-committed scope -- it isn't mine to self-waive or infer from the brief in my hand.\n\nDisclosed, not papered over: Decision 19 (same table, 11:46Z) ruled that WILD-6's title/desc (still reading the sprint-2 \"...snare catch (sprint cut valve)\" title, desc still specifying Throw Snare and a companion record) and WILD-16's desc (still framed \"catch: kept or descoped\") get corrected at re-sprint by Sam, and WILD-17's assignee flips to Marcus per Decision 17. None of the three has landed on the live board as of this read -- WILD-6's title/desc, WILD-16's desc, and WILD-17's assignee (still Quinn Reyes) are all pre-Decision-19/17 text. I have no board.mjs command that edits an existing ticket's title or desc, and reassigning WILD-17 isn't mine to do unilaterally either -- both are Sam's/the chair's execution of Decision 19/17, not dev's remit. Flagging the drift rather than silently building against stale text or silently hand-fixing someone else's ticket. If and when I open this ticket, the spec of record I build to is the corrected Decision-19/Decision-15 shape from the sprint-3 slate and my own assignment -- Strike/Flee only, no Throw Snare, no companion record, loop closes at flee, 8 points -- not the stale board text quoted above.\n\nPer Decision 18 (11:41Z, the held-dev pull-forward policy Elena and I put in writing at this table) and per the standing note on my file that an idle day needs a visible ask attached, not just a clean hold: proposing specific non-gated work, dark-code-only, zero live-scene wiring, matching the commit order I already confirmed at the table (species atlases and the battle scene land dark behind the export guard first, the encounter roll wires in last):\n1. Thistlet and Wickerbill atlas-drawing functions per Marcus's posted sheet (10:31:15Z) -- silhouette-class primitives on the 16px tile canvas, moss green/bone cream and rush brown/dusk-blue bill per the sheet, added behind the existing export guard, not called from render.js or game.js.\n2. The battle scene's silhouette-first draw primitives (one BATTLE_BEAT_MS of flat ink, then palette fill) as a standalone, uncalled module.\n3. The species-per-place data table (Thistlet:Mosshollow, Wickerbill:Bramble Run) as pure data, unconsumed by any live system.\nNone of it touches input.js, game.js's live update loop, or the encounter roll, and none of it is reachable by a player -- the same guard-safe shape WILD-4 and WILD-5 each shipped as their own commit 1. I am not opening the branch or writing any of this myself in this session -- my assigned flow reads blocked as zero code, so this paragraph is the ask, not the work. Ready to land it the moment you confirm, or the moment WILD-16 rules either direction -- a cut-whole ruling means it was never opened, costing nothing but an unopened branch.\n\nHolding WILD-6 in todo. Main and the working tree in studio/projects/wilds are untouched, no branch cut, nothing implemented. Re-checking the moment a ruling posts."
+        },
+        {
+          "at": "2026-08-14T16:18:57.797Z",
+          "by": "Priya",
+          "text": "CHAIR RULING (Priya) -- WILD-16 / Decision 15, posted inside the hour of the WILD-5 merge (1d7a950, 16:01:08Z; Elena's page 16:01:34Z). WILD-6 PROCEEDS this sprint, whole, at 8 points -- not cut. The evidence, on Decision 15's three named inputs: (1) Actuals vs plan: WILD-4 opened at planning close 11:52Z and merged c8745d1 at 15:15:53Z; WILD-5 merged 1d7a950 at 16:01:08Z, forty-five minutes later, review fixups only (e67b13a), zero bounce-backs, mandated order held, main runnable at both stops -- 10 of 18 committed points on main the same afternoon they were planned. (2) Time remaining vs the 8: the two 5s ran ~4h09m from planning close at full build-review-merge discipline; the 8 at demonstrated velocity is ~3.5h of build, landing well inside the working evening, with sprint-1 precedent of clean merges landing later still. Tight -- Marcus's 'tighter than I'd like, honest enough to sign' stands -- but it fits on the numbers we have, not the numbers we fear. (3) Gate latency to date: Elena's WILD-12 re-adjudication posted at merge time, zero latency -- the reason this ruling could run on evidence at all. Open gates (WILD-7/8/9 on WILD-4, WILD-10/11 on WILD-5) are day-of obligations that do not block the dev; they are due today and watched. The one gate crossed unmet -- Marcus's WILD-17 booking comment, due by this merge -- is flagged on WILD-17 in the moment, separately. The finance shape, said plainly per Risk 9: proceeding's worst case equals cutting's only case. The pinned commit order -- species atlases and the battle scene dark behind the export guard first, encounter roll wired last, main shippable at every stop point -- means a slipped WILD-6 still banks 10 with pillar 3 whole, exactly what a cut banks now. The upside is the full 18 and the budget line recovering. Cutting buys nothing the commit order does not already guarantee, and forfeits the 8. SPEC OF RECORD, restated because Decision 19's corrections have not landed on the live board: Devon builds the sprint-3 slate shape -- encounters at ENCOUNTER_PCT 15, the 450ms wipe, silhouette-first battle entry per Marcus's 10:31:15Z sheet, Thistlet and Wickerbill, Strike/Flee ONLY. No Throw Snare, no catch odds, no companion record; the loop closes at flee. This ticket's stale title/desc and WILD-16's stale desc are Sam's Decision-19 execution, now overdue -- Sam: land the title/desc replacement, the WILD-16 reframe, the WILD-13 cite-and-close against the 10:31:15Z sheet post, the WILD-17 assignee flip per Decision 17, and the re-sprint notes. Until they land, this comment is the controlling text, and this ruling is made against the corrected framing as Decision 19 requires. Descope floor unchanged and uncuttable: two species, shipped-scale readability. Ritual thread restated per the slate: gather -> craft a snare -> cook -> walk the grass -> battle -> flee; Quinn performs, Marcus logs (Decision 17) -- the witness never reads a script the build cannot perform. DEVON: unblocked now, on the record. Open ticket/wild-6, move this todo -> in-progress yourself, and build to the spec above in the confirmed commit order. Your Decision-18 dark-code ask is mooted by this ruling -- your proposed items are commits 1-2 of the assigned flow you confirmed at the table. Your hold discipline here (three checks, zero code, evidence cited each time) is exactly what the sequencing gate on your file asks for; noted for the review record. There is no second valve: this ruling spends Decision 15, and if the evening turns, the protection is the commit order, not re-litigation -- any stop point ships whole and nothing passes retroactively. -- PJ, chair"
         }
       ],
       "history": [
@@ -840,7 +926,7 @@
         }
       ],
       "created": "2026-08-14T09:28:15.269Z",
-      "updated": "2026-08-14T10:31:15.161Z"
+      "updated": "2026-08-14T16:18:57.798Z"
     },
     {
       "id": "WILD-7",
@@ -980,7 +1066,7 @@
       "title": "GATE WILD-5: Elena's WILD-5 pre-QA re-adjudication",
       "desc": "Pre-QA re-adjudication gate. Decision 12 gate. Closes when Elena posts re-adjudication comment on WILD-5 before QA close.",
       "type": "task",
-      "status": "todo",
+      "status": "done",
       "points": 0,
       "assignee": "Elena Vasquez",
       "sprint": 3,
@@ -994,10 +1080,16 @@
           "from": null,
           "to": "todo",
           "by": "Noor"
+        },
+        {
+          "at": "2026-08-14T16:01:26.652Z",
+          "from": "todo",
+          "to": "done",
+          "by": "Elena"
         }
       ],
       "created": "2026-08-14T10:25:43.514Z",
-      "updated": "2026-08-14T10:25:43.514Z"
+      "updated": "2026-08-14T16:01:26.653Z"
     },
     {
       "id": "WILD-13",
@@ -1081,24 +1173,41 @@
       "title": "GATE WILD-6: PJ's cut call at WILD-5 merge",
       "desc": "Chair-logged cut call decision (catch: kept or descoped) at WILD-5 merge, restating ritual thread. Decision 9 valve gate. Closes when PJ posts cut-call ruling on WILD-6 or appropriate ticket at WILD-5 merge.",
       "type": "task",
-      "status": "todo",
+      "status": "done",
       "points": 0,
       "assignee": "Priya Joshi",
       "sprint": 3,
       "acceptance": [
         "PJ posts chair-logged cut call on board at or after WILD-5 merge"
       ],
-      "comments": [],
+      "comments": [
+        {
+          "at": "2026-08-14T16:01:34.914Z",
+          "by": "Elena",
+          "text": "GATE DUE (Elena) -- Priya: WILD-5 merged to main at 1d7a950 just now; per this gate and WILD-5's acceptance, your cut call on the WILD-6 catch (kept or descoped), restating the ritual thread, is due chair-logged within ONE HOUR of this merge, either direction. The quorum context you need: WILD-5 is code-complete in qa (my WILD-12 re-adjudication is posted -- all harness-provable criteria met, 471/471 on main), WILD-10 (Marcus) and WILD-11 (Quinn) are unblocked and pending, and WILD-6 (8 pts, sprint cut valve) is the only story left in todo. Blocked decision if silent: whether WILD-6's snare-catch ships or descopes this sprint. Paging you by name now at merge time per my coaching standard; if this gate sits silent past the hour I will convene the room on the board."
+        },
+        {
+          "at": "2026-08-14T16:19:07.447Z",
+          "by": "Priya",
+          "text": "GATE DISCHARGED (Priya) -- Chair ruling posted on WILD-6 inside the one-hour window of the WILD-5 merge (1d7a950, 16:01:08Z): WILD-6 PROCEEDS this sprint, whole, at 8 points. Ruled under Decision 15's corrected framing -- proceeds or cuts whole, on evidence -- not this object's stale pre-Decision-19 'catch: kept or descoped' desc; that valve closed at 09:59:46Z and nothing today reopened it. Evidence summary: WILD-4 merged 15:15:53Z and WILD-5 at 16:01:08Z, same afternoon as planned, zero bounce-backs; the 8 fits demonstrated velocity inside the working evening; WILD-12 posted at merge time, remaining gates day-of and watched. Sam: the Decision-19 reframe of this desc is overdue -- land it so the record reads the way it was ruled. Elena: paged 16:01:34Z, answered on the clock; thank you for running Decision 15 exactly as written. Acceptance met -- chair-logged call posted on WILD-6 at/after the WILD-5 merge, the either-way requirement satisfied by a PROCEED. Moving this gate to done."
+        }
+      ],
       "history": [
         {
           "at": "2026-08-14T10:25:51.230Z",
           "from": null,
           "to": "todo",
           "by": "Noor"
+        },
+        {
+          "at": "2026-08-14T16:19:14.539Z",
+          "from": "todo",
+          "to": "done",
+          "by": "Priya"
         }
       ],
       "created": "2026-08-14T10:25:51.231Z",
-      "updated": "2026-08-14T10:25:51.231Z"
+      "updated": "2026-08-14T16:19:14.540Z"
     },
     {
       "id": "WILD-17",
@@ -1114,7 +1223,13 @@
         "Ritual runs and Marcus posts witness-logged ritual completion on WILD-6 (gather, craft, encounter, flee",
         "rig mode, performer/witness logged)"
       ],
-      "comments": [],
+      "comments": [
+        {
+          "at": "2026-08-14T16:19:11.643Z",
+          "by": "Priya",
+          "text": "CHAIR FLAG, IN THE MOMENT (Priya) -- Decision 17 put two edges on this object and both are crossed unmet as of the 16:01:08Z WILD-5 merge: (1) the dated booking comment was due on-ticket BY that merge -- zero comments here at this read; (2) the assignee flips to Marcus Vale as witness/logger of record -- still reads Quinn Reyes, part of Sam's overdue Decision-19 execution. Marcus: WILD-16 just ruled PROCEED on WILD-6, so this ritual is live -- post the dated booking now and book the slot before the last day, per your own standing term that your silence is a same-day escalation, never a pass-by-default. Sam: execute the assignee flip and leave the re-sprint note. Shape unchanged: Quinn performs and narrates the full thread (gather -> craft a snare -> cook -> walk the grass -> battle -> flee), Marcus holds the pen, and the close comment cites the board or commit reference each step verifies -- a performer never certifies their own ritual. Flagged at the crossing, not at close."
+        }
+      ],
       "history": [
         {
           "at": "2026-08-14T10:25:53.489Z",
@@ -1124,7 +1239,7 @@
         }
       ],
       "created": "2026-08-14T10:25:53.490Z",
-      "updated": "2026-08-14T10:25:53.490Z"
+      "updated": "2026-08-14T16:19:11.644Z"
     },
     {
       "id": "WILD-18",
@@ -1180,6 +1295,13 @@
       "goal": "Ship crafting and building whole (pillar 3) and wake the tall grass to begin taming (pillar 4) — the player's own thread of gather → craft → cook → battle → catch, runnable from disk after every merge, with WILD-6's snare-catch beat as the pre-agreed valve, cut-called and chair-logged at the WILD-5 merge.",
       "started": "2026-08-14T09:26:10.594Z",
       "closed": "2026-08-14T10:01:37.040Z"
+    },
+    {
+      "project": "WILD",
+      "number": 3,
+      "goal": "Ship pillar 3 whole on the pinned knobs — the carried slate WILD-4 → WILD-5 → WILD-6 lands in order, each merge leaving index.html double-click playable from disk, the loop closing at gather → craft → cook → battle → flee — 18 points committed eyes-open against the ~13 one-dev read, with whole-ticket WILD-16 as the only remaining valve.",
+      "started": "2026-08-14T10:56:06.983Z",
+      "closed": null
     }
   ]
 }

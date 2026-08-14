@@ -17,7 +17,7 @@ const LOCK_DIR = path.join(STUDIO, '.board.lock');
 
 const STATUSES = ['backlog', 'todo', 'in-progress', 'in-review', 'qa', 'done'];
 const TYPES = ['story', 'bug', 'task'];
-const STATIC_ROOTS = ['projects', 'meetings', 'briefs', 'hr'];
+const STATIC_ROOTS = ['projects', 'meetings', 'briefs', 'hr', 'dossiers'];
 const DEFAULT_PORT = 4545;
 
 // ---------- state ----------

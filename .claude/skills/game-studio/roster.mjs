@@ -235,6 +235,112 @@ function cmdSetNotes(pos) {
   console.log(`notes set for ${id}`);
 }
 
+// ---------- dossiers: extractable agent definitions ----------
+// One markdown file per employee: seat instructions verbatim, the identity
+// overlay sprints compose for them, salary/rating trajectory, full record.
+// The studio head lifts these to clone or evolve agents elsewhere.
+
+const AGENTS_DIR = path.join(REPO_ROOT, '.claude', 'agents');
+const SEAT_FILE = {
+  producer: 'studio-producer.md', creative: 'studio-creative.md',
+  'eng-lead': 'studio-eng-lead.md', dev: 'studio-dev.md', qa: 'studio-qa.md',
+  scribe: 'studio-scribe.md', manager: 'studio-manager.md',
+};
+
+function firstName(e) { return e.name.replace(/["']/g, '').split(/\s+/)[0]; }
+
+function heldOpinions(r, e) {
+  const first = firstName(e);
+  const held = [];
+  for (const other of r.employees) {
+    for (const o of other.opinions || []) {
+      if (o.by === first || e.name.startsWith(o.by || ' ')) {
+        held.push({ about: other.name, sprint: o.sprint, text: o.text });
+      }
+    }
+  }
+  return held;
+}
+
+function avgScore(review) {
+  const vals = Object.values(review.scores || {});
+  return vals.length ? (vals.reduce((a, b) => a + b, 0) / vals.length) : null;
+}
+
+function dossierMd(r, e) {
+  const reviews = e.reviews || [];
+  const trajectory = reviews.map((v) => (avgScore(v) || 0).toFixed(2)).join(' -> ') || 'unreviewed';
+  const last = reviews[reviews.length - 1];
+  const seatPath = path.join(AGENTS_DIR, SEAT_FILE[e.role] || '');
+  let seat = '';
+  try { seat = fs.readFileSync(seatPath, 'utf8').replace(/^---[\s\S]*?---\s*/, ''); }
+  catch { seat = `(seat file ${SEAT_FILE[e.role] || '?'} not found)`; }
+  const held = heldOpinions(r, e);
+
+  const lines = [];
+  lines.push('---');
+  lines.push(`name: ${e.id}`);
+  lines.push(`fullName: ${e.name}`);
+  lines.push(`seat: ${e.role}`);
+  lines.push(`model: ${e.model}`);
+  lines.push(`status: ${e.status} — Moonfall Interactive`);
+  lines.push(`salary: $${e.salary.toLocaleString('en-US')}/yr`);
+  lines.push(`hired: ${(e.hired || '').slice(0, 10)}`);
+  lines.push(`lastRating: ${last ? (avgScore(last) || 0).toFixed(2) : 'n/a'}`);
+  lines.push(`ratingTrajectory: ${trajectory}`);
+  lines.push('---');
+  lines.push('');
+  lines.push(`# ${e.name} — ${e.role} dossier`);
+  lines.push('');
+  lines.push('## Seat instructions (verbatim from the agent definition)');
+  lines.push('');
+  lines.push(seat.trim());
+  lines.push('');
+  lines.push('## Identity overlay (as sprints compose it)');
+  lines.push('');
+  lines.push(`You are ${e.name}, holding the ${e.role} seat at Moonfall Interactive.`);
+  if (e.personaNotes) lines.push(`Coaching note from your manager on file: "${e.personaNotes}"`);
+  if (held.length) {
+    lines.push('Your private working opinions of colleagues:');
+    for (const o of held) lines.push(`- ${o.about}${o.sprint ? ` (${o.sprint})` : ''}: "${o.text}"`);
+  }
+  lines.push('');
+  lines.push('## Performance record');
+  lines.push('');
+  if (!reviews.length) lines.push('No review cycles yet.');
+  for (const v of reviews) {
+    lines.push(`- ${(v.at || '').slice(0, 10)} ${v.sprint || ''} — **${v.decision}**${v.raisePct ? ` +${v.raisePct}% -> $${v.newSalary.toLocaleString('en-US')}` : ''} · avg ${(avgScore(v) || 0).toFixed(2)} (${Object.entries(v.scores || {}).map(([k, n]) => `${k}=${n}`).join(', ')})`);
+    if (v.notes) lines.push(`  - ${v.notes}`);
+  }
+  lines.push('');
+  lines.push('## Peer opinions received');
+  lines.push('');
+  if (!(e.opinions || []).length) lines.push('None on file.');
+  for (const o of e.opinions || []) lines.push(`- ${o.by}${o.sprint ? ` (${o.sprint})` : ''}: "${o.text}"`);
+  lines.push('');
+  return lines.join('\n');
+}
+
+function cmdDossier(pos) {
+  const r = load();
+  console.log(dossierMd(r, empOrDie(r, pos[0])));
+}
+
+function cmdExport(flags) {
+  const r = load();
+  if (!r.employees.length) die('nobody on the roster');
+  const dir = path.resolve(flags.dir || path.join(STUDIO, 'dossiers'));
+  fs.mkdirSync(dir, { recursive: true });
+  const index = ['# Moonfall Interactive — agent dossiers', ''];
+  for (const e of r.employees) {
+    fs.writeFileSync(path.join(dir, `${e.id}.md`), dossierMd(r, e));
+    const last = (e.reviews || [])[e.reviews.length - 1];
+    index.push(`- [${e.name}](${e.id}.md) — ${e.role} · ${e.model} · $${e.salary.toLocaleString('en-US')} · ${e.status}${last ? ` · last ${(avgScore(last) || 0).toFixed(2)}` : ''}`);
+  }
+  fs.writeFileSync(path.join(dir, '_index.md'), index.join('\n') + '\n');
+  console.log(`${r.employees.length} dossiers -> ${dir}`);
+}
+
 // ---------- main ----------
 
 const HELP = `Moonfall Interactive roster (state: ${ROSTER_FILE})
@@ -249,7 +355,9 @@ usage: node roster.mjs <command>
   raise <id> <pct> --by <name> [--notes "..."]
   fire <id> --reason "..." --by <name>
   hire "<Full Name>" --role <role> [--model M] [--salary N] [--notes "..."] --by <name>
-  set-notes <id> "<persona notes>"`;
+  set-notes <id> "<persona notes>"
+  dossier <id>                           print an employee's full extractable dossier
+  export [--dir PATH]                    write all dossiers to studio/dossiers/`;
 
 const [cmd, ...rest] = process.argv.slice(2);
 const { pos, flags } = parseArgs(rest);
@@ -263,5 +371,7 @@ switch (cmd) {
   case 'fire': cmdFire(pos, flags); break;
   case 'hire': cmdHire(pos, flags); break;
   case 'set-notes': cmdSetNotes(pos); break;
+  case 'dossier': cmdDossier(pos); break;
+  case 'export': cmdExport(flags); break;
   default: console.log(HELP); process.exit(cmd ? 1 : 0);
 }

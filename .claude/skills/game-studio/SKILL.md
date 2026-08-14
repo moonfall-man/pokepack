@@ -136,6 +136,8 @@ node .claude/skills/game-studio/roster.mjs review devon --scores "workEthic=4,ac
 node .claude/skills/game-studio/roster.mjs fire sam --reason "..." --by "Rosa"
 node .claude/skills/game-studio/roster.mjs hire "Jamie Chen" --role scribe --model haiku --salary 70000 --notes "meticulous, dry humor" --by "Rosa"
 node .claude/skills/game-studio/roster.mjs set-notes devon "Test the win path before claiming tested."
+node .claude/skills/game-studio/roster.mjs dossier devon       # print one extractable agent dossier
+node .claude/skills/game-studio/roster.mjs export              # all dossiers -> studio/dossiers/ (auto-refreshed each performance cycle; served at /dossiers/)
 
 node .claude/skills/game-studio/economy.mjs init               # $500k seed (idempotent)
 node .claude/skills/game-studio/economy.mjs payroll --note "sprint PONG#1"
