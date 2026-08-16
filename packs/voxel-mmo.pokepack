@@ -1,0 +1,86 @@
+{
+  "format": "pokepack",
+  "formatVersion": 1,
+  "id": "voxel-mmo",
+  "name": "voxel-mmo",
+  "author": "curry",
+  "summary": "",
+  "thumbnail": null,
+  "engine": null,
+  "createdAt": "2026-08-16T17:42:17.149Z",
+  "strict": true,
+  "mods": [
+    {
+      "id": "SHINY_POKEMON",
+      "version": "1.0.1",
+      "source": {
+        "url": "https://github.com/masterwebx/gen1recomp-shiny-pokemon/releases/download/v1.0.1/SHINY_POKEMON-1.0.1.zip",
+        "sha256": "90d2be6fcec1383bb9beec5df9038308b68fa903eb179840b344c7b6e48ccb59",
+        "size": 23768
+      },
+      "options": {}
+    },
+    {
+      "id": "VOXEL_DEX",
+      "version": "1.0.0",
+      "source": {
+        "url": "https://github.com/DavidSchuchert/gen1-voxel-dex/releases/download/v1.0.0/VOXEL_DEX-1.0.0.zip",
+        "sha256": "dc1fb3dcc24d7fb1c971b75793829d76b8b7556d7db927f955b35b2362a9db82",
+        "size": 17309
+      },
+      "options": {}
+    },
+    {
+      "id": "modern_dialog",
+      "version": "0.4.1",
+      "source": {
+        "url": "https://github.com/eduardocalafell/gen1recomp-modern-dialog/releases/download/v0.4.1/modern_dialog-0.4.1.zip",
+        "sha256": "715a4a7346dbafab29e1ecf5b90f5ca4771a9fa99cb6c94c9703f2a3179a17b5",
+        "size": 7754
+      },
+      "options": {}
+    },
+    {
+      "id": "quality_of_life",
+      "version": "1.3.0",
+      "source": {
+        "url": "https://github.com/unxpected-uxp/pokemon-gen1-recomp-mod-qol/releases/download/v1.3.0/quality_of_life-1.3.0.zip",
+        "sha256": "adafefb6874fd4c9de97219fa1b047e287cc0ecf70ecaaa1164d39516ac247c4",
+        "size": 25720
+      },
+      "options": {}
+    },
+    {
+      "id": "rby_mmo",
+      "version": "1.0.7",
+      "source": {
+        "url": "https://github.com/alamops/RBYMMOMod/releases/download/v1.0.7/rby_mmo-1.0.7.zip",
+        "sha256": "85c068d9a118c22b057e02cd35bc3b3d1095c28436728d82d9e2a78bea217361",
+        "size": 2092540
+      },
+      "options": {}
+    },
+    {
+      "id": "running_shoes",
+      "version": "1.7.0",
+      "source": {
+        "url": "https://github.com/MadeinTaly/gen1recomp-running-shoes/releases/download/v1.7.0/running_shoes-1.7.0.zip",
+        "sha256": "de617710b60dcf4347a3c41e00283856d397222a3eb0547515a5b2c4371a6929",
+        "size": 43680
+      },
+      "options": {}
+    },
+    {
+      "id": "unique_menu_icons",
+      "version": "1.5.0",
+      "source": {
+        "url": "https://github.com/menyas/unique-menu-icons/releases/download/1.5.0/unique_menu_icons_1.5.0.zip",
+        "sha256": "ec2ac4495810f93e0ca85b4feb99fc9bdfba8149e6956c6fc6c405cece353069",
+        "size": 411769
+      },
+      "options": {}
+    }
+  ],
+  "disable": [],
+  "slots": {}
+}
