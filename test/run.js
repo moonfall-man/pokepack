@@ -21,6 +21,8 @@ import * as android from '../src/android.js';
 import * as packaged from '../src/packaged.js';
 import * as gamedl from '../src/game.js';
 import * as saves from '../src/saves.js';
+import * as modopts from '../src/modoptions.js';
+import * as probe from '../src/probe.js';
 import * as packfeed from '../src/packfeed.js';
 import { applyToOptions, setModEnabled } from '../src/liveapply.js';
 import { uninstall, planUninstall } from '../src/uninstall.js';
@@ -733,6 +735,16 @@ it('writes a launcher that boots straight into the game', () => {
   }), 'not a game version');
 
   rmSync(root, { recursive: true, force: true });
+});
+
+it('does not touch the foreground unless asked', () => {
+  // raiseWindow borrows another window's input queue through AttachThreadInput,
+  // which Microsoft warns can wedge input, and it has never been shown to work.
+  // Default off, so a launch cannot be blamed for it.
+  throws(() => launchGame({ exePath: 'C:\\nope\\missing.exe', identity: 'x' }), 'does not exist');
+  const call = launchGame.toString();
+  ok(call.includes('raise = false'), 'the parameter defaults to off');
+  ok(call.includes('raise ? raiseWindow'), 'and nothing runs unless it is on');
 });
 
 it('spots which instances have unpacked ROM data', () => {
@@ -1786,6 +1798,147 @@ it('computes the CRC every unzipper will check', () => {
   // The check value from the zip spec's own test vector.
   eq(zip.crc32(Buffer.from('123456789')), 0xcbf43926);
   eq(zip.crc32(Buffer.alloc(0)), 0);
+});
+
+// ------- asking the game what it can see
+
+describe('controller probe');
+
+it('reads a pad report back out of the game\'s own output', () => {
+  const M = probe.MARK;
+  const out = probe.parse([
+    '[info] game loaded',
+    `${M} driver started`,
+    `${M} count=2`,
+    `${M} #1 name="Controller (Xbox One For Windows)" guid=0300938d5e040000ff02000000007200 gamepad=true connected=true axes=6 buttons=11 hats=1`,
+    `${M} #2 name="Generic   USB  Joystick" guid=03000000790000000600000000000000 gamepad=false connected=true axes=4 buttons=12 hats=1`,
+    `${M} #2 has no SDL gamepad mapping, so love.gamepadpressed will never fire for it`,
+    '[info] display: 1024x768',
+  ].join('\n'));
+
+  eq(out.available, true);
+  eq(out.count, 2);
+  eq(out.pads[0].name, 'Controller (Xbox One For Windows)');
+  eq(out.pads[0].gamepad, true);
+  eq(out.pads[0].buttons, 11);
+  eq(out.pads[1].gamepad, false, 'a stick with no mapping is not a gamepad');
+  ok(out.notes.some((n) => n.includes('never fire')), 'and the consequence is spelled out');
+});
+
+it('says nothing rather than guessing when the probe never ran', () => {
+  // The difference between "the game sees no pads" and "the game never
+  // answered" is the whole point; collapsing them would have cost another
+  // afternoon.
+  const out = probe.parse('[info] game loaded\n[info] display: 1024x768');
+  eq(out.available, false);
+  eq(out.count, null);
+  eq(out.pads, []);
+  eq(probe.parse('').available, false);
+  eq(probe.parse(null).available, false);
+});
+
+it('pulls the USB ids out of an SDL guid', () => {
+  // This is how "the game sees a pad" and "the game sees the pad in your hand"
+  // stop being the same claim: 045E:02FF is Steam's virtual gamepad, not the
+  // Xbox pad plugged into the machine.
+  eq(probe.usbIds('0300938d5e040000ff02000000007200'), { vendor: '045E', product: '02FF' });
+  eq(probe.usbIds('03000000790000000600000000000000'), { vendor: '0079', product: '0006' });
+  eq(probe.usbIds('not a guid'), null);
+  eq(probe.usbIds(null), null);
+});
+
+it('writes a driver the engine can actually load', () => {
+  ok(probe.DRIVER.includes('return function(Game)'), 'main.lua calls the file for a function');
+  ok(probe.DRIVER.includes('coroutine.yield()'), 'and resumes it as a coroutine');
+  ok(probe.DRIVER.includes('love.event.quit()'), 'a probe that does not quit is a launch');
+  ok(probe.DRIVER.includes('__OUT__'), 'the report path is substituted per run');
+  // Every line goes to a file as well as stdout, because Windows buffers a GUI
+  // process's stdout until exit and a killed probe would otherwise say nothing.
+  ok(probe.DRIVER.includes('io.open(OUT, "a")'));
+  ok(!probe.DRIVER.includes('local function print('), 'the helper must not shadow print');
+});
+
+// ------- a mod's own settings, from outside the game
+
+describe('mod options');
+
+function tmpModOpts(name) {
+  const root = join(HERE, '..', name);
+  rmSync(root, { recursive: true, force: true });
+  mkdirSync(join(root, 'mods', 'COUCH_MULTIPLAYER', 'lib'), { recursive: true });
+  mkdirSync(join(root, 'mods', 'COUCH_MULTIPLAYER', 'tests'), { recursive: true });
+  writeFileSync(join(root, 'mods', 'COUCH_MULTIPLAYER', 'lib', 'Opts.lua'),
+    'mod.options:define({\n'
+    + '  { key = "players", label = "PLAYERS", type = "number", default = Config.DEFAULT },\n'
+    + '  { key = "body", label = "BODY", type = "text", default = "SPRITE_RED" },\n'
+    + '  { key = "leftstick", label = "L-STICK" },\n'
+    + '})\n');
+  // Test fixtures inside a mod must not be mined for settings.
+  writeFileSync(join(root, 'mods', 'COUCH_MULTIPLAYER', 'tests', 'fake.lua'),
+    '{ key = "not_a_real_setting", label = "NOPE" }');
+  writeFileSync(join(root, 'options.lua'),
+    'return {\n  musicVol = 7,\n  modOptions = {\n'
+    + '    COUCH_MULTIPLAYER = {\n      players = "2",\n      role = "host",\n    },\n'
+    + '    OTHER_MOD = {\n      keep = true,\n    },\n  },\n}\n');
+  return root;
+}
+
+it('shows what a mod declares and what it is actually set to', () => {
+  const root = tmpModOpts('.test-tmp-mo1');
+  const couch = modopts.describe(root).find((m) => m.id === 'COUCH_MULTIPLAYER');
+  const by = Object.fromEntries(couch.options.map((o) => [o.key, o]));
+
+  eq(by.players.value, '2');
+  eq(by.players.set, true);
+  eq(by.players.label, 'PLAYERS', 'the label comes from the mod source');
+  eq(by.leftstick.set, false, 'declared but never written');
+  eq(by.leftstick.value, undefined);
+  // A stored value the source never declared is still real and still shown --
+  // a schema we could not parse is our problem, not the player's.
+  eq(by.role.set, true);
+  eq(by.role.label, 'role');
+  eq('not_a_real_setting' in by, false, 'a mod\'s own tests are not its settings');
+
+  rmSync(root, { recursive: true, force: true });
+});
+
+it('keeps the type options.lua already used', () => {
+  // COUCH_MULTIPLAYER stores players = "2" as a STRING while other mods store
+  // numbers. Writing the wrong one is how a setting silently stops being read.
+  const root = tmpModOpts('.test-tmp-mo2');
+  const out = modopts.set(root, 'COUCH_MULTIPLAYER', 'players', 1, { running: false });
+  eq(out.from, '2');
+  eq(out.to, '1', 'still a string, because that is what was there');
+
+  const after = parse(readFileSync(join(root, 'options.lua'), 'utf8'));
+  eq(after.modOptions.COUCH_MULTIPLAYER.players, '1');
+  eq(after.modOptions.COUCH_MULTIPLAYER.role, 'host', 'siblings untouched');
+  eq(after.modOptions.OTHER_MOD.keep, true, 'other mods untouched');
+  eq(after.musicVol, 7, 'and the rest of the file');
+  ok(existsSync(join(root, 'options.lua.pokepack-bak')), 'previous copy kept');
+
+  rmSync(root, { recursive: true, force: true });
+});
+
+it('reads a new value the way a person meant it', () => {
+  eq(modopts.coerce('1', { existing: '2' }), '1', 'string stays a string');
+  eq(modopts.coerce('4', { existing: 2 }), 4, 'number stays a number');
+  eq(modopts.coerce('off', { existing: true }), false);
+  eq(modopts.coerce('yes', { existing: false }), true);
+  eq(modopts.coerce('3', { type: 'number' }), 3);
+  eq(modopts.coerce('3', { type: 'text' }), '3', 'declared text is not turned into a number');
+  eq(modopts.coerce('true'), true, 'nothing to go on: read it as written');
+  eq(modopts.coerce('hello'), 'hello');
+  throws(() => modopts.coerce('banana', { existing: 2 }), 'is not one');
+});
+
+it('will not write a setting while the game is open', () => {
+  const root = tmpModOpts('.test-tmp-mo3');
+  throws(() => modopts.set(root, 'COUCH_MULTIPLAYER', 'players', 1, { running: true }), 'game is running');
+  throws(() => modopts.set(root, 'COUCH_MULTIPLAYER', 'players', 1, { running: null }), 'could not tell');
+  eq(parse(readFileSync(join(root, 'options.lua'), 'utf8')).modOptions.COUCH_MULTIPLAYER.players, '2');
+  throws(() => modopts.set(root, '', 'players', 1, { running: false }), 'which mod');
+  rmSync(root, { recursive: true, force: true });
 });
 
 // ------- moving a save between setups

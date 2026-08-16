@@ -327,7 +327,7 @@ function openRunLog(saveDir) {
   }
 }
 
-export function launchGame({ exePath, identity, version = null, saveDir = null }) {
+export function launchGame({ exePath, identity, version = null, saveDir = null, raise = false }) {
   const check = checkGameExe(exePath);
   if (!check.ok) throw new Error(check.reason);
   if (identity !== null && !validIdentity(identity).ok && identity !== DEFAULT_IDENTITY) {
@@ -363,7 +363,15 @@ export function launchGame({ exePath, identity, version = null, saveDir = null }
       closeSync(log);
     } catch { /* already gone */ }
   }
-  const raised = raiseWindow(child.pid);
+  // Off unless asked for.  This borrows another window's input queue through
+  // AttachThreadInput, which Microsoft's own documentation warns can wedge
+  // input, and it has never been shown to work -- it failed both tests it was
+  // given when it was written.  An unverified invasive trick that fires on
+  // every launch is a bad trade even when it turns out to be innocent, and
+  // while a controller was mysteriously dead it was one more thing that had to
+  // be argued about rather than ruled out.  Set raiseWindow in config.json to
+  // turn it back on.
+  const raised = raise ? raiseWindow(child.pid) : false;
   return {
     pid: child.pid,
     identity: identity ?? DEFAULT_IDENTITY,
